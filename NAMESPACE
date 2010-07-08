@@ -1,0 +1,10 @@
+export(ictreg, predict.ictreg)
+importFrom(VGAM, betabinomial, vglm)
+importFrom(gamlss.dist, dBB)
+
+S3method(summary, ictreg)
+S3method(print, ictreg)
+S3method(print, summary.ictreg)
+S3method(coef, ictreg)
+S3method(vcov, ictreg)
+S3method(predict, ictreg)
