@@ -32,7 +32,7 @@ ictreg <- function(formula, data, treat="treat", J, method = "nls", overdisperse
 	y.treatment <- model.response(data.treatment)
 	x.control <- model.matrix(attr(data.control, "terms"), data=data.control)
 	y.control <- model.response(data.control)
-		
+			
 	logit <- function(x) exp(x)/(1+exp(x))
 	inv.logit <- function(x) return(log(x)-log(1-x))
 	
@@ -451,13 +451,18 @@ ictreg <- function(formula, data, treat="treat", J, method = "nls", overdisperse
 				lfit <- wlogit.fit(y.all, t, x.all, w, par = par[(nPar+1):(nPar*2)])
 				
 			  }
-			 
+			  
+			  
+			  y.var <- as.character(formula)[[2]]
+			  
+			  x.vars <- strsplit(gsub(" ", "",as.character(formula)[[3]]), split="+", fixed=T)[[1]]
+			  			  
 			  data.all$w <- w
 			  
 			  dtmp <- rbind(cbind(data.all, t), cbind(data.all, t)[t==1, ])
 			 
-			  dtmp$y[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n))] <-
-				dtmp$y[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n))] - 1
+			  dtmp[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n)), paste(y.var)] <-
+				dtmp[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n)), paste(y.var)] - 1
 				
 			  dtmp$w[((dtmp$t == 1) & ((1:nrow(dtmp)) > n))] <-
 				1 - dtmp$w[((dtmp$t == 1) & ((1:nrow(dtmp)) > n))]
@@ -465,18 +470,16 @@ ictreg <- function(formula, data, treat="treat", J, method = "nls", overdisperse
 			  dtmp$w[dtmp$t == 0] <- 1
 			  
 			  dtmp <- dtmp[dtmp$w > 0, ]
-			  
-			  x.vars <- strsplit(gsub(" ", "",as.character(formula)[[3]]), split="+", fixed=T)[[1]]
-			  
+			  			  
 			  if (overdispersed==T) {
 			  			  
-				fit <- vglm(as.formula(paste("cbind(y, J-y) ~ ", paste(x.vars, collapse=" + "))), betabinomial, weights = dtmp$w, coefstart = par[c(1,(nPar+1),2:(nPar))], data = dtmp)
+				fit <- vglm(as.formula(paste("cbind(", y.var, ", J-", y.var, ") ~ ", paste(x.vars, collapse=" + "))), betabinomial, weights = dtmp$w, coefstart = par[c(1,(nPar+1),2:(nPar))], data = dtmp)
 				
 				par <- c(coef(fit)[c(1,3:(nPar+1),2)], coef(lfit))
 				
 			  } else {
-			  
-				fit <- glm(as.formula(paste("cbind(y, J-y) ~ ", paste(x.vars, collapse=" + "))), family = binomial(logit), weights = dtmp$w, start = par[1:(nPar)], data = dtmp)
+	
+				fit <- glm(as.formula(paste("cbind(", y.var, ", J-", y.var, ") ~ ", paste(x.vars, collapse=" + "))), family = binomial(logit), weights = dtmp$w, start = par[1:(nPar)], data = dtmp)
 				
 				par <- c(coef(fit), coef(lfit))
 				
@@ -778,7 +781,7 @@ print.summary.ictreg <- function(x, ...){
 	
 	print(as.matrix(tb))
 			
-	cat(paste("\n",summ.stat,"\n\n"))
+	cat("\n",summ.stat,"\n\n",sep="")
 	
 	invisible(x)
 	

@@ -4,7 +4,7 @@
 \alias{list}
 \title{Item Count Technique} 
 \description{ 
-Function to conduct a multivariate regression analysis of survey data with the item count technique, also known as the list experiment and unmatched count technique.
+Function to conduct multivariate regression analyses of survey data with the item count technique, also known as the list experiment and the unmatched count technique.
 } 
 \usage{
 ictreg(formula, data, treat = "treat", J, method = "nls", 
@@ -26,7 +26,7 @@ ictreg(formula, data, treat = "treat", J, method = "nls",
 
 \details{This function allows the user to perform regression analysis on data from the item count technique, also known as the list experiment and the unmatched count technique. 
 
-Two methods are implemented in this function, the Maximum Liklihoood (ML) estiamtion for the Expectation-Maximization (EM) algorithm and the nonlinear least squares (NLS) estimation with the two-step procedure both proposed in Imai (2010). The constrained and unconstrained ML models presented in Imai (2010) are available through the \code{constrained} option, and the user can specify if overdispersion is present in the data using the \code{overdispersed} option to control whether a beta-binomial or binomial model is used in the EM algorithm to model the item counts.}
+Two methods are implemented in this function, the Maximum Liklihoood (ML) estimation for the Expectation-Maximization (EM) algorithm and the nonlinear least squares (NLS) estimation with the two-step procedure both proposed in Imai (2010). The constrained and unconstrained ML models presented in Imai (2010) are available through the \code{constrained} option, and the user can specify if overdispersion is present in the data using the \code{overdispersed} option to control whether a beta-binomial or binomial model is used in the EM algorithm to model the item counts.}
 
 
 \value{\code{ictreg} returns an object of class "ictreg".  The function \code{summary} is used to obtain a table of the results.  The object \code{ictreg} is a list that contains the following components.  Some of these elements are not available depending on which method is used (\code{nls} or \code{ml}) and whether the constrained model is used (\code{constrained = TRUE}).
@@ -40,12 +40,11 @@ Two methods are implemented in this function, the Maximum Liklihoood (ML) estiam
 \item{overdispersed}{call indicating whether data is overdispersed}
 \item{constrained}{call indicating whether the constrained model is used}
 
-
 For the unconstrained model, the \code{par.control} and \code{se.control} output is replaced by:
-\item{par.control_phi0}{point estimate for effect of covariate on item count fitted on treatment group}
-\item{se.control_phi0}{standard error for estimate of effect of covariate on item count fitted on treatment group}
-\item{par.control_phi1}{point estimate for effect of covariate on item count fitted on treatment group}
-\item{se.control_phi1}{standard error for estimate of effect of covariate on item count fitted on treatment group}
+\item{par.control.phi0}{point estimate for effect of covariate on item count fitted on treatment group}
+\item{se.control.phi0}{standard error for estimate of effect of covariate on item count fitted on treatment group}
+\item{par.control.phi1}{point estimate for effect of covariate on item count fitted on treatment group}
+\item{se.control.phi1}{standard error for estimate of effect of covariate on item count fitted on treatment group}
 }
 
 \references{Imai, Kosuke. (2010) ``Statistical Inference for the Item
