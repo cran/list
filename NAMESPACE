@@ -1,6 +1,13 @@
+useDynLib(list)
+
 export(ictreg, predict.ictreg)
+export(ict.test)
 importFrom(VGAM, betabinomial, vglm)
 importFrom(gamlss.dist, dBB)
+importFrom(MASS, mvrnorm)
+importFrom(quadprog, solve.QP)
+importFrom(arm, bayesglm)
+importFrom(mvtnorm, pmvnorm)
 
 S3method(summary, ictreg)
 S3method(print, ictreg)
