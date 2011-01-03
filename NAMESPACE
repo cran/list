@@ -8,6 +8,7 @@ importFrom(MASS, mvrnorm)
 importFrom(quadprog, solve.QP)
 importFrom(arm, bayesglm)
 importFrom(mvtnorm, pmvnorm)
+importFrom(sandwich, vcovHC)
 
 S3method(summary, ictreg)
 S3method(print, ictreg)

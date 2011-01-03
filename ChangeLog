@@ -1,4 +1,5 @@
 version      date  description
 1.0      07/08/10  The first version on CRAN
 1.1      07/17/10  Bug fixes
-2.0      12/14/10  Three new experiment designs and a statistical test added
+2.0      12/14/10  A major update incorporating the methods proposed by Blair and Imai (2010)
+2.1      01/03/11  "lm" method for list experiment linear model added and several bug fixes

@@ -44,25 +44,76 @@ If \code{avg} is set to \code{TRUE}, the mean prediction across all observations
 \examples{
 data(race)
 
-# Fit two-step non-linear least squares regression
+race.south <- race.nonsouth <- race
 
-nls.results <- ictreg(y ~ south + age + male + college, data = race, treat = "treat", J=3, method = "nls")
+race.south[, "south"] <- 1
+race.nonsouth[, "south"] <- 0
 
 \dontrun{
 
-# Calculate average predictions for respondents in the South and the the North of the US for the NLS model, replicating the estimates presented in Figure 1, Imai (2010)
+# Fit EM algorithm ML model with constraint with no covariates
 
-avg.pred.south.nls <- predict(nls.results, newdata = race[race[,"south"]==1,], se.fit = TRUE, avg = TRUE)
-avg.pred.north.nls <- predict(nls.results, newdata = race[race[,"south"]==0,], se.fit = TRUE, avg = TRUE)
+ml.results.south.nocov <- ictreg(y ~ 1, 
+   data = race[race$south == 1, ], method = "ml", treat = "treat", 
+   J = 3, overdispersed = FALSE, constrained = TRUE)
+ml.results.nonsouth.nocov <- ictreg(y ~ 1, 
+   data = race[race$south == 0, ], method = "ml", treat = "treat", 
+   J = 3, overdispersed = FALSE, constrained = TRUE)
+
+# Calculate average predictions for respondents in the South 
+# and the the North of the US for the MLE no covariates 
+# model, replicating the estimates presented in Figure 1, 
+# Imai (2010)
+
+avg.pred.south.nocov <- predict(ml.results.south.nocov,
+   newdata = as.data.frame(matrix(1, 1, 1)), se.fit = TRUE, 
+   avg = TRUE)
+avg.pred.nonsouth.nocov <- predict(ml.results.nonsouth.nocov,
+   newdata = as.data.frame(matrix(1, 1, 1)), se.fit = TRUE, 
+   avg = TRUE)
+
+# Fit linear regression
+
+lm.results <- ictreg(y ~ south + age + male + college, 
+   data = race, treat = "treat", J=3, method = "lm")
+
+# Calculate average predictions for respondents in the 
+# South and the the North of the US for the lm model, 
+# replicating the estimates presented in Figure 1, Imai (2010)
+
+avg.pred.south.lm <- predict(lm.results, newdata = race.south, 
+   se.fit = TRUE, avg = TRUE)
+avg.pred.nonsouth.lm <- predict(lm.results, newdata = race.nonsouth, 
+   se.fit = TRUE, avg = TRUE)
+
+# Fit two-step non-linear least squares regression
+
+nls.results <- ictreg(y ~ south + age + male + college, 
+   data = race, treat = "treat", J=3, method = "nls")
+
+# Calculate average predictions for respondents in the South 
+# and the the North of the US for the NLS model, replicating
+# the estimates presented in Figure 1, Imai (2010)
+
+avg.pred.south.nls <- predict(nls.results, newdata = race.south, 
+   se.fit = TRUE, avg = TRUE)
+avg.pred.nonsouth.nls <- predict(nls.results, newdata = race.nonsouth, 
+   se.fit = TRUE, avg = TRUE)
 
 # Fit EM algorithm ML model with constraint
 
-ml.constrained.results <- ictreg(y ~ south + age + male + college, data = race, treat = "treat", J=3, method = "ml", overdispersed = FALSE, constrained = TRUE)
+ml.constrained.results <- ictreg(y ~ south + age + male + college, 
+   data = race, treat = "treat", J=3, method = "ml", 
+   overdispersed = FALSE, constrained = TRUE)
 
-# Calculate average predictions for respondents in the South and the the North of the US for the MLE model, replicating the estimates presented in Figure 1, Imai (2010)
+# Calculate average predictions for respondents in the South 
+# and the the North of the US for the MLE model, replicating the 
+# estimates presented in Figure 1, Imai (2010)
 
-avg.pred.south.mle <- predict(ml.constrained.results, newdata = race[race[,"south"]==1,], se.fit = TRUE, avg = TRUE)
-avg.pred.north.mle <- predict(ml.constrained.results, newdata = race[race[,"south"]==0,], se.fit = TRUE, avg = TRUE)
+avg.pred.south.mle <- predict(ml.constrained.results, 
+   newdata = race.south, se.fit = TRUE, avg = TRUE)
+avg.pred.nonsouth.mle <- predict(ml.constrained.results, 
+   newdata = race.nonsouth, se.fit = TRUE, avg = TRUE)
 
 }
 
