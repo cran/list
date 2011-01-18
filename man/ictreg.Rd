@@ -104,6 +104,11 @@ Imai, Kosuke. (2010) ``Statistical Inference for the Item
 
 data(race)
 
+# Calculate list experiment difference in means
+
+diff.in.means.results <- ictreg(y ~ 1, data = race, 
+	       	      treat = "treat", J=3, method = "lm")
+
 # Fit linear regression
 # Replicates Table 1 Columns 1-2 Imai (2010); note that age is divided by 10
 
@@ -143,35 +148,48 @@ summary(ml.unconstrained.results)
 # Fit EM algorithm ML model for multiple sensitive items
 # Replicates Table 3 in Blair and Imai (2010)
 
-multi.results <- ictreg(y ~ male + college + age + south, treat = "treat", J = 3, data = multi, method = "ml", multi.condition = "level")
+multi.results <- ictreg(y ~ male + college + age + south, treat = "treat", 
+	      	 	J = 3, data = multi, method = "ml", 
+			multi.condition = "level")
 
 summary(multi.results)
 
 # Fit standard design ML model
 # Replicates Table 7 Columns 1-2 in Blair and Imai (2010)
 
-noboundary.results <- ictreg(y ~ age + college + male + south, treat = "treat", J = 3, data = affirm, method = "ml", overdispersed = FALSE)
+noboundary.results <- ictreg(y ~ age + college + male + south, treat = "treat",
+		      	     J = 3, data = affirm, method = "ml", 
+			     overdispersed = FALSE)
 
 summary(noboundary.results)
 
 # Fit standard design ML model with ceiling effects alone
 # Replicates Table 7 Columns 3-4 in Blair and Imai (2010)
 
-ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", J = 3, data = affirm, method = "ml", overdispersed = FALSE, ceiling = TRUE, ceiling.fit = "bayesglm")
+ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+		   	  J = 3, data = affirm, method = "ml", 
+			  overdispersed = FALSE, ceiling = TRUE, 
+			  ceiling.fit = "bayesglm")
 
 summary(ceiling.results)
 
 # Fit standard design ML model with floor effects alone
 # Replicates Table 7 Columns 5-6 in Blair and Imai (2010)
 
-floor.results <- ictreg(y ~ age + college + male + south, treat = "treat", J = 3, data = affirm, method = "ml", overdispersed = FALSE, floor = TRUE, floor.fit = "bayesglm")
+floor.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+	      	 	J = 3, data = affirm, method = "ml", 
+			overdispersed = FALSE, floor = TRUE, 
+			floor.fit = "bayesglm")
 
 summary(floor.results)
 
 # Fit standard design ML model with floor and ceiling effects
 # Replicates Table 7 Columns 7-8 in Blair and Imai (2010)
 
-both.results <- ictreg(y ~ age + college + male + south, treat = "treat", J = 3, data = affirm, method = "ml", overdispersed = FALSE, floor = TRUE, ceiling = TRUE, floor.fit = "bayesglm", ceiling.fit = "bayesglm")
+both.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+	     	       J = 3, data = affirm, method = "ml", 
+		       overdispersed = FALSE, floor = TRUE, ceiling = TRUE, 
+		       floor.fit = "bayesglm", ceiling.fit = "bayesglm")
 
 summary(both.results)
 

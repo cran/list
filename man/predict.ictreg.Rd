@@ -6,7 +6,8 @@ Function to calculate predictions and uncertainties of predictions from estimate
 } 
 \usage{
 
-  \method{predict}{ictreg}(object, newdata, se.fit = FALSE, interval = c("none","prediction"), level = .95, avg = FALSE, ...) 
+  \method{predict}{ictreg}(object, newdata, se.fit = FALSE, 
+ interval = c("none","prediction"), level = .95, avg = FALSE, ...) 
 
 } 
 

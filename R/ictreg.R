@@ -6,7 +6,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   require(magic)
   
   # set up data frame, with support for standard and modified responses
-  mf <- match.call(expand = FALSE)
+  mf <- match.call(expand.dots = FALSE)
   
   # make all other call elements null in mf <- NULL in next line
   mf$method <- mf$maxIter <- mf$verbose <- mf$fit.start <- mf$J <- mf$design <- mf$treat <- mf$constrained <- mf$overdispersed <- mf$floor <- mf$ceiling <- mf$ceiling.fit <- mf$fit.nonsensitive <- mf$floor.fit <- mf$multi.condition <- NULL
@@ -65,9 +65,12 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   n <- nrow(x.treatment) + nrow(x.control)
 
   if(formula != as.formula("y ~ 1"))
-    coef.names <- c("(Intercept)", strsplit(gsub(" ", "",as.character(formula)[[3]]), split="+", fixed=T)[[1]])
+    coef.names <- c("(Intercept)", strsplit(gsub(" ", "", as.character(formula)[[3]]),
+                                            split="+", fixed=T)[[1]])
   else
     coef.names = "(Intercept)"
+
+  nPar <- ncol(x.all)
 
   intercept.only <- ncol(x.all)==1 & sum(x.all[,1]==1) == n
   
@@ -76,34 +79,68 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
 
   if (design == "standard" & method == "lm") {
 
-    treat <- t > 0
+    treat <- matrix(NA, nrow = n, ncol = length(treatment.values))
     
+    for (m in 1:length(treatment.values)) 
+      treat[ , m] <- as.numeric(t == m)
+      
     x.all.noint <- x.all[, -1, drop = FALSE]
-    fit.lm <- lm(y.all ~ x.all.noint * treat)
 
+    if (intercept.only == TRUE)
+      fit.lm <- lm(y.all ~ treat)
+    else
+      fit.lm <- lm(y.all ~ x.all.noint * treat)
+    
     vcov <- vcovHC(fit.lm)
 
     par.control <- coef(fit.lm)[1:length(coef.names)]
-    se.control <- sqrt(diag(vcov))[1:length(coef.names)]    
+    se.control <- sqrt(diag(vcov))[1:length(coef.names)]
 
-    par.treat <- coef(fit.lm)[(length(coef.names)+1):(2*length(coef.names))]
-    se.treat <- sqrt(diag(vcov))[(length(coef.names)+1):(2*length(coef.names))]    
+    names(par.control) <- names(se.control) <- coef.names
+
+    par.treat <- se.treat <- list()
     
-    names(par.treat) <- names(se.treat) <- names(par.control) <-
-      names(se.control) <- coef.names
+    for (m in 1:length(treatment.values)) {
+      if (intercept.only == TRUE) {
+        par.treat[[m]] <- coef(fit.lm)[nPar + m]
+        se.treat[[m]] <- sqrt(diag(vcov))[nPar + m]
+        names(par.treat[[m]]) <- names(se.treat[[m]]) <- "(Intercept)"
+      } else {
+        par.treat[[m]] <- coef(fit.lm)[c((nPar + m),
+                                         ((nPar + length(treatment.values)) + (m-1) * (nPar - 1) + 1) :
+                                         ((nPar + length(treatment.values)) + m * (nPar - 1)))]
+        se.treat[[m]] <- sqrt(diag(vcov))[c((nPar + m),
+                                            ((nPar + length(treatment.values)) + (m-1) * (nPar - 1) + 1) :
+                                            ((nPar + length(treatment.values)) + m * (nPar - 1)))]
+        names(par.treat[[m]]) <- names(se.treat[[m]]) <- coef.names
+      }
+      
+    }
 
+    if(multi == FALSE) {
+      par.treat <- par.treat[[1]]
+      se.treat <- se.treat[[1]]
+    }
+    
     sum.fit.lm <- summary(fit.lm)
       
     resid.se <- sum.fit.lm$sigma
     resid.df <- sum.fit.lm$df[2]
     
-    return.object <- list(par.treat=par.treat, se.treat=se.treat,
-                          par.control=par.control, se.control=se.control,
-                          vcov=vcov, J=J,  coef.names=coef.names, resid.se = resid.se,
-                          resid.df = resid.df,  design = design, method = method,
-                          multi = multi, boundary = boundary, call = match.call(),
-                          data = data, x = x.all, y = y.all, treat = t)
-
+    if (multi == TRUE)
+      return.object <- list(par.treat=par.treat, se.treat=se.treat,
+                            par.control=par.control, se.control=se.control,
+                            vcov=vcov, treat.values = treatment.values, J=J, coef.names=coef.names,
+                            resid.se = resid.se, resid.df = resid.df,  design = design, method = method,
+                            multi = multi, boundary = boundary, call = match.call(),
+                            data = data, x = x.all, y = y.all, treat = t)
+    else
+      return.object <- list(par.treat=par.treat, se.treat=se.treat,
+                            par.control=par.control, se.control=se.control,
+                            vcov=vcov, J=J,  coef.names=coef.names, resid.se = resid.se,
+                            resid.df = resid.df,  design = design, method = method,
+                            multi = multi, boundary = boundary, call = match.call(),
+                            data = data, x = x.all, y = y.all, treat = t)
 
   } else if (design=="standard" & method != "lm") {
     
@@ -296,13 +333,15 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             ind1y <- ((treat == 1) & (y > 0) & (y < (J+1)))
             
             if (sum(ind10) > 0) {
-              p10 <- sum(log(1-gX[ind10]) + dBB(x = 0, bd = J, mu = h0X[ind10], sigma = rho.h0/(1-rho.h0), log = TRUE))
+              p10 <- sum(log(1-gX[ind10]) + dBB(x = 0, bd = J, mu = h0X[ind10],
+                                                sigma = rho.h0/(1-rho.h0), log = TRUE))
             } else {
               p10 <- 0
             }
             
             if (sum(ind1J1) > 0) {
-              p1J1 <- sum(log(gX[ind1J1]) + dBB(J, bd = J, mu = h1X[ind1J1], sigma = rho.h1/(1-rho.h1), log = TRUE))
+              p1J1 <- sum(log(gX[ind1J1]) + dBB(J, bd = J, mu = h1X[ind1J1],
+                                                sigma = rho.h1/(1-rho.h1), log = TRUE))
             } else {
               p1J1 <- 0
             }
@@ -317,8 +356,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             }
             
             if (sum(treat == 0) > 0) {
-              p0y <- sum(log(gX[!treat]*dBB(y[!treat], bd = J, mu = h1X[!treat], sigma = rho.h1/(1-rho.h1), log = FALSE) +
-                             (1-gX[!treat])*dBB(y[!treat], bd = J, mu = h0X[!treat], sigma = rho.h0/(1-rho.h0), log = FALSE)))
+              p0y <- sum(log(gX[!treat]*dBB(y[!treat], bd = J, mu = h1X[!treat],
+                                            sigma = rho.h1/(1-rho.h1), log = FALSE) +
+                             (1-gX[!treat])*dBB(y[!treat], bd = J, mu = h0X[!treat],
+                                                sigma = rho.h0/(1-rho.h0), log = FALSE)))
             } else {
               p0y <- 0
             }
@@ -496,9 +537,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           ##
           ## Running the EM algorithm
           ##
-          
-          nPar <- ncol(x.all)
-          
+                    
           if(constrained==F) {
             
             ## Run unconstrained model
@@ -543,10 +582,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                   par <- c(coef(fit0), coef(fit1), coef(lfit))
                   
                 } else {
-                  fit0 <- vglm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ x.all[!Not0,] - 1,
+                  fit0 <- vglm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ x.all[!Not0, -1, drop = FALSE],
                                betabinomial, weights = 1-w[!Not0],
                                coefstart = par[c(1,(nPar+1),2:(nPar))])
-                  fit1 <- vglm(cbind(y1[!Not1], J-y1[!Not1]) ~ x.all[!Not1,] - 1,
+                  fit1 <- vglm(cbind(y1[!Not1], J-y1[!Not1]) ~ x.all[!Not1, -1, drop = FALSE] ,
                                betabinomial, weights = w[!Not1],
                                coefstart = par[c((nPar+2),(2*nPar+2),(nPar+3):(2*nPar+1))])
                   par <- c(coef(fit0)[c(1,3:(nPar+1),2)], coef(fit1)[c(1,3:(nPar+1),2)], coef(lfit))
@@ -905,8 +944,6 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           ##
           ## start EM algorithm
 
-          nPar <- ncol(x.all)
-
           ## get starting values from NLS
           
           par <- par.control.nls.std
@@ -1096,15 +1133,20 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           }
           
           if (sum(ind11) > 0) {
-            p11 <- sum(log( gX[ind11] * (1-qlX[ind11]) * dbinom(x = 0, size = J, prob = hX[ind11], log = FALSE) + (1-gX[ind11]) * dbinom(x = 1, size = J, prob = hX[ind11], log = FALSE) ))
+            p11 <- sum(log( gX[ind11] * (1-qlX[ind11]) *
+                           dbinom(x = 0, size = J, prob = hX[ind11], log = FALSE) +
+                           (1-gX[ind11]) * dbinom(x = 1, size = J, prob = hX[ind11], log = FALSE) ))
           }
           
           if (sum(ind1y) > 0) {
-            p1y <- sum(log( gX[ind1y] * dbinom(x = y[ind1y]-1, size = J, prob = hX[ind1y], log = FALSE) + (1-gX[ind1y]) * dbinom(x = y[ind1y], size = J, prob = hX[ind1y], log = FALSE) ))
+            p1y <- sum(log( gX[ind1y] * dbinom(x = y[ind1y]-1, size = J, prob = hX[ind1y], log = FALSE) +
+                           (1-gX[ind1y]) * dbinom(x = y[ind1y], size = J, prob = hX[ind1y], log = FALSE) ))
           }
           
           if (sum(ind1J)) {
-            p1J <- sum(log( gX[ind1J] * (dbinom(x = J-1, size = J, prob = hX[ind1J], log = FALSE) + quX[ind1J] * dbinom(x = J, size = J, prob = hX[ind1J], log = FALSE)) + (1-gX[ind1J]) * dbinom(x = J, size = J, prob = hX[ind1J], log = FALSE) ))
+            p1J <- sum(log( gX[ind1J] * (dbinom(x = J-1, size = J, prob = hX[ind1J], log = FALSE) +
+                                         quX[ind1J] * dbinom(x = J, size = J, prob = hX[ind1J], log = FALSE)) +
+                           (1-gX[ind1J]) * dbinom(x = J, size = J, prob = hX[ind1J], log = FALSE) ))
           }
           
           if (sum(ind1J1) > 0) {
@@ -1327,7 +1369,6 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         
         ## Mstep 1: weighted MLE for logistic regression
         wlogit.fit.boundary <- function(y, x, w, par = NULL, maxIter = 50000) {
-          
           yrep <- rep(c(1,0), each = length(y))
           xrep <- rbind(x, x)
           wrep <- c(w, 1-w)
@@ -1361,9 +1402,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
 
         if (overdispersed == T)
           stop("The ceiling-floor liar model does not support overdispersion. Set overdispersed = F.")
-        
-        nPar <- ncol(x.all)
-        
+                
         y.var <- as.character(formula)[[2]]
         
         x.vars <- strsplit(gsub(" ", "",as.character(formula)[[3]]), split="+", fixed=T)[[1]]
@@ -1425,7 +1464,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           w <- Estep.binom.boundary(par, J, y.all, t, x.all, product = FALSE)
           w.prod <- Estep.binom.boundary(par, J, y.all, t, x.all, product = TRUE)
           
-          lfit <- wlogit.fit.boundary(y.all[t==1], x.all[t==1,], w[t==1],
+          lfit <- wlogit.fit.boundary(y.all[t==1], x.all[t==1, , drop = FALSE], w[t==1],
                              par = par[(nPar+1):(nPar*2)], maxIter = maxIter)
           
           dtmp <- rbind(data.all[t==0, ], data.all[t==1, ], data.all[t==1, ], data.all[t==1, ])
@@ -2017,6 +2056,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             par.treat <- MLEfit$par[(nPar+2):(nPar*2+1)]
             se.treat <- se.mle[(nPar+2):(nPar*2+1)]
             se.control <- se.mle[1:(nPar)]
+            par.overdispersion <- MLEfit$par[nPar+1]
+            se.overdispersion <- se.mle[nPar+1]
+            names(par.overdispersion) <- names(se.overdispersion) <- "overdispersion"
           } else {
             par.treat <- MLEfit$par[(nPar+1):(nPar*2)]
             se.treat <- se.mle[(nPar+1):(nPar*2)]
@@ -2048,7 +2090,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             llik.const <- llik
           
           if(boundary==F)
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+            if (overdispersed == T)
+              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+            else
+              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
           
           if(floor==FALSE & ceiling==TRUE)
             return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.ceiling = par.ceiling, se.ceiling = se.ceiling, vcov=vcov.mle, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
@@ -2069,6 +2114,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             se.treat <- se.mle[(nPar*2+3):(nPar*3 + 2)]
             se.control.phi0 <- se.mle[1:(nPar)]
             se.control.phi1 <- se.mle[(nPar*2+2):(nPar*2+1)]
+            par.overdispersion <- MLEfit$par[nPar*2+2]
+            se.overdispersion <- se.mle[nPar*2+2]
+            names(par.overdispersion) <- names(se.overdispersion) <- "overdispersion"
           } else {
             se.treat <- se.mle[(nPar*2+1):(nPar*3)]
             se.control.phi0 <- se.mle[1:(nPar)]
@@ -2076,8 +2124,11 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           }
           
           names(par.treat) <- names(se.treat) <- names(par.control.phi0) <- names(se.control.phi0) <- names(par.control.phi1) <- names(se.control.phi1) <- coef.names
-          
-          return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.phi0=par.control.phi0, se.control.phi0=se.control.phi0, par.control.phi1=par.control.phi1, se.control.phi1=se.control.phi1, vcov=vcov.mle, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
+
+          if(overdispersed==T)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.phi0=par.control.phi0, se.control.phi0=se.control.phi0, par.control.phi1=par.control.phi1, se.control.phi1=se.control.phi1, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
+          else
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.phi0=par.control.phi0, se.control.phi0=se.control.phi0, par.control.phi1=par.control.phi1, se.control.phi1=se.control.phi1, vcov=vcov.mle, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
 	
         }
 
@@ -2159,7 +2210,8 @@ print.ictreg <- function(x, ...){
   
 }
 
-predict.ictreg <- function(object, newdata, se.fit = FALSE, interval = c("none","prediction"), level = .95, avg = FALSE, ...){
+predict.ictreg <- function(object, newdata, se.fit = FALSE,
+                           interval = c("none","prediction"), level = .95, avg = FALSE, ...){
 
   if(object$design != "standard" | object$multi == TRUE | object$boundary == TRUE)
     stop("The predict function only currently works for standard design, single sensitive item experiments without ceiling or floor effects.")
@@ -2300,7 +2352,7 @@ coef.ictreg <- function(object, ...){
 
   if(object$multi == TRUE) {
 
-    if (object$method == "nls")
+    if (object$method == "nls" | object$method == "lm")
       object$multi.condition <- "none"
     
     coef <- c(object$par.control, do.call(c, object$par.treat))
@@ -2471,11 +2523,16 @@ print.summary.ictreg <- function(x, ...){
       }
 
       print(as.matrix(tb))
+
+      if (x$overdispersed == TRUE)
+        cat(paste("\nOverdispersion parameter: ",
+                  round(x$par.overdispersion, 4), " (s.e. = ", round(x$se.overdispersion, 4), ").\n",
+                  sep = ""))
       
     } else {
       ## multi
 
-      if (x$method == "nls")
+      if (x$method == "nls" | x$method == "lm")
         x$multi.condition <- "none"
 
       cat(rep(" ", max(nchar(x$coef.names))+5), "Sensitive Item 1", sep="")
@@ -2507,6 +2564,10 @@ print.summary.ictreg <- function(x, ...){
       tb.control[,2] <- x$se.control
 
       print(as.matrix(tb.control))
+
+      if (x$method == "lm")
+        summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
+                            "with",x$resid.df,"degrees of freedom")
 
     }
     

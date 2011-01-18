@@ -1,7 +1,8 @@
 Package: list
-Version: 2.1
-Date: 2011-1-3
-Title: Multivariate Statistical Analysis for List Experiments
+Version: 2.2
+Date: 2011-1-18
+Title: Statistical Methods for the Item Count Technique and List
+        Experiments
 Author: Graeme Blair <gblair@Princeton.edu>, Kosuke Imai
         <kimai@Princeton.edu>
 Maintainer: Graeme Blair <gblair@Princeton.edu>
@@ -21,6 +22,6 @@ Description: list is a publicly available R package that allows
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
-Packaged: 2011-01-03 17:25:52 UTC; gblair
+Packaged: 2011-01-19 20:21:52 UTC; gblair
 Repository: CRAN
-Date/Publication: 2011-01-03 17:42:11
+Date/Publication: 2011-01-20 13:08:08
