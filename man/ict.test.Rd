@@ -26,10 +26,7 @@ ict.test(y, treat, J, alpha = 0.05, n.draws = 250000, gms = FALSE)
 Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments." 
 Technical Report, Department of Politics, Princeton University. 
 available at \url{http://imai.princeton.edu/research/listP.html}
-
-Imai, Kosuke. (2010) ``Statistical Inference for the Item
-  Count Technique.''  Technical Report, Department of Politics,
-  Princeton University. available at \url{http://imai.princeton.edu/research/list.html}}
+}
 
 \author{Graeme Blair, Princeton University,
 \email{gblair@princeton.edu} and Kosuke Imai, Princeton University,

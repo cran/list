@@ -3,4 +3,5 @@ version      date  description
 1.1      07/17/10  Bug fixes
 2.0      12/14/10  A major update incorporating the methods proposed by Blair and Imai (2010)
 2.1      01/03/11  "lm" method for list experiment linear model added and several bug fixes
-2.2      01/18/11  Multi design for "lm" method implemented, several bug fixes
+2.2      01/19/11  Multi design for "lm" method implemented, several bug fixes
+2.3      03/08/11  Plot function for predictions, modified design prediction, and bug fixes

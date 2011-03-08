@@ -91,9 +91,10 @@ Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments
   Technical Report, Department of Politics, Princeton University. 
   available at \url{http://imai.princeton.edu/research/listP.html}
 
-Imai, Kosuke. (2010) ``Statistical Inference for the Item
-  Count Technique.''  Technical Report, Department of Politics,
-  Princeton University. available at \url{http://imai.princeton.edu/research/list.html}}
+Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
+  Count Technique.''  Journal of the American Statistical Association,
+  Forthcoming. available at
+  \url{http://imai.princeton.edu/research/list.html}}
 
 \author{Graeme Blair, Princeton University,
 \email{gblair@princeton.edu} and Kosuke Imai, Princeton University,
@@ -109,8 +110,10 @@ data(race)
 diff.in.means.results <- ictreg(y ~ 1, data = race, 
 	       	      treat = "treat", J=3, method = "lm")
 
+summary(diff.in.means.results)
+
 # Fit linear regression
-# Replicates Table 1 Columns 1-2 Imai (2010); note that age is divided by 10
+# Replicates Table 1 Columns 1-2 Imai (2011); note that age is divided by 10
 
 lm.results <- ictreg(y ~ south + age + male + college, data = race, 
 	       	      treat = "treat", J=3, method = "lm")
@@ -118,7 +121,7 @@ lm.results <- ictreg(y ~ south + age + male + college, data = race,
 summary(lm.results)
 
 # Fit two-step non-linear least squares regression
-# Replicates Table 1 Columns 3-4 Imai (2010); note that age is divided by 10
+# Replicates Table 1 Columns 3-4 Imai (2011); note that age is divided by 10
 
 nls.results <- ictreg(y ~ south + age + male + college, data = race, 
 	       	      treat = "treat", J=3, method = "nls")
@@ -128,7 +131,7 @@ summary(nls.results)
 \dontrun{
 
 # Fit EM algorithm ML model with constraint
-# Replicates Table 1 Columns 5-6, Imai (2010); note that age is divided by 10
+# Replicates Table 1 Columns 5-6, Imai (2011); note that age is divided by 10
 
 ml.constrained.results <- ictreg(y ~ south + age + male + college, data = race, 
 		       	  	 treat = "treat", J=3, method = "ml", 
@@ -137,7 +140,7 @@ ml.constrained.results <- ictreg(y ~ south + age + male + college, data = race,
 summary(ml.constrained.results)
 
 # Fit EM algorithm ML model with no constraint
-# Replicates Table 1 Columns 7-10, Imai (2010); note that age is divided by 10
+# Replicates Table 1 Columns 7-10, Imai (2011); note that age is divided by 10
 
 ml.unconstrained.results <- ictreg(y ~ south + age + male + college, data = race, 
 			    	   treat = "treat", J=3, method = "ml", 
@@ -148,7 +151,7 @@ summary(ml.unconstrained.results)
 # Fit EM algorithm ML model for multiple sensitive items
 # Replicates Table 3 in Blair and Imai (2010)
 
-multi.results <- ictreg(y ~ male + college + age + south, treat = "treat", 
+multi.results <- ictreg(y ~ male + college + age + south + south:age, treat = "treat", 
 	      	 	J = 3, data = multi, method = "ml", 
 			multi.condition = "level")
 

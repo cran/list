@@ -64,7 +64,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   
   n <- nrow(x.treatment) + nrow(x.control)
 
-  if(formula != as.formula("y ~ 1"))
+  if(!(ncol(x.treatment)==1 & mean(x.treatment)==1))
     coef.names <- c("(Intercept)", strsplit(gsub(" ", "", as.character(formula)[[3]]),
                                             split="+", fixed=T)[[1]])
   else
@@ -97,7 +97,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     se.control <- sqrt(diag(vcov))[1:length(coef.names)]
 
     names(par.control) <- names(se.control) <- coef.names
-
+    
     par.treat <- se.treat <- list()
     
     for (m in 1:length(treatment.values)) {
@@ -1445,7 +1445,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         } else {
           coef.floor.start <- c(-Inf, rep(0, (nPar-1)))
         }
-
+        
         par <- c(coef.control.start, coef.treat.start, coef.floor.start, coef.ceiling.start)
        
         ## calculate starting log likelihood
@@ -1531,11 +1531,17 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                          family = binomial(logit), start = coef.qlfit.start, data = dtmpF,
                          control = glm.control(maxit = maxIter))
           } else if(floor.fit=="bayesglm") {
-            qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-                                               paste(x.vars, collapse=" + "))),
-                              weights = dtmpF$w, family = binomial(logit),
-                              start = coef.qlfit.start, data = dtmpF,
-                              control = glm.control(maxit = maxIter), scaled = F)
+            if (intercept.only == F)
+              qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                                                 paste(x.vars, collapse=" + "))),
+                                weights = dtmpF$w, family = binomial(logit),
+                                start = coef.qlfit.start, data = dtmpF,
+                                control = glm.control(maxit = maxIter), scaled = F)
+            else
+              qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                                weights = dtmpF$w, family = binomial(logit),
+                                start = coef.qlfit.start, data = dtmpF,
+                                control = glm.control(maxit = maxIter), scaled = F)
           }
           
           ## reset parameters based on floor / ceiling options
@@ -1592,8 +1598,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         }
         
         llik <- llik - p.prior.floor - p.prior.ceiling
-                
-        vcov.mle <- solve(-MLEfit$hessian)
+        
+        vcov.mle <- solve(-MLEfit$hessian, tol = 1e-7)
         se.mle <- sqrt(diag(vcov.mle))
         
       } # end of boundary ml
@@ -2009,7 +2015,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       if(design=="standard") {
         return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names,  J=J, design = design, method = method, fit.start = fit.start, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
       } else if (design=="modified") {
-        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.twostep, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names, J=J, design = design, method = method, fit.nonsensitive = fit.nonsensitive, data = data, x = x.all, y = y.all, treat = t, call = match.call())
+        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.twostep, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names, J=J, design = design, method = method, fit.nonsensitive = fit.nonsensitive, data = data, x = x.all, y = y.all, treat = t, boundary = FALSE, multi = FALSE, call = match.call())
       }
       
     } else if (multi == TRUE) {
@@ -2030,6 +2036,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       
       names(par.control) <- names(se.control) <- coef.names
 
+      
       resid.se <- resid.df <- rep(NA, length(treatment.values))
       for (m in treatment.values) {
         sum.fit.treat <- summary(fit.treat[[m]])
@@ -2176,7 +2183,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       
       names(par.control) <- names(se.control) <- rep(coef.names, J)
       
-      return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, llik=llik, coef.names=coef.names,  J=J, design = design, method = method, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
+      return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, llik=llik, coef.names=coef.names,  J=J, design = design, method = method, boundary = FALSE, multi = FALSE, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
       
     }
   }
@@ -2211,9 +2218,9 @@ print.ictreg <- function(x, ...){
 }
 
 predict.ictreg <- function(object, newdata, se.fit = FALSE,
-                           interval = c("none","prediction"), level = .95, avg = FALSE, ...){
+                           interval = c("none","confidence"), level = .95, avg = FALSE, ...){
 
-  if(object$design != "standard" | object$multi == TRUE | object$boundary == TRUE)
+  if(object$design != "standard" | object$multi == TRUE)
     stop("The predict function only currently works for standard design, single sensitive item experiments without ceiling or floor effects.")
   
   if(missing(interval)) interval <- "none"
@@ -2254,7 +2261,10 @@ predict.ictreg <- function(object, newdata, se.fit = FALSE,
       else
         var.pred[i] <- v[i] * v[i] * (xvar[i,, drop = FALSE] %*% var.beta %*%
                                       t(xvar[i,, drop = FALSE]))
-    }		
+    }
+
+    se <- sqrt(var.pred)
+    
   } else {
     
     pix <- mean(pix)
@@ -2269,14 +2279,15 @@ predict.ictreg <- function(object, newdata, se.fit = FALSE,
           var.pred <- var.pred + v[i] * v[j] * (xvar[i,, drop = FALSE] %*%
                                                 var.beta %*% t(xvar[j,, drop = FALSE]))
       }
-    }			
+    }
+
+    se <- c(sqrt(var.pred)/n)
+    
   }
-  
-  se <- c(sqrt(var.pred)/n)
   
   return.object <- list(fit=as.vector(pix))
   
-  if(interval=="prediction"){
+  if(interval=="confidence"){
     
     critical.value <- qt(1-(1-level)/2, df = n)
     ci.upper <- pix + critical.value * se
@@ -2288,6 +2299,8 @@ predict.ictreg <- function(object, newdata, se.fit = FALSE,
   
   if(se.fit==T)
     return.object$se.fit <- as.vector(se)
+
+  class(return.object) <- "predict.ictreg"
   
   return(return.object)
   
@@ -2460,6 +2473,58 @@ vcov.ictreg <- function(object, ...){
   
 }
 
+c.predict.ictreg <- function(...){
+  
+  x <- list(...)
+  
+  for (j in 1:length(x))
+    x[[j]] <- x[[j]]$fit
+
+  return.object <- as.matrix(do.call(rbind, x))
+
+  class(return.object) <- "predict.ictreg"
+
+  attr(return.object, "concat") <- TRUE
+
+  return.object
+  
+}
+
+plot.predict.ictreg <- function(x, labels = NA, axes.ict = TRUE,
+                                xlim = NULL, ylim = NULL, xlab = NULL, ylab = "Estimated Proportion",
+                                axes = F, pch = 19, xvec = NULL, ...){
+  
+  if (is.null(attr(x, "concat"))) {
+    x <- x$fit
+    xvec <- 1
+  }
+
+  if (is.null(xlim))
+    xlim <- c(0.5,nrow(x)+0.5)
+  if (is.null(ylim))
+    ylim <- c(min(x[,2]-.05,0), max(x[,3]+.05))
+  if (is.null(xvec))
+    xvec <- 1:nrow(x)
+  if (is.null(xlab))
+    xlab <- ""
+  
+  plot(xvec, x[,1], pch = pch, xlim = xlim, ylim = ylim, 
+       xlab = xlab, ylab = ylab, axes = axes, ... )
+  
+  critical <- abs(qnorm(0.025))
+  for (j in 1:nrow(x))
+    lines(rep(xvec[j], 2), x[j, 2:3]) 
+  
+  abline(h = 0, lty = "dashed")
+  
+  if (axes.ict == TRUE) {
+    axis(side = 2, at = seq(from = round(min(x[,2],0),1),
+                     to = round(max(x[,3]),1), by = 0.1))
+    axis(side = 1, at = xvec, tick = FALSE, labels = labels)
+  }
+  
+}
+
 summary.ictreg <- function(object, boundary.proportions = FALSE, ...) {
   object$boundary.proportions <- boundary.proportions
   structure(object, class = c("summary.ictreg", class(object)))
@@ -2472,278 +2537,315 @@ print.summary.ictreg <- function(x, ...){
   dput(x$call)
   
   cat("\n")
+
+  if(x$method=="nls" | x$design=="modified" | x$method == "lm")
+    x$constrained <- T
+
+  if (x$design == "standard") {
   
-  if((x$method=="nls" | x$method == "lm") & x$multi == FALSE){
-    cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
-        "Non-Sensitive Items \n", sep="")
-    tb <- matrix(NA, ncol = 4, nrow = length(x$par.control))
-    colnames(tb) <- rep(c("Est.", "S.E."), 2)
-    if(x$design=="standard") {
-      rownames(tb) <- x$coef.names
-    } else if(x$design=="modified") {
-      rownames(tb) <- rep(x$coef.names, x$J)
-    }
-    tb[,1] <- x$par.treat
-    tb[,2] <- x$se.treat
-    tb[,3] <- x$par.control
-    tb[,4] <- x$se.control
-
-    print(as.matrix(tb))
-    
-    summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
-                       "with",x$resid.df,"degrees of freedom")
-
-    cat("\n",summ.stat,"\n\n", sep="")
-    
-  } else if(x$method=="ml" | x$multi == TRUE) {
-
-    if (x$multi == FALSE) {
-      if(x$constrained==F) {
-        cat(rep(" ", max(nchar(x$coef.names))+7), "Sensitive Item", rep(" ", 3),
-            "Non-sensitive (phi0)", rep(" ",2), "Non-sensitive (phi1)\n", sep="")
-        tb <- matrix(NA, ncol = 6, nrow = length(x$par.treat))
-        colnames(tb) <- rep(c("Est.", "S.E."), 3)
+    if((x$method=="nls" | x$method == "lm") & x$multi == FALSE){
+      cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
+          "Control Items \n", sep="")
+      tb <- matrix(NA, ncol = 4, nrow = length(x$par.control))
+      colnames(tb) <- rep(c("Est.", "S.E."), 2)
+      if(x$design=="standard") {
         rownames(tb) <- x$coef.names
-        tb[,1] <- x$par.treat
-        tb[,2] <- x$se.treat
-        tb[,3] <- x$par.control.phi0
-        tb[,4] <- x$se.control.phi0
-        tb[,5] <- x$par.control.phi1
-        tb[,6] <- x$se.control.phi1
-      } else {
-        cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
-            "Non-sensitive Item \n", sep="")
-        tb <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
-        colnames(tb) <- rep(c("Est.", "S.E."), 2)
-        rownames(tb) <- x$coef.names
-        tb[,1] <- x$par.treat
-        tb[,2] <- x$se.treat
-        tb[,3] <- x$par.control
-        tb[,4] <- x$se.control
+      } else if(x$design=="modified") {
+        rownames(tb) <- rep(x$coef.names, x$J)
       }
-
-      print(as.matrix(tb))
-
-      if (x$overdispersed == TRUE)
-        cat(paste("\nOverdispersion parameter: ",
-                  round(x$par.overdispersion, 4), " (s.e. = ", round(x$se.overdispersion, 4), ").\n",
-                  sep = ""))
+      tb[,1] <- x$par.treat
+      tb[,2] <- x$se.treat
+      tb[,3] <- x$par.control
+      tb[,4] <- x$se.control
       
-    } else {
-      ## multi
-
-      if (x$method == "nls" | x$method == "lm")
-        x$multi.condition <- "none"
-
-      cat(rep(" ", max(nchar(x$coef.names))+5), "Sensitive Item 1", sep="")
-      for(k in 2:length(x$treat.values))
-        cat(rep(" ", 7), "Sensitive Item ", k, "\n", sep = "")
- 
-      tb <- matrix(NA, ncol = length(x$treat.values)*2, nrow = length(x$par.treat[[1]]))
-      colnames(tb) <- rep(c("Est.", "S.E."), length(x$treat.values))
-      if(x$multi.condition == "none")
-        rownames(tb) <- x$coef.names
-      else if (x$multi.condition == "level")
-        rownames(tb) <- c(x$coef.names, "y_i(0)")
-      else if (x$multi.condition == "indicators")
-        rownames(tb) <- rep("varnames", length(x$par.treat[[1]]))
-      tb[,1] <- x$par.treat[[1]]
-      tb[,2] <- x$se.treat[[1]]
-      for (k in 2:length(x$treat.values)) {
-        tb[,((k-1)*2+1)] <- x$par.treat[[k]]
-        tb[,((k-1)*2+2)] <- x$se.treat[[k]]
-      }
-
       print(as.matrix(tb))
-
-      cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Control\n", sep="")
-      tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
-      colnames(tb.control) <- rep(c("Est.", "S.E."), 1)
-      rownames(tb.control) <- x$coef.names
-      tb.control[,1] <- x$par.control
-      tb.control[,2] <- x$se.control
-
-      print(as.matrix(tb.control))
-
-      if (x$method == "lm")
-        summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
-                            "with",x$resid.df,"degrees of freedom")
-
-    }
-    
-    if(x$method == "ml")
-      summ.stat <- paste("Log-likelihood:", x$llik)
-    else if (x$method == "nls") {
-      summ.stat <- "Residual standard error of "
-      for (m in 1:length(x$treat.values)) {
-        if(m==1)
-          summ.stat <- paste(summ.stat, signif(x$resid.se[m], digits=6), " with ",x$resid.df[m]," degrees of freedom for sensitive item ",m,"", sep = "")
-        else
-          summ.stat <- paste(summ.stat, "; residual standard error of ", signif(x$resid.se[m], digits=6), " with ",x$resid.df[m]," degrees of freedom for sensitive item ",m,"", sep ="")
-      }
-      summ.stat <- paste(summ.stat, ".", sep = "")
-    }
-
-    if(x$boundary == FALSE)
+      
+      summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
+                         "with",x$resid.df,"degrees of freedom")
+      
       cat("\n",summ.stat,"\n\n", sep="")
       
-  }
-  
-  if (x$boundary == TRUE & x$method == "ml" & x$design == "standard") {
-
-    if (x$ceiling == TRUE & x$floor == TRUE) {
-      cat("\n", rep(" ", max(nchar(x$coef.names))+16), "Ceiling", rep(" ", 17),
-          "Floor \n", sep="")
-      tb.boundary <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
-      colnames(tb.boundary) <- rep(c("Est.", "S.E."), 2)
-      rownames(tb.boundary) <- x$coef.names
-      tb.boundary[,1] <- x$par.ceiling
-      tb.boundary[,2] <- x$se.ceiling
-      tb.boundary[,3] <- x$par.floor
-      tb.boundary[,4] <- x$se.floor
-    } else {
-      if (x$ceiling == TRUE)
-        cat("\n",rep(" ", max(nchar(x$coef.names))+13), "Ceiling\n", sep="")
-      else
-        cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Floor\n", sep="")
-      tb.boundary <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
-      colnames(tb.boundary) <- rep(c("Est.", "S.E."), 1)
-      rownames(tb.boundary) <- x$coef.names
-      if (x$ceiling == TRUE) {
-        tb.boundary[,1] <- x$par.ceiling
-        tb.boundary[,2] <- x$se.ceiling
-      } else {
-        tb.boundary[,1] <- x$par.floor
-        tb.boundary[,2] <- x$se.floor
-      }
-    }
-
-    print(as.matrix(tb.boundary))
-
-    cat("\n",summ.stat,"\n\n", sep="")
-
-    if (x$boundary.proportions == TRUE) {
+    } else if(x$method=="ml" | x$multi == TRUE) {
       
-      logistic <- function(x) exp(x)/(1+exp(x))
-      logit <- function(x) return(log(x)-log(1-x))
-      
-      nPar <- ncol(x$x)
-      n <- nrow(x$x)
-      
-      n.draws <- 10000
-      
-      mu.par <- c(x$par.control, x$par.treat)
-      if (x$floor == TRUE)
-        mu.par <- c(mu.par, x$par.floor)
-      if (x$ceiling == TRUE)
-        mu.par <- c(mu.par, x$par.ceiling)
-      
-      try(draws <- mvrnorm(n = n.draws, mu = mu.par, Sigma = x$vcov, tol = 1e-1))
-      
-      if (exists("draws")) {
-        
-        coef.h.draws <- draws[,1:nPar]
-        coef.g.draws <- draws[,(nPar+1):(2*nPar)]
-        
-        if(x$floor==TRUE) {
-          coef.ql.draws <- draws[,(2*nPar+1):(3*nPar)]
-          if(x$ceiling==TRUE){
-            coef.qu.draws <- draws[,(3*nPar+1):(4*nPar)] 
-          } 
+      if (x$multi == FALSE) {
+        if(x$constrained==F) {
+          cat(rep(" ", max(nchar(x$coef.names))+7), "Sensitive Item", rep(" ", 3),
+              "Control (phi0)", rep(" ",2), "Control (phi1)\n", sep="")
+          tb <- matrix(NA, ncol = 6, nrow = length(x$par.treat))
+          colnames(tb) <- rep(c("Est.", "S.E."), 3)
+          rownames(tb) <- x$coef.names
+          tb[,1] <- x$par.treat
+          tb[,2] <- x$se.treat
+          tb[,3] <- x$par.control.phi0
+          tb[,4] <- x$se.control.phi0
+          tb[,5] <- x$par.control.phi1
+          tb[,6] <- x$se.control.phi1
         } else {
-          if(x$ceiling==TRUE){
-            coef.qu.draws <- draws[,(2*nPar+1):(3*nPar)] 
-          } 
+          cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
+              "Control Items \n", sep="")
+          tb <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
+          colnames(tb) <- rep(c("Est.", "S.E."), 2)
+          rownames(tb) <- x$coef.names
+          tb[,1] <- x$par.treat
+          tb[,2] <- x$se.treat
+          tb[,3] <- x$par.control
+          tb[,4] <- x$se.control
         }
         
-        liar.ceiling.sims <- liar.floor.sims <-
-          liar.ceiling.pop.sims <- liar.floor.pop.sims <- rep(NA, n.draws)
+        print(as.matrix(tb))
         
-        for (i in 1:n.draws) {
-          if (x$floor==TRUE)
-            qlX <- logistic(x$x %*% coef.ql.draws[i,])
-          if (x$ceiling==TRUE)
-            quX <- logistic(x$x %*% coef.qu.draws[i,])
+        if (x$overdispersed == TRUE)
+          cat(paste("\nOverdispersion parameter: ",
+                    round(x$par.overdispersion, 4), " (s.e. = ", round(x$se.overdispersion, 4), ").\n",
+                    sep = ""))
+        
+      } else {
+        ## multi
+        
+        if (x$method == "nls" | x$method == "lm")
+          x$multi.condition <- "none"
+        
+        cat(rep(" ", max(nchar(x$coef.names))+5), "Sensitive Item 1", sep="")
+        for(k in 2:length(x$treat.values))
+          cat(rep(" ", 7), "Sensitive Item ", k, "\n", sep = "")
+        
+        tb <- matrix(NA, ncol = length(x$treat.values)*2, nrow = length(x$par.treat[[1]]))
+        colnames(tb) <- rep(c("Est.", "S.E."), length(x$treat.values))
+        if(x$multi.condition == "none")
+          rownames(tb) <- x$coef.names
+        else if (x$multi.condition == "level")
+          rownames(tb) <- c(x$coef.names, "y_i(0)")
+        else if (x$multi.condition == "indicators")
+          rownames(tb) <- rep("varnames", length(x$par.treat[[1]]))
+        tb[,1] <- x$par.treat[[1]]
+        tb[,2] <- x$se.treat[[1]]
+        for (k in 2:length(x$treat.values)) {
+          tb[,((k-1)*2+1)] <- x$par.treat[[k]]
+          tb[,((k-1)*2+2)] <- x$se.treat[[k]]
+        }
+        
+        print(as.matrix(tb))
+        
+        cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Control\n", sep="")
+        tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
+        colnames(tb.control) <- rep(c("Est.", "S.E."), 1)
+        rownames(tb.control) <- x$coef.names
+        tb.control[,1] <- x$par.control
+        tb.control[,2] <- x$se.control
+        
+        print(as.matrix(tb.control))
+        
+        if (x$method == "lm")
+          summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
+                             "with",x$resid.df,"degrees of freedom")
+        
+      }
+      
+      if(x$method == "ml")
+        summ.stat <- paste("Log-likelihood:", x$llik)
+      else if (x$method == "nls") {
+        summ.stat <- "Residual standard error of "
+        for (m in 1:length(x$treat.values)) {
+          if(m==1)
+            summ.stat <- paste(summ.stat, signif(x$resid.se[m], digits=6), " with ",x$resid.df[m]," degrees of freedom for sensitive item ",m,"", sep = "")
+          else
+            summ.stat <- paste(summ.stat, "; residual standard error of ", signif(x$resid.se[m], digits=6), " with ",x$resid.df[m]," degrees of freedom for sensitive item ",m,"", sep ="")
+        }
+        summ.stat <- paste(summ.stat, ".", sep = "")
+      }
+      
+      if(x$boundary == FALSE)
+        cat("\n",summ.stat,"\n\n", sep="")
+      
+    }
+    
+    if (x$boundary == TRUE & x$method == "ml" & x$design == "standard") {
+      
+      if (x$ceiling == TRUE & x$floor == TRUE) {
+        cat("\n", rep(" ", max(nchar(x$coef.names))+16), "Ceiling", rep(" ", 17),
+            "Floor \n", sep="")
+        tb.boundary <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
+        colnames(tb.boundary) <- rep(c("Est.", "S.E."), 2)
+        rownames(tb.boundary) <- x$coef.names
+        tb.boundary[,1] <- x$par.ceiling
+        tb.boundary[,2] <- x$se.ceiling
+        tb.boundary[,3] <- x$par.floor
+        tb.boundary[,4] <- x$se.floor
+      } else {
+        if (x$ceiling == TRUE)
+          cat("\n",rep(" ", max(nchar(x$coef.names))+13), "Ceiling\n", sep="")
+        else
+          cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Floor\n", sep="")
+        tb.boundary <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+        colnames(tb.boundary) <- rep(c("Est.", "S.E."), 1)
+        rownames(tb.boundary) <- x$coef.names
+        if (x$ceiling == TRUE) {
+          tb.boundary[,1] <- x$par.ceiling
+          tb.boundary[,2] <- x$se.ceiling
+        } else {
+          tb.boundary[,1] <- x$par.floor
+          tb.boundary[,2] <- x$se.floor
+        }
+      }
+      
+      print(as.matrix(tb.boundary))
+      
+      cat("\n",summ.stat,"\n\n", sep="")
+      
+      if (x$boundary.proportions == TRUE) {
+        
+        logistic <- function(x) exp(x)/(1+exp(x))
+        logit <- function(x) return(log(x)-log(1-x))
+        
+        nPar <- ncol(x$x)
+        n <- nrow(x$x)
+        
+        n.draws <- 10000
+        
+        mu.par <- c(x$par.control, x$par.treat)
+        if (x$floor == TRUE)
+          mu.par <- c(mu.par, x$par.floor)
+        if (x$ceiling == TRUE)
+          mu.par <- c(mu.par, x$par.ceiling)
+        
+        try(draws <- mvrnorm(n = n.draws, mu = mu.par, Sigma = x$vcov, tol = 1e-7))
+        
+        if (exists("draws")) {
           
-          hX <- logistic(x$x %*% coef.h.draws[i,])
-          gX <- logistic(x$x %*% coef.g.draws[i,])
+          coef.h.draws <- draws[,1:nPar, drop = FALSE]
+          coef.g.draws <- draws[,(nPar+1):(2*nPar), drop = FALSE]
+          
+          if(x$floor==TRUE) {
+            coef.ql.draws <- draws[,(2*nPar+1):(3*nPar), drop = FALSE]
+            if(x$ceiling==TRUE){
+              coef.qu.draws <- draws[,(3*nPar+1):(4*nPar), drop = FALSE] 
+            } 
+          } else {
+            if(x$ceiling==TRUE){
+              coef.qu.draws <- draws[,(2*nPar+1):(3*nPar), drop = FALSE] 
+            } 
+          }
+          
+          liar.ceiling.sims <- liar.floor.sims <-
+            liar.ceiling.pop.sims <- liar.floor.pop.sims <- rep(NA, n.draws)
+          
+          for (i in 1:n.draws) {
+            if (x$floor==TRUE)
+              qlX <- logistic(x$x %*% as.vector(coef.ql.draws[i, , drop = FALSE]))
+            if (x$ceiling==TRUE)
+              quX <- logistic(x$x %*% as.vector(coef.qu.draws[i, , drop = FALSE]))
+            
+            hX <- logistic(x$x %*% as.vector(coef.h.draws[i,, drop = FALSE]))
+            gX <- logistic(x$x %*% as.vector(coef.g.draws[i,, drop = FALSE]))
+            
+            hX0 <- dbinom(x = 0, size = x$J, prob = hX, log = FALSE)
+            hXJ <- dbinom(x = x$J, size = x$J, prob = hX, log = FALSE)
+            
+            if (x$ceiling==TRUE) {
+              liar.ceiling.sims[i] <- sum(quX * hXJ * gX) / sum(hXJ * gX)
+              liar.ceiling.pop.sims[i] <- (1/n) * sum(quX * hXJ * gX)
+            }
+            
+            if (x$floor==TRUE) {
+              liar.floor.sims[i] <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
+              liar.floor.pop.sims[i] <- (1/n) * sum(qlX * hX0 * gX)
+            }
+            
+          }
+          
+          if(x$ceiling==TRUE) {
+            liar.ceiling <- mean(liar.ceiling.sims)
+            liar.ceiling.se <- sd(liar.ceiling.sims)/sqrt(nrow(x$x))
+            liar.ceiling.pop <- mean(liar.ceiling.pop.sims)
+            liar.ceiling.pop.se <- sd(liar.ceiling.pop.sims)/sqrt(nrow(x$x))
+            cat("Ceiling liar cond. prob. est. = ",liar.ceiling, " (s.e. = ",
+                liar.ceiling.se, ")\nCeiling liar pop. prop. est. = ",liar.ceiling.pop, " (s.e. = ",
+                liar.ceiling.pop.se, ")\n\n", sep = "")
+          } 
+          
+          if(x$floor==TRUE) {
+            liar.floor <- mean(liar.floor.sims)
+            liar.floor.se <- sd(liar.floor.sims)/sqrt(nrow(x$x))
+            liar.floor.pop <- mean(liar.floor.pop.sims)
+            liar.floor.pop.se <- sd(liar.floor.pop.sims)/sqrt(nrow(x$x))
+            cat("Floor liar cond. prob. est. = ",liar.floor, " (s.e. = ",
+                liar.floor.se, ")\nFloor liar pop. prop. est. = ",liar.floor.pop, " (s.e. = ",
+                liar.floor.pop.se, ")\n\n", sep = "")
+          } 
+          
+        } else {
+          ## cannot use mvrnorm()
+          
+          coef.h <- x$par.control
+          coef.g <- x$par.treat
+          
+          if(x$floor == TRUE) {
+            coef.ql <- x$par.floor
+            qlX <- logistic(x$x %*% coef.ql)
+          }
+          if(x$ceiling == TRUE) {
+            coef.qu <- x$par.ceiling
+            quX <- logistic(x$x %*% coef.qu)
+          }
+          
+          hX <- logistic(x$x %*% coef.h)
+          gX <- logistic(x$x %*% coef.g)
           
           hX0 <- dbinom(x = 0, size = x$J, prob = hX, log = FALSE)
           hXJ <- dbinom(x = x$J, size = x$J, prob = hX, log = FALSE)
           
-          if (x$ceiling==TRUE) {
-            liar.ceiling.sims[i] <- sum(quX * hXJ * gX) / sum(hXJ * gX)
-            liar.ceiling.pop.sims[i] <- (1/n) * sum(quX * hXJ * gX)
+          if (x$ceiling == TRUE) {
+            liar.ceiling <- sum(quX * hXJ * gX) / sum(hXJ * gX)
+            liar.ceiling.pop <- (1/n) * sum(quX * hXJ * gX)
+            cat("Ceiling liar conditional probability:", liar.ceiling, "\n")
+            cat("Ceiling liar population proportion:", liar.ceiling.pop,"\n")
+          }
+          if (x$floor == TRUE) {
+            liar.floor <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
+            liar.floor.pop <- (1/n) * sum(qlX * hX0 * gX)
+            cat("Floor liar cond. prob. est. =", liar.floor, "\n")
+            cat("Floor liar pop. prop. est. =", liar.floor.pop,"\n")
           }
           
-          if (x$floor==TRUE) {
-            liar.floor.sims[i] <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
-            liar.floor.pop.sims[i] <- (1/n) * sum(qlX * hX0 * gX)
-          }
+          cat("\nNote: covariance matrix was not computationally singular,\n")
+          cat("so std. errors for the proportion estimates could not be calculated.\n\n")
           
         }
-        
-        if(x$ceiling==TRUE) {
-          liar.ceiling <- mean(liar.ceiling.sims)
-          liar.ceiling.se <- sd(liar.ceiling.sims)/sqrt(nrow(x$x))
-          liar.ceiling.pop <- mean(liar.ceiling.pop.sims)
-          liar.ceiling.pop.se <- sd(liar.ceiling.pop.sims)/sqrt(nrow(x$x))
-          cat("Ceiling liar cond. prob. est. = ",liar.ceiling, " (s.e. = ",
-              liar.ceiling.se, ")\nCeiling liar pop. prop. est. = ",liar.ceiling.pop, " (s.e. = ",
-              liar.ceiling.pop.se, ")\n\n", sep = "")
-        } 
-        
-        if(x$floor==TRUE) {
-          liar.floor <- mean(liar.floor.sims)
-          liar.floor.se <- sd(liar.floor.sims)/sqrt(nrow(x$x))
-          liar.floor.pop <- mean(liar.floor.pop.sims)
-          liar.floor.pop.se <- sd(liar.floor.pop.sims)/sqrt(nrow(x$x))
-          cat("Floor liar cond. prob. est. = ",liar.floor, " (s.e. = ",
-              liar.floor.se, ")\nFloor liar pop. prop. est. = ",liar.floor.pop, " (s.e. = ",
-              liar.floor.pop.se, ")\n\n", sep = "")
-        } 
-        
-      } else {
-        ## cannot use mvrnorm()
-        
-        coef.h <- x$par.control
-        coef.g <- x$par.treat
-        
-        if(x$floor == TRUE) {
-          coef.ql <- x$par.floor
-          qlX <- logistic(x$x %*% coef.ql)
-        }
-        if(x$ceiling == TRUE) {
-          coef.qu <- x$par.ceiling
-          quX <- logistic(x$x %*% coef.qu)
-        }
-        
-        hX <- logistic(x$x %*% coef.h)
-        gX <- logistic(x$x %*% coef.g)
-        
-        hX0 <- dbinom(x = 0, size = x$J, prob = hX, log = FALSE)
-        hXJ <- dbinom(x = x$J, size = x$J, prob = hX, log = FALSE)
-        
-        if (x$ceiling == TRUE) {
-          liar.ceiling <- sum(quX * hXJ * gX) / sum(hXJ * gX)
-          liar.ceiling.pop <- (1/n) * sum(quX * hXJ * gX)
-          cat("Ceiling liar conditional probability:", liar.ceiling, "\n")
-          cat("Ceiling liar population proportion:", liar.ceiling.pop,"\n")
-        }
-        if (x$floor == TRUE) {
-          liar.floor <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
-          liar.floor.pop <- (1/n) * sum(qlX * hX0 * gX)
-          cat("Floor liar cond. prob. est. =", liar.floor, "\n")
-          cat("Floor liar pop. prop. est. =", liar.floor.pop,"\n")
-        }
-        
-        cat("\nNote: covariance matrix was not computationally singular,\n")
-        cat("so std. errors for the proportion estimates could not be calculated.\n\n")
         
       }
       
     }
     
+  } else {
+
+    ## modified design
+    
+    cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item \n", sep = "")
+    tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
+    tb.treat <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+    colnames(tb.control) <- colnames(tb.treat) <- c("Est.", "S.E.")
+    rownames(tb.control) <- rep(x$coef.names, x$J)
+    rownames(tb.treat) <- x$coef.names
+    
+    tb.control[,1] <- x$par.control
+    tb.control[,2] <- x$se.control
+
+    tb.treat[,1] <- x$par.treat
+    tb.treat[,2] <- x$se.treat
+    
+    print(as.matrix(tb.treat))
+    
+    cat("\n\n", rep("", max(nchar(x$coef.names))+8), "Control Items \n", sep="")
+    print(as.matrix(tb.control))
+
+    if (x$method == "nls")
+      summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
+                         "with",x$resid.df,"degrees of freedom")
+    else if (x$method == "ml")
+      summ.stat <- paste("Log-likelihood:", x$llik)
+    
+    cat("\n",summ.stat,"\n\n", sep="")
+      
   }
   
   invisible(x)

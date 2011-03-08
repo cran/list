@@ -19,13 +19,13 @@ where the last item is presented only with the treatment group and the control l
 The survey also includes a question in which attitudes toward the sensitive
 item are asked directly. 
 
-\verb{Now I'm going to ask you about another thing that sometimes
-makes people angry or upset. Do you get angry or upset when black leaders 
-ask the government for affirmative action?}
+\verb{ Now I'm going to ask you about another thing that sometimes
+      makes people angry or upset. Do you get angry or upset when black leaders 
+      ask the government for affirmative action?}
 
 }
 
-\usage{data(race)}
+\usage{data(mis)}
 
 \format{A data frame containing the following 6 variables for 1171 observations.
   
@@ -36,9 +36,9 @@ ask the government for affirmative action?}
     male \tab numeric \tab whether or not a respondent is male \tab 0 - 1 \cr
     college \tab numeric \tab whether or not a respondent attended some college \tab 0 - 1 \cr
     age \tab numeric \tab age of a respondent divided by 10 \cr
-    democrat \tab numeric \tab whether not a respondent identifies as a Democrat \cr
-    republican \tab numeric \tab whether not a respondent identifies as a Republican \cr
-    independent \tab numeric \tab whether not a respondent identifies as an independent \cr
+    democrat \tab numeric \tab whether not a respondent identifies as a Democrat \tab 0 - 1 \cr
+    republican \tab numeric \tab whether not a respondent identifies as a Republican \tab 0 - 1\cr
+    independent \tab numeric \tab whether not a respondent identifies as an independent \tab 0 - 1 \cr
     treat \tab numeric \tab treatment status \tab 0 - 1 \cr
     list.data \tab numeric \tab indicator for list experiment subset (treatment and control groups) \tab 0 - 1 \cr
     sens.data \tab numeric \tab indicator for direct sensitive item subset \tab 0 - 1 \cr
