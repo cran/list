@@ -5,3 +5,5 @@ version      date  description
 2.1      01/03/11  "lm" method for list experiment linear model added and several bug fixes
 2.2      01/19/11  Multi design for "lm" method implemented, several bug fixes
 2.3      03/08/11  Plot function for predictions, modified design prediction, and bug fixes
+3.0      04/05/11  Prediction and prediction plots for differences in
+	proportions and comparison between list and direct survey item predictions; formulae for 	ceiling and floor fits; numerous bug fixes.

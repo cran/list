@@ -1,6 +1,6 @@
 Package: list
-Version: 2.3
-Date: 2011-3-8
+Version: 3.0
+Date: 2011-4-5
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
 Author: Graeme Blair <gblair@Princeton.edu>, Kosuke Imai
@@ -22,6 +22,6 @@ Description: list is a publicly available R package that allows
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
-Packaged: 2011-03-09 17:21:07 UTC; gblair
+Packaged: 2011-04-05 17:44:59 UTC; gblair
 Repository: CRAN
-Date/Publication: 2011-03-09 19:59:50
+Date/Publication: 2011-04-06 06:10:00

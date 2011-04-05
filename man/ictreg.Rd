@@ -9,15 +9,15 @@ Function to conduct multivariate regression analyses of survey data with the ite
 \usage{
 ictreg(formula, data = parent.frame(), treat = "treat", J, method = "ml", 
        overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE,
-       ceiling.fit = "glm", floor.fit = "glm", fit.start = "nls", 
-       fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, 
-       verbose = FALSE, ...)
+       ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, 
+       floor.formula = ~ 1, fit.start = "lm", fit.nonsensitive = "nls", 
+       multi.condition = "none", maxIter = 5000, verbose = FALSE, ...)
 } 
 
 \arguments{ 
 \item{formula}{An object of class "formula": a symbolic description of the model to be fitted.} 
 \item{data}{A data frame containing the variables in the model}
-\item{treat}{Name of binary treatment indicator.}
+\item{treat}{Name of treatment indicator as a string. For single sensitive item models, this refers to a binary indicator, and for multiple sensitive item models it refers to a multi-valued variable with zero representing the control condition.}
 \item{J}{Number of non-sensitive (control) survey items.}
 \item{method}{ Method for regression, either \code{ml} for the Maximum Likelihood (ML) estimation with the Expectation-Maximization algorithm; \code{lm} for linear model estimation; or \code{nls} for the Non-linear Least Squares (NLS) estimation with the two-step procedure.}
 \item{overdispersed}{Indicator for the presence of overdispersion. If \code{TRUE}, the beta-binomial model is used in the EM algorithm, if \code{FALSE} the binomial model is used. Not relevant for the \code{NLS} or \code{lm} methods.}
@@ -26,6 +26,8 @@ ictreg(formula, data = parent.frame(), treat = "treat", J, method = "ml",
 \item{ceiling}{A logical value indicating whether the ceiling liar model should be used to adjust for the possible presence of respondents dishonestly reporting a negative preference for the sensitive item among those who hold affirmative views of all the non-sensitive items.}
 \item{ceiling.fit}{Fit method for the M step in the EM algorithm used to fit the ceiling liar model. \code{glm} uses standard logistic regression, while \code{bayesglm} uses logistic regression with a weakly informative prior over the parameters.}
 \item{floor.fit}{Fit method for the M step in the EM algorithm used to fit the floor liar model. \code{glm} uses standard logistic regression, while \code{bayesglm} uses logistic regression with a weakly informative prior over the parameters.}
+\item{ceiling.formula}{Covariates to include in ceiling liar model. These must be a subset of the covariates used in \code{formula}.}
+\item{floor.formula}{Covariates to include in floor liar model. These must be a subset of the covariates used in \code{formula}.}
 \item{fit.start}{Fit method for starting values for standard design \code{ml} model. The options are \code{lm}, \code{glm}, and \code{nls}, which use OLS, logistic regression, and non-linear least squares to generate starting values, respectively. The default is \code{nls}.}
 \item{fit.nonsensitive}{Fit method for the non-sensitive item fit for the \code{nls} method and the starting values for the \code{ml} method for the \code{modified} design. Options are \code{glm} and \code{nls}, and the default is \code{nls}.}
 \item{multi.condition}{For the multiple sensitive item design, covariates representing the estimated count of affirmative responses for each respondent can be included directly as a level variable by choosing \code{level}, or as indicator variables for each value but one by choosing \code{indicators}. The default is \code{none}.}
@@ -68,6 +70,8 @@ For the floor/ceiling models, several additional output objects are included:
 \item{floor}{call indicating whether the assumption of no floor liars is relaxed, and floor parameters are estimated}
 \item{par.ceiling}{point estimate for effect of covariate on whether respondents who answered negatively to all non-sensitive items and hold a true affirmative opinion toward the sensitive item lied and reported a negative response to the sensitive item }
 \item{se.ceiling}{standard error for estimate for effect of covariate on whether respondents who answered negatively to all non-sensitive items and hold a true affirmative opinion toward the sensitive item lied and reported a negative response to the sensitive item}
+\item{coef.names.ceiling}{variable names from the ceiling liar model fit, if applicable}
+\item{coef.names.floor}{variable names from the floor liar model fit, if applicable}
 
 For the multiple sensitive item design, the \code{par.treat} and \code{se.treat} vectors are returned as lists of vectors, one for each sensitive item. An additional output object is also included:
 \item{treat.values}{a vector of the values used in the \code{treat} vector for the sensitive items. does not include the value for the control status}
@@ -170,9 +174,9 @@ summary(noboundary.results)
 # Replicates Table 7 Columns 3-4 in Blair and Imai (2010)
 
 ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
-		   	  J = 3, data = affirm, method = "ml", 
-			  overdispersed = FALSE, ceiling = TRUE, 
-			  ceiling.fit = "bayesglm")
+		   	  J = 3, data = affirm, method = "ml", fit.start = "nls",
+			  ceiling = TRUE, ceiling.fit = "bayesglm",
+			  ceiling.formula = ~ age + college + male + south)
 
 summary(ceiling.results)
 
@@ -180,9 +184,9 @@ summary(ceiling.results)
 # Replicates Table 7 Columns 5-6 in Blair and Imai (2010)
 
 floor.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
-	      	 	J = 3, data = affirm, method = "ml", 
-			overdispersed = FALSE, floor = TRUE, 
-			floor.fit = "bayesglm")
+	      	 	J = 3, data = affirm, method = "ml", fit.start = "glm", 
+			floor = TRUE, floor.fit = "bayesglm",
+			floor.formula = ~ age + college + male + south)
 
 summary(floor.results)
 
@@ -191,8 +195,10 @@ summary(floor.results)
 
 both.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
 	     	       J = 3, data = affirm, method = "ml", 
-		       overdispersed = FALSE, floor = TRUE, ceiling = TRUE, 
-		       floor.fit = "bayesglm", ceiling.fit = "bayesglm")
+		       floor = TRUE, ceiling = TRUE, 
+		       floor.fit = "bayesglm", ceiling.fit = "bayesglm",
+		       floor.formula = ~ age + college + male + south,
+		       ceiling.formula = ~ age + college + male + south)
 
 summary(both.results)
 

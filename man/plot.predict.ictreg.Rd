@@ -35,7 +35,7 @@ The function accepts a set of \code{predict.ictreg} objects calculated in the fo
 
 For each average prediction, a point estimate and its confidence interval is plotted at equally spaced intervals. The x location of the points can be manipulated with the \code{xvec} option.
 
-Either a single predict object can be plotted, or a group of them combined with \code{c(predict.object1, predict.object2)}.
+Either a single predict object can be plotted, or a group of them combined with \code{c(predict.object1, predict.object2)}. Predict objects with the \code{newdata.diff} option, which calculates the mean difference in probability between two datasets, and the \code{direct.glm} option, which calculates the mean difference between the mean predicted support for the sensitive item in the list experiment and in a direct survey item, can also be plotted in the same way as other \code{predict} objects.
 }
 
 \seealso{\code{\link{ictreg}} for model fitting and \code{\link{predict.ictreg}} for predictions based on the model fits.}
@@ -81,6 +81,36 @@ avg.pred.nonsouth.mle <- predict(ml.constrained.results,
 plot(avg.pred.south.mle, labels = "South")
 # A  plot of the two estimates and their confidence intervals
 plot(c(avg.pred.south.mle, avg.pred.nonsouth.mle), labels = c("South", "Non-South"))
+
+# Social desirability bias plots
+
+# Estimate logit for direct sensitive question
+
+data(mis)
+
+mis.list <- subset(mis, list.data == 1)
+
+mis.sens <- subset(mis, sens.data == 1)
+
+# Fit EM algorithm ML model
+
+fit.list <- ictreg(y ~ age + college + male + south,
+   J = 4, data = mis.list, method = "ml")
+
+# Fit logistic regression with directly-asked sensitive question
+
+fit.sens <- glm(sensitive ~ age + college + male + south, 
+   data = mis.sens, family = binomial("logit"))
+
+# Predict difference between response to sensitive item
+# under the direct and indirect questions (the list experiment).
+# This is an estimate of the revealed social desirability bias
+# of respondents. See Blair and Imai (2010).
+
+avg.pred.social.desirability <- predict(fit.list, 
+   direct.glm = fit.sens, se.fit = TRUE)
+
+plot(avg.pred.social.desirability)
 
 }
 }

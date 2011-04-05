@@ -11,15 +11,7 @@
 #include <Rmath.h>
 #include <R_ext/Utils.h>
 #include <R.h>
-
-/* double array */
-double* doubleArray(int num) {
-  double *dArray = (double *)malloc(num * sizeof(double));
-  if (!dArray)
-    error("Out of memory error in doubleArray\n");
-  return dArray;
-}
-
+#include "vector.h"
 
 /* direct use of recursive formula */
 double Rpoisbinom(int k, double *p, int l) {

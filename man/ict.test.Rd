@@ -5,7 +5,7 @@
 Function to conduct a statistical test with the null hypothesis that there is no "design effect" in a list experiment, a failure of the experiment.
 } 
 \usage{
-ict.test(y, treat, J, alpha = 0.05, n.draws = 250000, gms = FALSE)
+ict.test(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRUE, pi.table = TRUE)
 } 
 
 \arguments{ 
@@ -15,6 +15,7 @@ ict.test(y, treat, J, alpha = 0.05, n.draws = 250000, gms = FALSE)
 \item{alpha}{Confidence level for the statistical test.}
 \item{n.draws}{Number of Monte Carlo draws.}
 \item{gms}{A logical value indicating whether the generalized moment selection procedure should be used.}
+\item{pi.table}{A logical value indicating whether a table of estimated proportions of respondent types with standard errors is displayed.}
 }
 
 \details{This function allows the user to perform a statistical test on data from a list experiment or item count technique with the null hypothesis of no design effect. A design effect occurs when an individual's response to the non-sensitive items changes depending upon the respondent's treatment status.

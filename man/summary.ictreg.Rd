@@ -43,20 +43,20 @@ Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
 
 \examples{
 data(race)
-
+\dontrun{
 # Fit standard design ML model with floor and ceiling effects
 # Replicates Table 7 Columns 7-8 in Blair and Imai (2010)
 
 floor.results <- ictreg(y ~ age + college + male + south, 
    treat = "treat", J = 3, data = affirm, method = "ml",
-   overdispersed = FALSE, floor = TRUE, floor.fit = "bayesglm")
+   fit.start = "nls", floor = TRUE, floor.fit = "bayesglm")
 
 # Summarize fit object and generate conditional probability 
 # of floor liars the population proportion of floor liars,
 # both with standard errors.
 # Replicates Table 7 Columns 7-8 last row in Blair and Imai (2010)
 
-\dontrun{
+
 summary(floor.results, boundary.proportions = TRUE)
 }
 
