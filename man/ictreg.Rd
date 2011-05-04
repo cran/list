@@ -8,16 +8,17 @@ Function to conduct multivariate regression analyses of survey data with the ite
 } 
 \usage{
 ictreg(formula, data = parent.frame(), treat = "treat", J, method = "ml", 
-       overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE,
-       ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, 
-       floor.formula = ~ 1, fit.start = "lm", fit.nonsensitive = "nls", 
-       multi.condition = "none", maxIter = 5000, verbose = FALSE, ...)
+       overdispersed = FALSE, constrained = TRUE, floor = FALSE, 
+       ceiling = FALSE, ceiling.fit = "glm", floor.fit = "glm", 
+       ceiling.formula = ~ 1, floor.formula = ~ 1, fit.start = "lm", 
+       fit.nonsensitive = "nls", multi.condition = "none", 
+       maxIter = 5000, verbose = FALSE, ...)
 } 
 
 \arguments{ 
 \item{formula}{An object of class "formula": a symbolic description of the model to be fitted.} 
 \item{data}{A data frame containing the variables in the model}
-\item{treat}{Name of treatment indicator as a string. For single sensitive item models, this refers to a binary indicator, and for multiple sensitive item models it refers to a multi-valued variable with zero representing the control condition.}
+\item{treat}{Name of treatment indicator as a string. For single sensitive item models, this refers to a binary indicator, and for multiple sensitive item models it refers to a multi-valued variable with zero representing the control condition. This can be an integer (with 0 for the control group) or a factor (with "control" for the control group).}
 \item{J}{Number of non-sensitive (control) survey items.}
 \item{method}{ Method for regression, either \code{ml} for the Maximum Likelihood (ML) estimation with the Expectation-Maximization algorithm; \code{lm} for linear model estimation; or \code{nls} for the Non-linear Least Squares (NLS) estimation with the two-step procedure.}
 \item{overdispersed}{Indicator for the presence of overdispersion. If \code{TRUE}, the beta-binomial model is used in the EM algorithm, if \code{FALSE} the binomial model is used. Not relevant for the \code{NLS} or \code{lm} methods.}
@@ -74,7 +75,8 @@ For the floor/ceiling models, several additional output objects are included:
 \item{coef.names.floor}{variable names from the floor liar model fit, if applicable}
 
 For the multiple sensitive item design, the \code{par.treat} and \code{se.treat} vectors are returned as lists of vectors, one for each sensitive item. An additional output object is also included:
-\item{treat.values}{a vector of the values used in the \code{treat} vector for the sensitive items. does not include the value for the control status}
+\item{treat.values}{a vector of the values used in the \code{treat} vector for the sensitive items. Does not include the value for the control status}
+\item{treat.labels}{a vector of the names used by the \code{treat} vector for the sensitive items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.} 
 
 
 For the unconstrained model, the \code{par.control} and \code{se.control} output is replaced by:

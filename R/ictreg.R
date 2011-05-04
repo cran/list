@@ -32,9 +32,6 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
 
   if (method == "nls") fit.start <- "nls"
   
-  # J is defined by user for the standard design
-  if(design=="standard" & missing("J")) stop("J must be defined.")
-  
   # extract number of non-sensitive items from the response matrix
   if(design=="modified") J <- ncol(y.all) - 1
   
@@ -58,12 +55,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   if(design=="modified") t <- as.numeric(is.na(y.all[na.x == 0 & na.y == 0, J+1]) == FALSE)
 
   if(class(t) == "factor") {
-    condition.labels <- tolower(levels(t))
-    t <- as.numeric(t) - 1
-    #t[t==which(condition.labels == "control")] <- 0
-    treatment.labels <- condition.labels[2:length(condition.labels)]
-    if (condition.labels[1] != "control")
+
+    levels(t) <- tolower(levels(t))
+    
+    if (length(which(levels(t) == "control")) == 1) {
+      t <- relevel(t, ref = "control")
+    } else {
       warning("Note: using the first level as the control condition, but it is not labeled 'control'.")
+    }
+        
+    condition.labels <- levels(t)
+    t <- as.numeric(t) - 1
+    treatment.labels <- condition.labels[2:length(condition.labels)]
   } else {
     condition.labels <- as.character(paste("Sensitive Item",sort(unique(t))))
     condition.labels[which(condition.labels == "Sensitive Item 0")] <- "control"
@@ -80,6 +83,11 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   y.treatment <- subset(y.all, t != 0)
   x.control <- x.all[t == 0 , , drop = FALSE]
   y.control <- subset(y.all, t==0)
+
+  if(design=="standard" & missing("J")) {
+    J <- max(y.treatment) - 1
+    cat(paste("Note: number of control items set to", J, "\n"))
+  }
 
   condition.values <- sort(unique(t))
   treatment.values <- 1:length(condition.values[condition.values!=0])
@@ -2376,12 +2384,13 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
 
   if (missing(direct.glm) == TRUE) {
     
-    if (!missing(newdata.diff))
+    if (!missing(newdata.diff)) {
       data.list <- list(xvar,
                         model.matrix(as.formula(paste("~", c(object$call$formula[[3]]))),
                                      newdata.diff))
-    else
+    } else {
       data.list <- list(xvar)
+    }
     
     k <- 1
     
@@ -2479,7 +2488,7 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
       
       se <- as.vector(sqrt(var)) / n
       
-      return.object <- list(est = est)
+      return.object <- list(fit = est)
       
       if(interval=="confidence"){
         
@@ -2527,7 +2536,6 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
         
     xvar.direct <- model.matrix(as.formula(paste("~", c(object$call$formula[[3]]))),
                                 direct.glm$data)
-
     
     if (ncol(xvar.direct) != nPar)
       stop("Different number of covariates in direct and list regressions.")
@@ -2540,9 +2548,12 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
     for (d in 1:n.draws) {
       
       par.g <- draws.list[d, ]
-      
-      pred.list <- logistic(xvar %*% par.g)
-      
+
+      if (object$method == "lm")   
+        pred.list <- xvar %*% par.g
+      else
+        pred.list <- logistic(xvar %*% par.g)
+
       pred.direct <- logistic(xvar.direct %*% draws.direct[d,])
       
       pred.list.mean[d] <- mean(pred.list)
@@ -2595,9 +2606,9 @@ coef.ictreg <- function(object, ...){
     coef <- c(object$par.treat,object$par.control)
     
     if(object$design=="standard") {
-      names(coef) <- c(paste("treat.",object$coef.names,sep=""), paste("control.",object$coef.names,sep=""))
+      names(coef) <- c(paste("sensitive.",object$coef.names,sep=""), paste("control.",object$coef.names,sep=""))
     } else if(object$design=="modified") {
-      coef.names <- paste("treat.",object$coef.names,sep="")
+      coef.names <- paste("sensitive.",object$coef.names,sep="")
       for(j in 1:object$J)
         coef.names <- c(coef.names, paste("control.", j, ".", object$coef.names, sep=""))
       names(coef) <- coef.names
@@ -2608,13 +2619,13 @@ coef.ictreg <- function(object, ...){
     if(object$design=="standard"){
       if(object$constrained==F) {
         coef <- c(object$par.treat,object$par.control.psi0,object$par.control.psi1)
-        names(coef) <- c(paste("treat.",object$coef.names,sep=""), paste("control.psi0.",object$coef.names,sep=""),paste("control.psi1.",object$coef.names,sep=""))
+        names(coef) <- c(paste("sensitive.",object$coef.names,sep=""), paste("control.psi0.",object$coef.names,sep=""),paste("control.psi1.",object$coef.names,sep=""))
       } else if (object$design=="modified") {
         coef <- c(object$par.treat,object$par.control)
-        names(coef) <- c(paste("treat.",object$coef.names,sep=""), paste("control.",object$coef.names,sep=""))
+        names(coef) <- c(paste("sensitive.",object$coef.names,sep=""), paste("control.",object$coef.names,sep=""))
       } else if (object$constrained == T) {
         coef <- c(object$par.treat,object$par.control)
-        names(coef) <- c(paste("treat.",object$coef.names,sep=""),
+        names(coef) <- c(paste("sensitive.",object$coef.names,sep=""),
                          paste("control.",object$coef.names,sep=""))
       } 
     } 
@@ -2625,20 +2636,20 @@ coef.ictreg <- function(object, ...){
       coef <- c(object$par.control, object$par.treat,
                 object$par.floor, object$par.ceiling)
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("floor.",object$coef.names.floor,sep=""))
       coef.names <- c(coef.names, paste("ceiling.",object$coef.names.ceiling,sep=""))
       names(coef) <- coef.names
     } else if (object$floor == TRUE){
       coef <- c(object$par.control, object$par.treat, object$par.floor)
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("floor.",object$coef.names.floor,sep=""))
       names(coef) <- coef.names
     } else  if (object$ceiling == TRUE) {
       coef <- c(object$par.control, object$par.treat, object$par.ceiling)
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("ceiling.",object$coef.names.ceiling,sep=""))
       names(coef) <- coef.names
     }
@@ -2652,9 +2663,9 @@ coef.ictreg <- function(object, ...){
     coef <- c(object$par.control, do.call(c, object$par.treat))
     coef.names <- paste("control.",object$coef.names,sep="")
     if(object$multi.condition == "none")
-      for(j in 1:length(object$treat.values)) coef.names <- c(coef.names, paste("treat.", j, ".", object$coef.names,sep=""))
+      for(j in 1:length(object$treat.values)) coef.names <- c(coef.names, paste("sensitive.", j, ".", object$coef.names,sep=""))
     if(object$multi.condition == "level")
-      for(j in 1:length(object$treat.values)) coef.names <- c(coef.names, paste("treat.", j, ".", c(object$coef.names, "y_i(0)"),sep=""))
+      for(j in 1:length(object$treat.values)) coef.names <- c(coef.names, paste("sensitive.", j, ".", c(object$coef.names, "y_i(0)"),sep=""))
     names(coef) <- coef.names
 
   }
@@ -2692,24 +2703,24 @@ vcov.ictreg <- function(object, ...){
   if((object$method=="nls" | object$method == "lm") &
      object$boundary == FALSE & object$multi == FALSE){
     if(object$design=="standard") rownames(vcov) <-
-      colnames(vcov)<- c(paste("treat.",object$coef.names,sep=""),
+      colnames(vcov)<- c(paste("sensitive.",object$coef.names,sep=""),
                          paste("control.",object$coef.names,sep=""))
     else if(object$design=="modified") {
-      coef.names<- paste("treat.",object$coef.names,sep="")
+      coef.names<- paste("sensitive.",object$coef.names,sep="")
       for(j in 1:object$J) coef.names <-
         c(coef.names, paste("control.", j, ".", object$coef.names, sep=""))
       rownames(vcov) <- colnames(vcov) <- coef.names
     }
   } else if(object$method=="ml" & object$boundary == FALSE & object$multi == FALSE) {
     if(object$constrained==F) {
-      rownames(vcov) <- colnames(vcov) <- c(paste("treat.",object$coef.names,sep=""),
+      rownames(vcov) <- colnames(vcov) <- c(paste("sensitive.",object$coef.names,sep=""),
                                             paste("control.psi0.",object$coef.names,
                                                   sep=""),
                                             paste("control.psi1.",object$coef.names,
                                                   sep=""))
     } else {
       rownames(vcov) <- colnames(vcov) <-
-        c(paste("treat.",object$coef.names,sep=""),
+        c(paste("sensitive.",object$coef.names,sep=""),
           paste("control.",object$coef.names,sep=""))
     }
   }
@@ -2717,18 +2728,18 @@ vcov.ictreg <- function(object, ...){
   if (object$boundary == TRUE) {
     if (object$floor == TRUE & object$ceiling == TRUE) {
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("floor.",object$coef.names.floor,sep=""))
       coef.names <- c(coef.names, paste("ceiling.",object$coef.names.ceiling,sep=""))
       rownames(vcov) <- colnames(vcov) <- coef.names
     } else if (object$floor == TRUE){
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("floor.",object$coef.names.floor,sep=""))
       rownames(vcov) <- colnames(vcov) <- coef.names
     } else  if (object$ceiling == TRUE) {
       coef.names <- paste("control.",object$coef.names,sep="")
-      coef.names <- c(coef.names, paste("treat.",object$coef.names,sep=""))
+      coef.names <- c(coef.names, paste("sensitive.",object$coef.names,sep=""))
       coef.names <- c(coef.names, paste("ceiling.",object$coef.names.ceiling,sep=""))
       rownames(vcov) <- colnames(vcov) <- coef.names
     }
@@ -2742,10 +2753,10 @@ vcov.ictreg <- function(object, ...){
     coef.names <- paste("control.",object$coef.names,sep="")
     if(object$multi.condition == "none")
       for(j in 1:length(object$treat.values)) coef.names <-
-        c(coef.names, paste("treat.", j, ".", object$coef.names,sep=""))
+        c(coef.names, paste("sensitive.", j, ".", object$coef.names,sep=""))
     if(object$multi.condition == "level")
       for(j in 1:length(object$treat.values)) coef.names <-
-        c(coef.names, paste("treat.", j, ".", c(object$coef.names, "y_i(0)"),sep=""))
+        c(coef.names, paste("sensitive.", j, ".", c(object$coef.names, "y_i(0)"),sep=""))
     rownames(vcov) <- colnames(vcov) <- coef.names
     
   }
@@ -2758,14 +2769,13 @@ c.predict.ictreg <- function(...){
 
   x <- list(...)
   
-  for (j in 1:length(x))
+  for (j in 1:length(x)) 
     x[[j]] <- x[[j]]$fit
-
-  return.object <- as.matrix(do.call(rbind, x))
+  
+  return.object <- c()
+  return.object$fit <- as.matrix(do.call(rbind, x))
 
   class(return.object) <- "predict.ictreg"
-
-  attr(return.object, "concat") <- TRUE
 
   return.object
   
@@ -2774,22 +2784,20 @@ c.predict.ictreg <- function(...){
 plot.predict.ictreg <- function(x, labels = NA, axes.ict = TRUE,
                                 xlim = NULL, ylim = NULL, xlab = NULL, ylab = "Estimated Proportion",
                                 axes = F, pch = 19, xvec = NULL, ...){
-  
-  if (is.null(attr(x, "concat"))) {
-    x <- as.matrix(x$fit)
-  }
+
+  x <- as.matrix(x$fit)
 
   if (is.null(xlim))
     xlim <- c(0.5,nrow(x)+0.5)
   if (is.null(ylim))
-    ylim <- c(min(x[,2]-.05,0), max(x[,3]+.05))
+    ylim <- c(min(x[,2]-.05,0), max(x[,3]+.05))  
   if (is.null(xvec))
-    xvec <- 1:nrow(x)
+    xvec <- 1:nrow(x)  
   if (is.null(xlab))
     xlab <- ""
-  
+
   plot(xvec, x[,1], pch = pch, xlim = xlim, ylim = ylim, 
-       xlab = xlab, ylab = ylab, axes = axes, ... )
+       xlab = xlab, ylab = ylab, axes = axes, ...)
   
   critical <- abs(qnorm(0.025))
   for (j in 1:nrow(x))
@@ -2824,21 +2832,24 @@ print.summary.ictreg <- function(x, ...){
   if (x$design == "standard") {
   
     if((x$method=="nls" | x$method == "lm") & x$multi == FALSE){
-      cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
-          "Control Items \n", sep="")
-      tb <- matrix(NA, ncol = 4, nrow = length(x$par.control))
-      colnames(tb) <- rep(c("Est.", "S.E."), 2)
+      ##cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
+      ##    "Control Items \n", sep="")
+      tb.treat <- tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
+      colnames(tb.treat) <- colnames(tb.control) <- c("Est.", "S.E.")
       if(x$design=="standard") {
-        rownames(tb) <- x$coef.names
+        rownames(tb.treat) <- rownames(tb.control) <- x$coef.names
       } else if(x$design=="modified") {
-        rownames(tb) <- rep(x$coef.names, x$J)
+        rownames(tb.treat) <- rownames(tb.control) <- rep(x$coef.names, x$J)
       }
-      tb[,1] <- x$par.treat
-      tb[,2] <- x$se.treat
-      tb[,3] <- x$par.control
-      tb[,4] <- x$se.control
+      tb.treat[,1] <- x$par.treat
+      tb.treat[,2] <- x$se.treat
+      tb.control[,1] <- x$par.control
+      tb.control[,2] <- x$se.control
       
-      print(as.matrix(tb))
+      cat("Sensitive item \n")
+      print(as.matrix(round(tb.treat,5)))
+      cat("\nControl items \n")
+      print(as.matrix(round(tb.control,5)))    
       
       summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
                          "with",x$resid.df,"degrees of freedom")
@@ -2849,30 +2860,42 @@ print.summary.ictreg <- function(x, ...){
       
       if (x$multi == FALSE) {
         if(x$constrained==F) {
-          cat(rep(" ", max(nchar(x$coef.names))+7), "Sensitive Item", rep(" ", 3),
-              "Control (psi0)", rep(" ",2), "Control (psi1)\n", sep="")
-          tb <- matrix(NA, ncol = 6, nrow = length(x$par.treat))
-          colnames(tb) <- rep(c("Est.", "S.E."), 3)
-          rownames(tb) <- x$coef.names
-          tb[,1] <- x$par.treat
-          tb[,2] <- x$se.treat
-          tb[,3] <- x$par.control.psi0
-          tb[,4] <- x$se.control.psi0
-          tb[,5] <- x$par.control.psi1
-          tb[,6] <- x$se.control.psi1
+          ##cat(rep(" ", max(nchar(x$coef.names))+7), "Sensitive Item", rep(" ", 3),
+          ##    "Control (psi0)", rep(" ",2), "Control (psi1)\n", sep="")
+          tb.treat <- tb.control.psi0 <- tb.control.psi1 <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+          colnames(tb.treat) <- colnames(tb.control.psi0) <- colnames(tb.control.psi1) <- c("Est.", "S.E.")
+          rownames(tb.treat) <- rownames(tb.control.psi0) <- rownames(tb.control.psi1) <- x$coef.names
+          tb.treat[,1] <- x$par.treat
+          tb.treat[,2] <- x$se.treat
+          tb.control.psi0[,1] <- x$par.control.psi0
+          tb.control.psi0[,2] <- x$se.control.psi0
+          tb.control.psi1[,1] <- x$par.control.psi1
+          tb.control.psi1[,2] <- x$se.control.psi1
+
+          cat("Sensitive item \n")
+          print(as.matrix(round(tb.treat, 5)))
+          cat("\nControl items (psi0) \n")
+          print(as.matrix(round(tb.control.psi0,5)))
+          cat("\nControl items (psi1) \n")
+          print(as.matrix(round(tb.control.psi1,5)))
+          
         } else {
-          cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
-              "Control Items \n", sep="")
-          tb <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
-          colnames(tb) <- rep(c("Est.", "S.E."), 2)
-          rownames(tb) <- x$coef.names
-          tb[,1] <- x$par.treat
-          tb[,2] <- x$se.treat
-          tb[,3] <- x$par.control
-          tb[,4] <- x$se.control
+          #cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
+          #    "Control Items \n", sep="")
+          tb.treat <- tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+          colnames(tb.treat) <- colnames(tb.control) <- c("Est.", "S.E.")
+          rownames(tb.treat) <- rownames(tb.control) <- x$coef.names
+          tb.treat[,1] <- x$par.treat
+          tb.treat[,2] <- x$se.treat
+          tb.control[,1] <- x$par.control
+          tb.control[,2] <- x$se.control
+          
+          cat("Sensitive item \n")
+          print(as.matrix(round(tb.treat,5)))
+          cat("\nControl items \n")
+          print(as.matrix(round(tb.control,5)))
+          
         }
-        
-        print(as.matrix(tb))
         
         if (x$overdispersed == TRUE)
           cat(paste("\nOverdispersion parameter: ",
@@ -2885,28 +2908,33 @@ print.summary.ictreg <- function(x, ...){
         if (x$method == "nls" | x$method == "lm")
           x$multi.condition <- "none"
         
-        cat(rep(" ", max(nchar(x$coef.names))+5), x$treat.labels[1], sep="")
-        for(k in 2:length(x$treat.values))
-          cat(rep(" ", 7), x$treat.labels[k], "\n", sep = "")
+        ##cat(rep(" ", max(nchar(x$coef.names))+5), x$treat.labels[1], sep="")
+        ##for(k in 2:length(x$treat.values))
+        ##  cat(rep(" ", 7), x$treat.labels[k], "\n", sep = "")
         
-        tb <- matrix(NA, ncol = length(x$treat.values)*2, nrow = length(x$par.treat[[1]]))
-        colnames(tb) <- rep(c("Est.", "S.E."), length(x$treat.values))
+        tb.treat <- tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.treat[[1]]))
+        colnames(tb.treat) <- c("Est.", "S.E.")
         if(x$multi.condition == "none")
-          rownames(tb) <- x$coef.names
+          rownames(tb.treat) <- x$coef.names
         else if (x$multi.condition == "level")
-          rownames(tb) <- c(x$coef.names, "y_i(0)")
+          rownames(tb.treat) <- c(x$coef.names, "y_i(0)")
         else if (x$multi.condition == "indicators")
-          rownames(tb) <- rep("varnames", length(x$par.treat[[1]]))
-        tb[,1] <- x$par.treat[[1]]
-        tb[,2] <- x$se.treat[[1]]
-        for (k in 2:length(x$treat.values)) {
-          tb[,((k-1)*2+1)] <- x$par.treat[[k]]
-          tb[,((k-1)*2+2)] <- x$se.treat[[k]]
+          rownames(tb.treat) <- rep("varnames", length(x$par.treat[[1]]))
+
+        for (k in 1:length(x$treat.values)) {
+
+          tb.treat[,1] <- x$par.treat[[k]]
+          tb.treat[,2] <- x$se.treat[[k]]
+
+          cat(paste("Sensitive item (", x$treat.labels[k], ")", "\n", sep = ""))
+          print(as.matrix(round(tb.treat,5)))
+   
+          cat("\n")
+
         }
-        
-        print(as.matrix(round(tb, 5)))
-        
-        cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Control\n", sep="")
+                
+        ##cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Control\n", sep="")
+        cat("Control items\n")
         tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
         colnames(tb.control) <- rep(c("Est.", "S.E."), 1)
         rownames(tb.control) <- x$coef.names
@@ -2922,7 +2950,7 @@ print.summary.ictreg <- function(x, ...){
       }
       
       if(x$method == "ml")
-        summ.stat <- paste("Log-likelihood:", x$llik)
+        summ.stat <- paste("Log-likelihood:", round(x$llik, 3))
       else if (x$method == "nls") {
         summ.stat <- "Residual standard error of "
         for (m in 1:length(x$treat.values)) {
@@ -2941,34 +2969,22 @@ print.summary.ictreg <- function(x, ...){
     
     if (x$boundary == TRUE & x$method == "ml" & x$design == "standard") {
       
-      if (x$ceiling == TRUE & x$floor == TRUE) {
-        cat("\n", rep(" ", max(nchar(x$coef.names))+16), "Ceiling", rep(" ", 17),
-            "Floor \n", sep="")
-        tb.boundary <- matrix(NA, ncol = 4, nrow = length(x$par.treat))
-        colnames(tb.boundary) <- rep(c("Est.", "S.E."), 2)
-        rownames(tb.boundary) <- x$coef.names
-        tb.boundary[,1] <- x$par.ceiling
-        tb.boundary[,2] <- x$se.ceiling
-        tb.boundary[,3] <- x$par.floor
-        tb.boundary[,4] <- x$se.floor
-      } else {
-        if (x$ceiling == TRUE)
-          cat("\n",rep(" ", max(nchar(x$coef.names))+13), "Ceiling\n", sep="")
-        else
-          cat("\n",rep(" ", max(nchar(x$coef.names))+16), "Floor\n", sep="")
-        tb.boundary <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
-        colnames(tb.boundary) <- rep(c("Est.", "S.E."), 1)
-        rownames(tb.boundary) <- x$coef.names
-        if (x$ceiling == TRUE) {
-          tb.boundary[,1] <- x$par.ceiling
-          tb.boundary[,2] <- x$se.ceiling
-        } else {
-          tb.boundary[,1] <- x$par.floor
-          tb.boundary[,2] <- x$se.floor
-        }
-      }
+      tb.ceiling <- tb.floor <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+      colnames(tb.ceiling) <- colnames(tb.floor) <- rep(c("Est.", "S.E."), 1)
+      rownames(tb.ceiling) <- rownames(tb.floor) <- x$coef.names
       
-      print(as.matrix(tb.boundary))
+      if (x$ceiling == TRUE) {
+        cat("\nCeiling\n", sep="")
+        tb.ceiling[,1] <- x$par.ceiling
+        tb.ceiling[,2] <- x$se.ceiling
+        print(as.matrix(round(tb.ceiling, 5)))
+      }
+      if (x$floor == TRUE) {
+        cat("\nFloor\n", sep="")
+        tb.floor[,1] <- x$par.floor
+        tb.floor[,2] <- x$se.floor
+        print(as.matrix(round(tb.floor, 5)))
+     }
       
       cat("\n",summ.stat,"\n\n", sep="")
       
@@ -3038,9 +3054,9 @@ print.summary.ictreg <- function(x, ...){
             liar.ceiling.se <- sd(liar.ceiling.sims)/sqrt(nrow(x$x))
             liar.ceiling.pop <- mean(liar.ceiling.pop.sims)
             liar.ceiling.pop.se <- sd(liar.ceiling.pop.sims)/sqrt(nrow(x$x))
-            cat("Ceiling liar cond. prob. est. = ",liar.ceiling, " (s.e. = ",
-                liar.ceiling.se, ")\nCeiling liar pop. prop. est. = ",liar.ceiling.pop, " (s.e. = ",
-                liar.ceiling.pop.se, ")\n\n", sep = "")
+            cat("Ceiling liar cond. prob. est. = ", round(liar.ceiling,5), " (s.e. = ",
+                round(liar.ceiling.se,5), ")\nCeiling liar pop. prop. est. = ", round(liar.ceiling.pop,5), " (s.e. = ",
+                round(liar.ceiling.pop.se,5), ")\n\n", sep = "")
           } 
           
           if(x$floor==TRUE) {
@@ -3048,9 +3064,9 @@ print.summary.ictreg <- function(x, ...){
             liar.floor.se <- sd(liar.floor.sims)/sqrt(nrow(x$x))
             liar.floor.pop <- mean(liar.floor.pop.sims)
             liar.floor.pop.se <- sd(liar.floor.pop.sims)/sqrt(nrow(x$x))
-            cat("Floor liar cond. prob. est. = ",liar.floor, " (s.e. = ",
-                liar.floor.se, ")\nFloor liar pop. prop. est. = ",liar.floor.pop, " (s.e. = ",
-                liar.floor.pop.se, ")\n\n", sep = "")
+            cat("Floor liar cond. prob. est. = ",round(liar.floor,5), " (s.e. = ",
+                round(liar.floor.se,5), ")\nFloor liar pop. prop. est. = ",round(liar.floor.pop,5), " (s.e. = ",
+                round(liar.floor.pop.se,5), ")\n\n", sep = "")
           } 
           
         } else {
@@ -3077,14 +3093,14 @@ print.summary.ictreg <- function(x, ...){
           if (x$ceiling == TRUE) {
             liar.ceiling <- sum(quX * hXJ * gX) / sum(hXJ * gX)
             liar.ceiling.pop <- (1/n) * sum(quX * hXJ * gX)
-            cat("Ceiling liar conditional probability:", liar.ceiling, "\n")
-            cat("Ceiling liar population proportion:", liar.ceiling.pop,"\n")
+            cat("Ceiling liar conditional probability:", round(liar.ceiling,5), "\n")
+            cat("Ceiling liar population proportion:", round(liar.ceiling.pop,5),"\n")
           }
           if (x$floor == TRUE) {
             liar.floor <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
             liar.floor.pop <- (1/n) * sum(qlX * hX0 * gX)
-            cat("Floor liar cond. prob. est. =", liar.floor, "\n")
-            cat("Floor liar pop. prop. est. =", liar.floor.pop,"\n")
+            cat("Floor liar cond. prob. est. =", round(liar.floor,5), "\n")
+            cat("Floor liar pop. prop. est. =", round(liar.floor.pop,5),"\n")
           }
           
           cat("\nNote: covariance matrix was not computationally singular,\n")
@@ -3100,7 +3116,7 @@ print.summary.ictreg <- function(x, ...){
 
     ## modified design
     
-    cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item \n", sep = "")
+    cat("Sensitive Item \n", sep = "")
     tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
     tb.treat <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
     colnames(tb.control) <- colnames(tb.treat) <- c("Est.", "S.E.")
@@ -3113,16 +3129,16 @@ print.summary.ictreg <- function(x, ...){
     tb.treat[,1] <- x$par.treat
     tb.treat[,2] <- x$se.treat
     
-    print(as.matrix(tb.treat))
+    print(as.matrix(round(tb.treat,5)))
     
-    cat("\n\n", rep("", max(nchar(x$coef.names))+8), "Control Items \n", sep="")
-    print(as.matrix(tb.control))
+    cat("Control Items \n", sep="")
+    print(as.matrix(round(tb.control,5)))
 
     if (x$method == "nls")
       summ.stat <- paste("Residual standard error:",signif(x$resid.se, digits=6),
                          "with",x$resid.df,"degrees of freedom")
     else if (x$method == "ml")
-      summ.stat <- paste("Log-likelihood:", x$llik)
+      summ.stat <- paste("Log-likelihood:", round(x$llik,5))
     
     cat("\n",summ.stat,"\n\n", sep="")
       

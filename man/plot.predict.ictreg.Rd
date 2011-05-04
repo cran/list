@@ -14,7 +14,7 @@ Function to plot predictions and confidence intervals of predictions from estima
 } 
 
 \arguments{ 
-\item{x}{object of class inheriting from "predict.ictreg". Either a single \code{predict} object from an \code{ictreg()} model fit, or a set of predict objects combined with \code{c()}.}
+\item{x}{object or set of objects of class inheriting from "predict.ictreg". Either a single object from an \code{ictreg()} model fit or multiple \code{predict} objects combined with the c() function. }
 \item{labels}{a vector of labels for each prediction, plotted at the x axis.}
 \item{axes.ict}{a switch indicating if custom plot axes are to be used with the user-provided estimate \code{labels}.}
 \item{xlim}{a title for the y axis.}
@@ -24,7 +24,7 @@ Function to plot predictions and confidence intervals of predictions from estima
 \item{axes}{an indicator for whether default plot axes are included.}
 \item{pch}{either an integer specifying a symbol or a single character to be used as the default in plotting points.}
 \item{xvec}{a vector of x values at which the proportions will be printed.}
-\item{...}{other graphical parameters for the \code{plot()} command are accepted.}
+\item{...}{Other graphical parameters to be passed to the \code{plot()} command are accepted.}
 }
 
 \details{\code{plot.predict.ictreg} produces plots with estimated population proportions of respondents answering the sensitive item in a list experiment in the affirmative, with confidence intervals. 
@@ -79,8 +79,20 @@ avg.pred.nonsouth.mle <- predict(ml.constrained.results,
 
 # A plot of a single estimate and its confidence interval
 plot(avg.pred.south.mle, labels = "South")
+
 # A  plot of the two estimates and their confidence intervals
+# use c() to combine more than one predict object for plotting
 plot(c(avg.pred.south.mle, avg.pred.nonsouth.mle), labels = c("South", "Non-South"))
+
+# The difference option can also be used to simultaneously
+# calculate separate estimates of the two sub-groups
+# and the estimated difference. This can also be plotted.
+
+avg.pred.diff.mle <- predict(ml.constrained.results, 
+   newdata = race.south, newdata.diff = race.nonsouth,
+   se.fit = TRUE, avg = TRUE)
+
+plot(avg.pred.diff.mle)
 
 # Social desirability bias plots
 

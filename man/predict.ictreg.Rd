@@ -98,8 +98,11 @@ lm.results <- ictreg(y ~ south + age + male + college,
 # South and the the North of the US for the lm model, 
 # replicating the estimates presented in Figure 1, Imai (2010)
 
-avg.pred.lm <- predict(lm.results, newdata = race.south, 
-   newdata.diff = race.nonsouth, se.fit = TRUE, avg = TRUE)
+avg.pred.south.lm <- predict(lm.results, newdata = race.south, 
+   se.fit = TRUE, avg = TRUE)
+
+avg.pred.nonsouth.lm <- predict(lm.results, newdata = race.nonsouth, 
+   se.fit = TRUE, avg = TRUE)
 
 # Fit two-step non-linear least squares regression
 
@@ -123,7 +126,7 @@ ml.constrained.results <- ictreg(y ~ south + age + male + college,
 # and the the North of the US for the MLE model, replicating the 
 # estimates presented in Figure 1, Imai (2010)
 
-avg.pred.south.mle <- predict(ml.constrained.results, 
+avg.pred.diff.mle <- predict(ml.constrained.results, 
    newdata = race.south, newdata.diff = race.nonsouth,
    se.fit = TRUE, avg = TRUE)
 

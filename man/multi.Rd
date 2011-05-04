@@ -18,6 +18,8 @@ where the last item is presented only with the treatment group and the control l
 The second sensitive item replaces item (4) with
      \verb{ (4) "black leaders asking the government for affirmative action." }
 
+Treatment status one (treat == 1) is the "black family" item and status two is the "affirmative action" item. 
+
 }
 
 \usage{data(race)}
@@ -30,7 +32,7 @@ The second sensitive item replaces item (4) with
     male \tab numeric \tab whether or not a respondent is male \tab 0 - 1 \cr
     college \tab numeric \tab whether or not a respondent attended some college \tab 0 - 1 \cr
     age \tab numeric \tab age of a respondent divided by 10 \cr
-    treat \tab numeric \tab treatment status \tab 0 - 1 
+    treat \tab numeric \tab treatment status \tab 0 - 2
   }
 }
 

@@ -6,7 +6,6 @@ citEntry(entry = "misc",
                    as.person("Kosuke Imai")),
   howpublished = "Available at The Comprehensive R Archive Network (CRAN)",
   year         = "2010",
-  note         = "Forthcoming",
   url          = "http://CRAN.R-project.org/package=list",
 
   textVersion  =

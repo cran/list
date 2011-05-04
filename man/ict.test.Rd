@@ -5,7 +5,8 @@
 Function to conduct a statistical test with the null hypothesis that there is no "design effect" in a list experiment, a failure of the experiment.
 } 
 \usage{
-ict.test(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRUE, pi.table = TRUE)
+ict.test(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRUE, 
+         pi.table = TRUE)
 } 
 
 \arguments{ 
