@@ -7,7 +7,7 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \usage{
 
   \method{predict}{ictregBayes}(object, newdata, newdata.diff, direct.glm, se.fit = FALSE, 
- interval = c("none","confidence"), level = .95, ...) 
+ interval = c("none","confidence"), level = .95, sensitive.item, ...) 
 
 } 
 
@@ -19,6 +19,7 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \item{se.fit}{A switch indicating if standard errors are required.}
 \item{interval}{Type of interval calculation.}
 \item{level}{Significance level for confidence intervals.}
+\item{sensitive.item}{For the multiple sensitive item design, the integer indicating which sensitive item coefficients will be used for prediction.}
 \item{...}{further arguments to be passed to or from other methods.}
 }
 
@@ -28,7 +29,9 @@ The mean prediction across all observations in the dataset is calculated, and if
 
 Two additional types of mean prediction are also available. The first, if a \code{newdata.diff} data frame is provided by the user, calculates the mean predicted values across two datasets, as well as the mean difference in predicted value. Standard errors and confidence intervals can also be added. For difference prediction, \code{avg} must be set to \code{TRUE}.
 
-The second type of prediction, triggered if a \code{direct.glm} object is provided by the user, calculates the mean difference in prediction between predictions based on an \code{ictreg} fit and a \code{glm} fit from a direct survey item on the sensitive question. This is defined as the revealed social desirability bias in Blair and Imai (2010). 
+The second type of prediction, triggered if a \code{direct.glm} object is provided by the user, calculates the mean difference in prediction between predictions based on an \code{ictreg} fit and a \code{glm} fit from a direct survey item on the sensitive question. This is defined as the revealed social desirability bias in Blair and Imai (2010).
+
+In the multiple sensitive item design, prediction can only be based on the coefficients from one of the sensitive item fits. The \code{sensitive.item} option allows you to specify which is used, using integers from 1 to the number of sensitive items.
 
 }
 
@@ -62,7 +65,8 @@ data(race)
 
 \dontrun{
 
-bayes.fit <- ictregBayes(y ~ age + college + male + south, data = multi, treat = "treat", delta.tune = diag(.002, 5), psi.tune = diag(.00025, 5))
+bayes.fit <- ictregBayes(y ~ age + college + male + south, data = multi, 
+  treat = "treat", delta.tune = diag(.002, 5), psi.tune = diag(.00025, 5))
 
 bayes.predict <- predict(bayes.fit, interval = "confidence", se.fit = TRUE)
 

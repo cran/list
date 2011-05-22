@@ -1,6 +1,6 @@
 Package: list
-Version: 4.0
-Date: 2011-5-4
+Version: 4.1
+Date: 2011-5-22
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
 Author: Graeme Blair <gblair@Princeton.edu>, Kosuke Imai
@@ -19,11 +19,11 @@ Description: list is a publicly available R package that allows
         count technique and is an alternative to the commonly used
         randomized response method. The package implements the methods
         developed by Imai (2010) and Blair and Imai (2010), and a
-        Bayesian MCMC implementation of regression for the standard
-        list experiment design.
+        Bayesian MCMC implementation of regression for the standard and
+        multiple sensitive item list experiment designs.
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
-Packaged: 2011-05-04 14:26:18 UTC; gblair
+Packaged: 2011-05-23 20:36:51 UTC; gblair
 Repository: CRAN
-Date/Publication: 2011-05-04 15:24:20
+Date/Publication: 2011-05-24 19:11:13
