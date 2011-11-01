@@ -88,13 +88,23 @@ double*** doubleMatrix3D(int x, int y, int z) {
 void PdoubleMatrix3D(double ***dmatrix3D, int x, int y, int z) {
   int i, j, k;
   for (i = 0; i < x; i++) {
-    Rprintf("Fist dimension = %5d\n", i);
+    Rprintf("First dimension = %5d\n", i);
     for (j = 0; j < y; j++) {
       for (k = 0; k < z; k++)
 	Rprintf("%14g", dmatrix3D[i][j][k]);
       Rprintf("\n");
     }
   }
+}
+
+double**** doubleMatrix4D(int x, int y, int z, int zz) {
+  int i;
+  double ****dM4 = (double ****)malloc(x * sizeof(double ***));
+  if (!dM4) 
+    error("Out of memory error in doubleMatrix4D\n");
+  for (i = 0; i < x; i++) 
+    dM4[i] = doubleMatrix3D(y, z, zz);
+  return dM4;
 }
 
 long* longArray(int num) {
@@ -122,6 +132,13 @@ void Free3DMatrix(double ***Matrix, int index, int row) {
   int i;
   for (i = 0; i < index; i++)
     FreeMatrix(Matrix[i], row);
+  free(Matrix);
+}
+
+void Free4DMatrix(double ****Matrix, int index, int index1, int row) {
+  int i;
+  for (i = 0; i < index; i++)
+    Free3DMatrix(Matrix[i], index1, row);
   free(Matrix);
 }
 		

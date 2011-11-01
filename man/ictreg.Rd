@@ -63,6 +63,9 @@ The modified design and the multiple sensitive item design are automatically det
 \item{x}{the design matrix}
 \item{y}{the response vector}
 \item{treat}{the vector indicating treatment status}
+\item{J}{Number of non-sensitive (control) survey items set by the user or detected.}
+\item{treat.labels}{a vector of the names used by the \code{treat} vector for the sensitive item or items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.} 
+\item{control.label}{a vector of the names used by the \code{treat} vector for the control items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.}
 
 For the floor/ceiling models, several additional output objects are included:
 \item{ceiling}{call indicating whether the assumption of no ceiling liars is relaxed, and ceiling parameters are estimated}
@@ -74,10 +77,7 @@ For the floor/ceiling models, several additional output objects are included:
 \item{coef.names.ceiling}{variable names from the ceiling liar model fit, if applicable}
 \item{coef.names.floor}{variable names from the floor liar model fit, if applicable}
 
-For the multiple sensitive item design, the \code{par.treat} and \code{se.treat} vectors are returned as lists of vectors, one for each sensitive item. An additional output object is also included:
-\item{treat.values}{a vector of the values used in the \code{treat} vector for the sensitive items. Does not include the value for the control status}
-\item{treat.labels}{a vector of the names used by the \code{treat} vector for the sensitive items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.} 
-
+For the multiple sensitive item design, the \code{par.treat} and \code{se.treat} vectors are returned as lists of vectors, one for each sensitive item.
 
 For the unconstrained model, the \code{par.control} and \code{se.control} output is replaced by:
 \item{par.control.phi0}{point estimate for effect of covariate on item count fitted on treatment group}
@@ -93,13 +93,13 @@ Depending upon the estimator requested by the user, model fit statistics are als
 }
 
 \references{
-Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments." 
-  Technical Report, Department of Politics, Princeton University. 
-  available at \url{http://imai.princeton.edu/research/listP.html}
+Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
+  Political Analysis. Forthcoming. available at 
+  \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
-  Count Technique.''  Journal of the American Statistical Association,
-  Forthcoming. available at
+  Count Technique.''  Journal of the American Statistical Association, 
+  Vol. 106, No. 494 (June), pp. 407-416. available at
   \url{http://imai.princeton.edu/research/list.html}}
 
 \author{Graeme Blair, Princeton University,

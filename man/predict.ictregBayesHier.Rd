@@ -1,12 +1,12 @@
-\name{predict.ictregBayes} 
-\alias{predict.ictregBayes}
-\title{Predict Method for the Item Count Technique with Bayesian MCMC} 
+\name{predict.ictregBayesHier} 
+\alias{predict.ictregBayesHier}
+\title{Predict Method for the Item Count Technique with Bayesian Hierarchical Regression} 
 \description{ 
-Function to calculate predictions and uncertainties of predictions from estimates from multivariate regression analysis of survey data with the item count technique.
+Function to calculate predictions and uncertainties of predictions from estimates from hierarchical multivariate regression analysis of survey data with the item count technique.
 } 
 \usage{
 
-  \method{predict}{ictregBayes}(object, newdata, newdata.diff, direct.glm, se.fit = FALSE, 
+  \method{predict}{ictregBayesHier}(object, newdata, se.fit = FALSE, 
  interval = c("none","confidence"), level = .95, sensitive.item, ...) 
 
 } 
@@ -14,8 +14,6 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \arguments{ 
 \item{object}{Object of class inheriting from "ictregBayes" or "ictregBayesMulti"}
 \item{newdata}{An optional data frame containing data that will be used to make predictions from. If omitted, the data used to fit the regression are used.}
-\item{newdata.diff}{An optional data frame used to compare predictions with predictions from the data in the provided newdata data frame.}
-\item{direct.glm}{A glm object from a logistic binomial regression predicting responses to a direct survey item regarding the sensitive item. The predictions from the ictreg object are compared to the predictions based on this glm object.}
 \item{se.fit}{A switch indicating if standard errors are required.}
 \item{interval}{Type of interval calculation.}
 \item{level}{Significance level for confidence intervals.}
@@ -23,13 +21,9 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \item{...}{further arguments to be passed to or from other methods.}
 }
 
-\details{\code{predict.ictregBayes} produces predicted values, obtained by evaluating the regression function in the frame newdata (which defaults to \code{model.frame(object)}. If the logical \code{se.fit} is \code{TRUE}, standard errors of the predictions are calculated. Setting \code{interval} specifies computation of confidence intervals at the specified level or no intervals.
+\details{\code{predict.ictregBayesHier} produces predicted values, obtained by evaluating the regression function in the frame newdata (which defaults to \code{model.frame(object)}. If the logical \code{se.fit} is \code{TRUE}, standard errors of the predictions are calculated. Setting \code{interval} specifies computation of confidence intervals at the specified level or no intervals.
 
 The mean prediction across all observations in the dataset is calculated, and if the \code{se.fit} option is set to \code{TRUE} a standard error for this mean estimate will be provided. The \code{interval} option will output confidence intervals instead of only the point estimate if set to \code{TRUE}.
-
-Two additional types of mean prediction are also available. The first, if a \code{newdata.diff} data frame is provided by the user, calculates the mean predicted values across two datasets, as well as the mean difference in predicted value. Standard errors and confidence intervals can also be added. For difference prediction, \code{avg} must be set to \code{TRUE}.
-
-The second type of prediction, triggered if a \code{direct.glm} object is provided by the user, calculates the mean difference in prediction between predictions based on an \code{ictreg} fit and a \code{glm} fit from a direct survey item on the sensitive question. This is defined as the revealed social desirability bias in Blair and Imai (2010).
 
 In the multiple sensitive item design, prediction can only be based on the coefficients from one of the sensitive item fits. The \code{sensitive.item} option allows you to specify which is used, using integers from 1 to the number of sensitive items.
 
@@ -65,8 +59,21 @@ data(race)
 
 \dontrun{
 
-bayes.fit <- ictregBayes(y ~ age + college + male + south, data = multi, 
-  treat = "treat", delta.tune = diag(.002, 5), psi.tune = diag(.00025, 5))
+mle.estimates.multi <- ictreg(y ~ male + college, data = multi,
+  constrained = TRUE)
+
+draws <- mvrnorm(n = 3, mu = coef(mle.estimates.multi), 
+  Sigma = vcov(mle.estimates.multi) * 9)
+
+bayes.fit <- ictregBayesHier(y ~ male + college,
+                        formula.level.2 = ~ 1, 
+                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
+                        delta.start.level.1 = list(draws[1, 8:9], draws[1, 2:3], draws[1, 5:6]),
+                        data = multi, treat = "treat",
+                        delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
+                        alpha.tune = rep(0.001, length(unique(multi$state))),
+                        J = 3, group.level.2 = "state",
+                        n.draws = 100, burnin = 10, thin = 1)
 
 bayes.predict <- predict(bayes.fit, interval = "confidence", se.fit = TRUE)
 

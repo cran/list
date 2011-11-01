@@ -25,9 +25,9 @@ ict.test(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRUE,
 \value{\code{ict.test} returns a numerical scalar with the Bonferroni-corrected minimum p-value of the statistical test.}
 
 \references{
-Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments." 
-Technical Report, Department of Politics, Princeton University. 
-available at \url{http://imai.princeton.edu/research/listP.html}
+Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
+  Political Analysis. Forthcoming. available at 
+  \url{http://imai.princeton.edu/research/listP.html}
 }
 
 \author{Graeme Blair, Princeton University,

@@ -7,7 +7,7 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \usage{
 
   \method{predict}{ictreg}(object, newdata, newdata.diff, direct.glm, se.fit = FALSE, 
- interval = c("none","confidence"), level = .95, avg = FALSE, ...) 
+ interval = c("none","confidence"), level = .95, avg = FALSE, sensitive.item, ...) 
 
 } 
 
@@ -20,6 +20,7 @@ Function to calculate predictions and uncertainties of predictions from estimate
 \item{interval}{Type of interval calculation.}
 \item{level}{Significance level for confidence intervals.}
 \item{avg}{A switch indicating if the mean prediction and associated statistics across all obserations in the dataframe will be returned instead of predictions for each observation.}
+\item{sensitive.item}{For multiple sensitive item design list experiments, specify which sensitive item fits to use for predictions. Default is the first sensitive item.}
 \item{...}{further arguments to be passed to or from other methods.}
 }
 
@@ -44,13 +45,13 @@ The second type of prediction, triggered if a \code{direct.glm} object is provid
 
 
 \references{
-Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments." 
-  Technical Report, Department of Politics, Princeton University. 
-  available at \url{http://imai.princeton.edu/research/listP.html}
+Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
+  Political Analysis. Forthcoming. available at 
+  \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
-  Count Technique.''  Journal of the American Statistical Association,
-  Forthcoming. available at
+  Count Technique.''  Journal of the American Statistical Association, 
+  Vol. 106, No. 494 (June), pp. 407-416. available at
   \url{http://imai.princeton.edu/research/list.html}}
 
   \author{Graeme Blair, Princeton University,

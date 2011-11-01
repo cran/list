@@ -6,13 +6,14 @@ Function to summarize results from list experiment regression based on the ictre
 } 
 \usage{
 
-  \method{summary}{ictreg}(object, boundary.proportions = FALSE, ...) 
+  \method{summary}{ictreg}(object, boundary.proportions = FALSE, n.draws = 10000, ...) 
 
 } 
 
 \arguments{ 
 \item{object}{Object of class inheriting from "ictreg"}
 \item{boundary.proportions}{A switch indicating whether, for models with ceiling effects, floor effects, or both (indicated by the \code{floor = TRUE}, \code{ceiling = TRUE} options in ictreg), the conditional probability of lying and the population proportions of liars are calculated.}
+\item{n.draws}{For quasi-Bayesian approximation based predictions, specify the number of Monte Carlo draws.}
 \item{...}{further arguments to be passed to or from other methods.}
 }
 
@@ -27,13 +28,13 @@ The conditional probability of lying for the ceiling model is the probability th
 \seealso{\code{\link{ictreg}} for model fitting}
 
 \references{
-Blair, Graeme and Kosuke Imai. (2010) ``Statistical Analysis of List Experiments." 
-  Technical Report, Department of Politics, Princeton University. 
-  available at \url{http://imai.princeton.edu/research/listP.html}
+Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
+  Political Analysis. Forthcoming. available at 
+  \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
-  Count Technique.''  Journal of the American Statistical Association,
-  Forthcoming. available at
+  Count Technique.''  Journal of the American Statistical Association, 
+  Vol. 106, No. 494 (June), pp. 407-416. available at
   \url{http://imai.princeton.edu/research/list.html}}
 
 \author{Graeme Blair, Princeton University,

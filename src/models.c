@@ -3,6 +3,7 @@
 #include <stdio.h>      
 #include <math.h>
 #include <Rmath.h>
+#include <R_ext/Utils.h>
 #include <R.h>
 #include "vector.h"
 #include "subroutines.h"
@@ -29,6 +30,8 @@ void ictregBinom(int *Y,             /* outcome vector */
 		 double *deltaVar,   /* proposal variance for delta */
 		 double *psiVar,     /* proposal variance for psi */
 		 int *unconst,       /* is this unconstrained model? */
+		 int *ceiling,       /* ceiling effects */
+		 int *floor,         /* floor effects */
 		 int *burnin,        /* number of burnins */
 		 int *keep,          /* keep every *th draw */
 		 int *verbose,       /* want to print progress? */
@@ -42,13 +45,16 @@ void ictregBinom(int *Y,             /* outcome vector */
   int *deltaCounter = intArray(1);  /* acceptance ratio for delta */
   int *psiCounter = intArray(1);    /* acceptance ratio for psi */
   int *psi1Counter = intArray(1);   /* acceptance ratio for psi1 */
-  double dtemp1, dtemp2;
+  double dtemp, dtemp1, dtemp2, dtemp3;
 
   /* intercept only model */
   if (*unconst == 2) {
     n_covp = *n_cov + 1;
   } else {
     n_covp = *n_cov;
+  }
+  if (((*ceiling == 1) || (*floor == 1)) && (*unconst > 0)) {
+    error("Only constrained models are allowed with ceiling and floor effects\n");
   }
 
   /** get random seed **/
@@ -129,12 +135,21 @@ void ictregBinom(int *Y,             /* outcome vector */
   for (i = 0; i < *n_samp; i++) {
     if ((treat[i] == 1) && (Y[i] == (*J+1))) {
       Zstar[i] = 1;
-      Y0[i] = *J;
+      if (*ceiling == 1) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");
+      }
     } else if ((treat[i] == 1) && (Y[i] == 0)) {
       Zstar[i] = 0;
-      Y0[i] = 0;
+      if (*floor == 1) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
     } else { /* random draw if not known */
       Zstar[i] = (unif_rand() < 0.5);
+    }
+    if (Zstar[i] == 1) {
+      Y0[i] = Y[i] - treat[i];
+    } else {
+      Y0[i] = Y[i];
     }
     if (*unconst == 2) 
       X[i][n_covp-1] = Zstar[i];
@@ -161,20 +176,52 @@ void ictregBinom(int *Y,             /* outcome vector */
 	if (*unconst == 2) {
 	  Xpsi1[i] = Xpsi[i] + psi[n_covp-1];
 	}
-	if (*unconst > 0) {
-	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
-		       dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi1[i])), 1));
-	} else {
-	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
-		       dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	}
-	dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
-	  Zstar[i] = 1;
-	  Y0[i] = Y[i] - treat[i];
-	} else { 
-	  Zstar[i] = 0;
-	  Y0[i] = Y[i];
+	if ((*ceiling == 1) && (treat[i] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  dtemp = unif_rand();
+	  if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = *J-1;
+	  } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = *J;
+	  } else {
+	    Zstar[i] = 0;
+	    Y0[i] = *J;
+	  }
+	} else if ((*floor == 1) && (treat[i] == 1) && (Y[i] == 1)) { /* floor effects */
+	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1));	  
+	  dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp = unif_rand();
+	  if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = 0;
+	  } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 0;
+	    Y0[i] = 1;
+	  } else {
+	    Zstar[i] = 0;
+	    Y0[i] = 0;
+	  }
+	} else { /* no ceiling and floor effects */
+	  if (*unconst > 0) {
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi1[i])), 1));
+	  } else {
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  }
+	  dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	    Zstar[i] = 1;
+	    Y0[i] = Y[i] - treat[i];
+	  } else { 
+	    Zstar[i] = 0;
+	    Y0[i] = Y[i];
+	  }
 	}
 	if (*unconst == 1) {
 	  if (Zstar[i] == 1) {
@@ -236,17 +283,17 @@ void ictregBinom(int *Y,             /* outcome vector */
     /* printing */
     if (*verbose) {
       if (main_loop == itempP) {
-	Rprintf("%3d percent done.\n", progress*10);
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
 	itempP += ftrunc((double) *n_draws/10); 
 	progress++;
-	Rprintf("    Metropolis acceptance ratio (sensitive): %3g\n", 
+	Rprintf("      Sensitive item model: %3g\n", 
 		fprec((double) *deltaCounter / (double) (main_loop + 1), 3));
 	if (*unconst == 1) {
-	  Rprintf("    Metropolis acceptance ratios (control): %3g (psi)  %3g (psi1)\n", 
+	  Rprintf("      Control items model: %3g (psi)  %3g (psi1)\n", 
 		  fprec((double) *psiCounter / (double) (main_loop + 1), 3),
 		  fprec((double) *psi1Counter / (double) (main_loop + 1), 3));
 	} else {
-	  Rprintf("    Metropolis acceptance ratio (control): %3g\n", 
+	  Rprintf("      Control items model: %3g\n", 
 		  fprec((double) *psiCounter / (double) (main_loop + 1), 3));
 	}
 	R_FlushConsole(); 
@@ -307,6 +354,8 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
 		      double *deltaVar,   /* proposal variance for delta */
 		      double *psiVar,     /* proposal variance for psi */
 		      int *unconst,       /* is this unconstrained model? */
+		      int *ceiling,       /* ceiling effects */
+		      int *floor,         /* floor effects */
 		      int *burnin,        /* number of burnins */
 		      int *keep,          /* keep every *th draw */
 		      int *verbose,       /* want to print progress? */
@@ -318,7 +367,8 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
   int itempK = 1;
   int **deltaCounter = intMatrix(*tmax, 1);  /* acceptance ratio for delta */
   int *psiCounter = intArray(1);        /* acceptance ratio for psi */
-  double dtemp1, dtemp2;
+  int *treatSum = intArray(*tmax);
+  double dtemp, dtemp1, dtemp2, dtemp3;
 
   /** get random seed **/
   GetRNGstate();
@@ -329,6 +379,16 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     n_dim = *n_cov + 1;
   }
 
+  if (*unconst > 0) {
+    itemp = 0;
+    for (i = 0; i < *tmax; i++) {
+      itemp += ceiling[i];
+      itemp += floor[i];
+    }
+    if (itemp > 0)
+      error("Only constrained models are allowed with ceiling and floor effects\n");
+  }
+
   double **deltaMatrix = doubleMatrix(*tmax, n_dim);
 
   itemp = 0; 
@@ -336,26 +396,37 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     for (j = 0; j < n_dim; j++)
       deltaMatrix[i][j] = delta[itemp++];
 
-  /* PdoubleMatrix(deltaMatrix, *tmax, n_dim);
-     R_FlushConsole(); */
-
   /** Data **/
-  int *Zstar = intArray(*n_samp);
+  int **Zstar = intMatrix(*tmax, *n_samp);
   int *Y0 = intArray(*n_samp);
-  int *Zstartemp = intArray(*n_samp);
   double *Xdelta = doubleArray(*n_samp);
   double *Xdelta1 = doubleArray(*n_samp);
   double *Xpsi = doubleArray(*n_samp);
   double **X = doubleMatrix(*n_samp, n_dim); 
-  double **Xtemp = doubleMatrix(*n_samp, n_dim); 
+  double ***Xtemp = doubleMatrix3D(*tmax, *n_samp, n_dim); 
   
   itemp = 0;
   for (j = 0; j < *n_cov; j++)
     for (i = 0; i < *n_samp; i++)
       X[i][j] = Xall[itemp++];
 
-  for (i = 0; i < *n_samp; i++)
+  for (i = 0; i < *tmax; i++)
+    treatSum[i] = 0;
+
+  for (i = 0; i < *n_samp; i++) {
     Y0[i] = Y[i];
+    if (treat[i] > 0) {
+      for (j = 0; j < *n_cov; j++) 
+	Xtemp[treat[i]-1][treatSum[treat[i]-1]][j] = X[i][j];
+      treatSum[treat[i]-1]++;
+      if ((ceiling[treat[i]-1] == 1) && (Y[i] == (*J+1))) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");	
+      }
+      if ((floor[treat[i]-1] == 1) && (Y[i] == 0)) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    }
+  }
 
   /** Prior **/
   double ***A0delta = doubleMatrix3D(*tmax, n_dim, n_dim);
@@ -378,11 +449,6 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     for (j = 0; j < n_dim; j++)
       m0delta[i][j] = delta0[itemp++];
 
-  /* PdoubleMatrix3D(A0delta, *tmax, n_dim, n_dim);
-     PdoubleMatrix(m0delta, *tmax, n_dim); 
-     PdoubleMatrix(A0psi, *n_cov, *n_cov);
-     R_FlushConsole(); */
-
   /** Proposal precisoin **/
   double ***deltaPro = doubleMatrix3D(*tmax, n_dim, n_dim);
   double **psiPro = doubleMatrix(*n_cov, *n_cov);
@@ -398,10 +464,6 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     for (i = 0; i < *n_cov; i++)
       psiPro[i][j] = psiVar[itemp++];
 
-  /* PdoubleMatrix3D(deltaPro, *tmax, n_dim, n_dim); 
-     PdoubleMatrix(psiPro, *n_cov, *n_cov);
-     R_FlushConsole(); */
-
   /** MCMC **/
   itempS = 0; psiCounter[0] = 0; 
   for (i = 0; i < *tmax; i++) {
@@ -411,14 +473,16 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     Rprintf("\n *** Starting posterior sampling... *** \n");
   }
   for (main_loop = 0; main_loop < *n_draws; main_loop++) {
+    for (j = 0; j < *tmax; j++)
+      treatSum[j] = 0;
     for (i = 0; i < *n_samp; i++) {
       /* Sample Zstar for treated units */
       if (treat[i] > 0) {
 	if (Y[i] == (*J+1)) {
-	  Zstar[i] = 1;
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
 	  Y0[i] = *J;
 	} else if (Y[i] == 0) {
-	  Zstar[i] = 0;
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
 	  Y0[i] = 0;
 	} else {
 	  Xdelta[i] = 0;  Xpsi[i] = 0;  
@@ -426,45 +490,68 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
 	    Xdelta[i] += X[i][j] * deltaMatrix[treat[i]-1][j];
 	    Xpsi[i] += X[i][j] * psi[j];
 	  }
-	  if (*unconst) {
-	    Xdelta1[i] = Xdelta[i] + (Y[i] - 1) * deltaMatrix[treat[i]-1][*n_cov];
-	    Xdelta[i] += Y[i] * deltaMatrix[treat[i]-1][*n_cov];
-	    dtemp1 = exp(Xdelta1[i] - log1p(exp(Xdelta1[i])) + 
-			 dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  if ((ceiling[treat[i]-1] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J-1;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = *J;
+	    }
+	  } else if ((floor[treat[i]-1] == 1) && (Y[i] == 1)) { /* floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = 0;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 1;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 0;
+	    }
+	  } else { /* no ceiling and floor effects */
+	    if (*unconst) {
+	      Xdelta1[i] = Xdelta[i] + (Y[i] - 1) * deltaMatrix[treat[i]-1][*n_cov];
+	      Xdelta[i] += Y[i] * deltaMatrix[treat[i]-1][*n_cov];
+	      dtemp1 = exp(Xdelta1[i] - log1p(exp(Xdelta1[i])) + 
+			   dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    } else {
+	      dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			   dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    } 
 	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	  } else {
-	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
-			 dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	  } 
-	  if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
-	    Zstar[i] = 1;
-	    Y0[i] = Y[i] - 1;
-	  } else { 
-	    Zstar[i] = 0;
-	    Y0[i] = Y[i];
+	    if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = Y[i] - 1;
+	    } else { 
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = Y[i];
+	    }
 	  }
 	}
 	if (*unconst) {
 	  X[i][*n_cov] = Y0[i];
+	  Xtemp[treat[i]-1][treatSum[treat[i]-1]][*n_cov] = Y0[i];
 	}
+	treatSum[treat[i]-1]++;
       }
     }
 
     /* Sample delta */
-    for (k = 1; k <= *tmax; k++) {
-      itemp = 0;
-      for (i = 0; i < *n_samp; i++) {
-	if (treat[i] == k) {
-	  Zstartemp[itemp] = Zstar[i];
-	  for (j = 0; j < n_dim; j++) {
-	    Xtemp[itemp][j] = X[i][j];
-	  }
-	  itemp++;
-	}
-      }
-      BinomLogit(Zstartemp, Xtemp, deltaMatrix[k-1], itemp, 1, n_dim, 
-		 m0delta[k-1], A0delta[k-1], deltaPro[k-1], 1, deltaCounter[k-1]);
+    for (k = 0; k < *tmax; k++) {
+      BinomLogit(Zstar[k], Xtemp[k], deltaMatrix[k], treatSum[k], 1, n_dim, 
+		 m0delta[k], A0delta[k], deltaPro[k], 1, deltaCounter[k]);
     }
 
     /* Sample psi */
@@ -494,15 +581,15 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
     /* printing */
     if (*verbose) {
       if (main_loop == itempP) {
-	Rprintf("%3d percent done.\n", progress*10);
+	Rprintf("%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
 	itempP += ftrunc((double) *n_draws/10); 
 	progress++;
-	Rprintf("    Metropolis acceptance ratio (sensitive): %3g", 
+	Rprintf("      Sensitive item model: %3g", 
 		fprec((double) deltaCounter[0][0] / (double) (main_loop + 1), 3));
 	for (k = 1; k < *tmax; k++) {
 	  Rprintf(" %3g", fprec((double) deltaCounter[k][0] / (double) (main_loop + 1), 3));
 	}
-	Rprintf("\n    Metropolis acceptance ratio (control): %3g\n", 
+	Rprintf("\n    Control items model: %3g\n", 
 		fprec((double) *psiCounter / (double) (main_loop + 1), 3));
 	R_FlushConsole(); 
       }
@@ -517,17 +604,17 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
  
   /** freeing memory **/
   free(psiCounter);
-  free(Zstar);
+  free(treatSum);
   free(Y0);
-  free(Zstartemp);
   free(Xdelta);
   free(Xdelta1);
   free(Xpsi);
-  free(m0delta);
+  FreeMatrix(m0delta, *tmax);
   FreeintMatrix(deltaCounter, *tmax);
   FreeMatrix(deltaMatrix, *tmax);
+  FreeintMatrix(Zstar, *tmax);
   FreeMatrix(X, *n_samp);
-  FreeMatrix(Xtemp, *n_samp);
+  Free3DMatrix(Xtemp, *tmax, *n_samp);
   Free3DMatrix(A0delta, *tmax, n_dim);
   FreeMatrix(A0psi, *n_cov);
   Free3DMatrix(deltaPro, *tmax, n_dim);
@@ -538,7 +625,7 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
 /** 
   Item Count Technique Binomial Mixed Effects Regression for the Standard Design
   
-  for now, constrained model only
+  unconst = 0 or 2 is allowed
 
 **/
 
@@ -557,6 +644,9 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 		      double *A0psiAll,   /* prior precision for psi */
 		      double *deltaVar,   /* proposal variance for delta (fixed effects) */
 		      double *psiVar,     /* proposal variance for psi (fixed effects) */
+		      int *unconst,       /* is this unconstrained model? */
+		      int *ceiling,       /* ceiling effects? */
+		      int *floor,         /* floor effects? */
 		      int *grp,           /* group indicator, 0, 1, ..., G-1 */
 		      int *n_grp,         /* number of groups, G */
 		      int *max_samp_grp,  /* max # of obs within each group */
@@ -576,7 +666,7 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 		      double *allresults  /* storage for all results */
 		      ) {
 
-  int i, j, k, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
+  int i, j, k, n_covp, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
   int progress = 1;
   int itempK = 1;
   int *deltaCounter = intArray(1);  /* acceptance ratio for delta */
@@ -584,7 +674,17 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
   int *gammaCounter = intArray(*n_grp);
   int *zetaCounter = intArray(*n_grp);
   int *vitemp = intArray(*n_grp);
-  double dtemp1, dtemp2;
+  double dtemp, dtemp1, dtemp2, dtemp3;
+
+  /* intercept only model */
+  if (*unconst == 2) {
+    n_covp = *n_cov + 1;
+  } else {
+    n_covp = *n_cov;
+  }
+  if (((*ceiling == 1) || (*floor == 1)) && (*unconst > 0)) {
+    error("Only constrained models are allowed with ceiling and floor effects\n");
+  }
 
   /** get random seed **/
   GetRNGstate();
@@ -593,19 +693,23 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
   double **gamma = doubleMatrix(*n_grp, *n_rand); /* sensitive */
   double *gamma0 = doubleArray(*n_rand);
   double **Sigma = doubleMatrix(*n_rand, *n_rand);
+  double **SigInv = doubleMatrix(*n_rand, *n_rand);
   double **zeta = doubleMatrix(*n_grp, *n_rand);  /* control */
   double *zeta0 = doubleArray(*n_rand);
   double **Phi = doubleMatrix(*n_rand, *n_rand);
+  double **PhiInv = doubleMatrix(*n_rand, *n_rand);
 
   itemp = 0;
   for (j = 0; j < *n_rand; j++)
     for (i = 0; i < *n_rand; i++)
       Sigma[i][j] = SigmaAll[itemp++];
-
+  dinv(Sigma, *n_rand, SigInv);
+  
   itemp = 0;
   for (j = 0; j < *n_rand; j++)
     for (i = 0; i < *n_rand; i++)
       Phi[i][j] = PhiAll[itemp++];
+  dinv(Phi, *n_rand, PhiInv);
 
   /* starting values for random effects from prior */
   for (j = 0; j < *n_rand; j++) {
@@ -616,13 +720,14 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
     rMVN(gamma[j], gamma0, Sigma, *n_rand);
     rMVN(zeta[j], zeta0, Phi, *n_rand);
   }
-  
+
   /** Data **/
   int *Zstar = intArray(*n_samp);
   int *Y0 = intArray(*n_samp);
-  double **X = doubleMatrix(*n_samp, *n_cov); 
+  double **X = doubleMatrix(*n_samp, n_covp); 
   double *Xdelta = doubleArray(*n_samp);
   double *Xpsi = doubleArray(*n_samp);
+  double *Xpsi1 = doubleArray(*n_samp);
   double ***Vgrp = doubleMatrix3D(*n_grp, *max_samp_grp, *n_rand);
   
   itemp = 0;
@@ -644,7 +749,7 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 
   /** Prior **/
   double **A0delta = doubleMatrix(*n_cov, *n_cov);
-  double **A0psi = doubleMatrix(*n_cov, *n_cov);
+  double **A0psi = doubleMatrix(n_covp, n_covp);
   double **S0 = doubleMatrix(*n_rand, *n_rand);
   double **T0 = doubleMatrix(*n_rand, *n_rand);
 
@@ -654,8 +759,8 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
       A0delta[i][j] = A0deltaAll[itemp++];
 
   itemp = 0;
-  for (j = 0; j < *n_cov; j++)
-    for (i = 0; i < *n_cov; i++)
+  for (j = 0; j < n_covp; j++)
+    for (i = 0; i < n_covp; i++)
       A0psi[i][j] = A0psiAll[itemp++];
 
   itemp = 0;
@@ -670,7 +775,7 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 
   /** Proposal precisoin **/
   double **deltaPro = doubleMatrix(*n_cov, *n_cov);
-  double **psiPro = doubleMatrix(*n_cov, *n_cov);
+  double **psiPro = doubleMatrix(n_covp, n_covp);
 
   itemp = 0;
   for (j = 0; j < *n_cov; j++)
@@ -678,10 +783,35 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
       deltaPro[i][j] = deltaVar[itemp++];
 
   itemp = 0;
-  for (j = 0; j < *n_cov; j++)
-    for (i = 0; i < *n_cov; i++)
+  for (j = 0; j < n_covp; j++)
+    for (i = 0; i < n_covp; i++)
       psiPro[i][j] = psiVar[itemp++];
 
+  /** known Z star **/
+  for (i = 0; i < *n_samp; i++) {
+    if ((treat[i] == 1) && (Y[i] == (*J+1))) {
+      Zstar[i] = 1;
+      Y0[i] = *J;
+      if (*ceiling == 1) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");
+      }
+    } else if ((treat[i] == 1) && (Y[i] == 0)) {
+      Zstar[i] = 0;
+      Y0[i] = 0;
+      if (*floor == 1) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    } else { /* random draw if not known */
+      Zstar[i] = (unif_rand() < 0.5);
+    }
+    if (Zstar[i] == 1)
+      Y0[i] = Y[i] - treat[i];
+    else 
+      Y0[i] = Y[i];
+    if (*unconst == 2) 
+      X[i][n_covp-1] = Zstar[i];
+  }
+  
   /** MCMC **/
   itemp = 0; deltaCounter[0] = 0; psiCounter[0] = 0; 
   for (j = 0; j < *n_grp; j++) {
@@ -696,13 +826,7 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
       vitemp[j] = 0;
     for (i = 0; i < *n_samp; i++) {
       /* Sample Zstar */
-      if ((treat[i] == 1) && (Y[i] == (*J+1))) {
-	Zstar[i] = 1;
-	Y0[i] = *J;
-      } else if ((treat[i] == 1) && (Y[i] == 0)) {
-	Zstar[i] = 0;
-	Y0[i] = 0;
-      } else {
+      if ((treat[i] == 0) || ((treat[i] == 1) && (Y[i] < (*J + 1)) && (Y[i] > 0))) {
 	Xdelta[i] = 0;  Xpsi[i] = 0;  
 	for (j = 0; j < *n_cov; j++) { /* fixed effects */
 	  Xdelta[i] += X[i][j]*delta[j];
@@ -712,26 +836,68 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 	  Xdelta[i] += Vgrp[grp[i]][vitemp[grp[i]]][j] * gamma[grp[i]][j];
 	  Xpsi[i] += Vgrp[grp[i]][vitemp[grp[i]]][j] * zeta[grp[i]][j];
 	}
-	dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
-		     dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
-	if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
-	  Zstar[i] = 1;
-	  Y0[i] = Y[i] - treat[i];
-	} else { 
-	  Zstar[i] = 0;
-	  Y0[i] = Y[i];
+	if (*unconst == 2) 
+	  Xpsi1[i] = Xpsi[i] + psi[n_covp-1]; 
+	if ((*ceiling == 1) && (treat[i] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  dtemp = unif_rand();
+	  if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = *J-1;
+	  } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = *J;
+	  } else {
+	    Zstar[i] = 0;
+	    Y0[i] = *J;
+	  }
+	} else if ((*floor == 1) && (treat[i] == 1) && (Y[i] == 1)) { /* floor effects */
+	  dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1));	  
+	  dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	  dtemp = unif_rand();
+	  if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 1;
+	    Y0[i] = 0;
+	  } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	    Zstar[i] = 0;
+	    Y0[i] = 1;
+	  } else {
+	    Zstar[i] = 0;
+	    Y0[i] = 0;
+	  }
+	} else { /* no ceiling and floor effects */
+	  if (*unconst == 2) {
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi1[i])), 1));
+	  } else {
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i]-treat[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  }
+	  dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	  if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	    Zstar[i] = 1;
+	    Y0[i] = Y[i] - treat[i];
+	  } else { 
+	    Zstar[i] = 0;
+	    Y0[i] = Y[i];
+	  }
+	}
+	if (*unconst == 2) {
+	  X[i][n_covp-1] = Zstar[i];
 	}
       }
       vitemp[grp[i]]++;
     }
 
     /* Sample delta */
-    BinomLogitMixed(Zstar, X, Vgrp, grp, delta, gamma, Sigma, *n_samp, 1, *n_cov, *n_rand, *n_grp, 
+    BinomLogitMixed(Zstar, X, Vgrp, grp, delta, gamma, SigInv, *n_samp, 1, *n_cov, *n_rand, *n_grp, 
 		    delta0, A0delta, *s0, S0, deltaPro, tune_gamma, 1, deltaCounter, gammaCounter);
     
     /* Sample psi */
-    BinomLogitMixed(Y0, X, Vgrp, grp, psi, zeta, Phi, *n_samp, *J, *n_cov, *n_rand, *n_grp, 
+    BinomLogitMixed(Y0, X, Vgrp, grp, psi, zeta, PhiInv, *n_samp, *J, n_covp, *n_rand, *n_grp, 
 		    psi0, A0psi, *t0, T0, psiPro, tune_zeta, 1, psiCounter, zetaCounter);
 
     /* Store the results */
@@ -741,17 +907,19 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 	for (j = 0; j < *n_cov; j++) {
 	  allresults[itemp++] = delta[j];
 	}      
-	for (j = 0; j < *n_cov; j++) {
+	for (j = 0; j < n_covp; j++) {
 	  allresults[itemp++] = psi[j];
 	}
 	/* Var-Cov matrices */
+	dinv(SigInv, *n_rand, Sigma);
 	for (j = 0; j < *n_rand; j++) {
-	  for (k = 0; k < *n_rand; k++) {
+	  for (k = j; k < *n_rand; k++) {
 	    allresults[itemp++] = Sigma[j][k];
 	  }      
 	}
+	dinv(PhiInv, *n_rand, Phi);
 	for (j = 0; j < *n_rand; j++) {
-	  for (k = 0; k < *n_rand; k++) {
+	  for (k = j; k < *n_rand; k++) {
 	    allresults[itemp++] = Phi[j][k];
 	  }      
 	}
@@ -769,9 +937,9 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
 	/* acceptance ratios */
 	allresults[itemp++] = ((double) *deltaCounter / (double) (main_loop + 1));
 	allresults[itemp++] = ((double) *psiCounter / (double) (main_loop + 1));
-	for (j = 0; j < *n_rand; j++)
+	for (j = 0; j < *n_grp; j++)
 	  allresults[itemp++] = ((double) gammaCounter[j] / (double) (main_loop + 1));
-	for (j = 0; j < *n_rand; j++)
+	for (j = 0; j < *n_grp; j++)
 	  allresults[itemp++] = ((double) zetaCounter[j] / (double) (main_loop + 1));
 	itempK = 1;
       } else {
@@ -782,16 +950,16 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
     /* printing */
     if (*verbose) {
       if (main_loop == itempP) {
-	Rprintf("\n%3d percent done.", progress*10);
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios", progress*10);
 	itempP += ftrunc((double) *n_draws/10); 
 	progress++;
-	Rprintf("\n    Metropolis acceptance ratio (fixed effects): %3g (sensitive) %3g (control)", 
+	Rprintf("\n    Fixed effects: %3g (sensitive) %3g (control)", 
 		fprec((double) *deltaCounter / (double) (main_loop + 1), 3),
 		fprec((double) *psiCounter / (double) (main_loop + 1), 3));
-	Rprintf("\n    Metropolis acceptance ratio (random effects: sensitive):");
+	Rprintf("\n    Sensitive item model random effects (for each group):");
 	for (j = 0; j < *n_grp; j++) 
 	  Rprintf(" %3g", fprec((double) gammaCounter[j] / (double) (main_loop + 1), 3));
-	Rprintf("\n    Metropolis acceptance ratio (random effects: control):");
+	Rprintf("\n    Control items model random effects (for each group):");
 	for (j = 0; j < *n_grp; j++) 
 	  Rprintf(" %3g", fprec((double) zetaCounter[j] / (double) (main_loop + 1), 3));
 	Rprintf("\n");
@@ -811,6 +979,7 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
   free(Y0);
   free(Xdelta);
   free(Xpsi);
+  free(Xpsi1);
   free(deltaCounter);
   free(psiCounter);
   free(gammaCounter);
@@ -819,7 +988,9 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
   free(gamma0);
   free(zeta0);
   FreeMatrix(Sigma, *n_rand);
+  FreeMatrix(SigInv, *n_rand);
   FreeMatrix(Phi, *n_rand);
+  FreeMatrix(PhiInv, *n_rand);
   FreeMatrix(X, *n_samp);
   FreeMatrix(A0delta, *n_cov);
   FreeMatrix(A0psi, *n_cov);
@@ -830,6 +1001,1996 @@ void ictregBinomMixed(int *Y,             /* outcome vector */
   Free3DMatrix(Vgrp, *n_grp, *max_samp_grp);
 }
 
+/** 
+  Item Count Technique Binomial Mixed Effects Regression for the Multiple Sensitive Item Design
+  
+  for now, constrained model only
+
+**/
+
+void ictregBinomMultiMixed(int *Y,             /* outcome vector */
+			   int *J,             /* # of control items */
+			   int *n_samp,        /* sample size */
+			   int *n_draws,       /* # of MCMC draws */
+			   int *treat,         /* treatment indicator vector: 0 or 1 */
+			   int *tmax,          /* number of sensitive items */
+			   double *Xall,       /* fixed effects covariates in a vector form */
+			   double *delta,      /* fixed effects coefs for sensitive item */
+			   double *psi,        /* fixed effects coefs for control items */ 
+			   int *n_cov,         /* # of fixed effects covariates */
+			   double *delta0,     /* prior mean for delta */
+			   double *psi0,       /* prior mean for psi */
+			   double *A0deltaAll, /* prior precision for delta */
+			   double *A0psiAll,   /* prior precision for psi */
+			   double *deltaVar,   /* proposal variance for delta (fixed effects) */
+			   double *psiVar,     /* proposal variance for psi (fixed effects) */
+			   int *unconst,       /* unconst = 1 includes Y(0) */
+			   int *ceiling,       /* ceiling effects */
+			   int *floor,         /* floor effects */
+			   int *grp,           /* group indicator, 0, 1, ..., G-1 */
+			   int *n_grp,         /* number of groups, G */
+			   int *max_samp_grp,  /* max # of obs within each group */
+			   double *Xall_rand,  /* random effects covariates */
+			   int *n_rand,        /* # of random effects covariates */
+			   double *tune_gamma, /* tuning constants for random effects (sensitive) */
+			   double *tune_zeta,  /* tuning constants for random effects (control) */
+			   double *SigmaAll,   /* covariance for random effects (sensitive) */
+			   double *PhiAll,     /* covariance for random effects (control) */
+			   int *s0,            /* prior df for Sigma (sensitive) */
+			   double *S0All,      /* prior scale matrix for Sigma (sensitive) */
+			   int *t0,            /* prior df for Phi (control) */
+			   double *T0All,      /* prior scale matrix for Phi (control) */
+			   int *burnin,        /* number of burnins */
+			   int *keep,          /* keep every *th draw */
+			   int *verbose,       /* want to print progress? */
+			   double *allresults  /* storage for all results */
+			   ) {
+  
+  int i, j, k, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
+  int progress = 1;
+  int itempK = 1;
+  int **deltaCounter = intMatrix(*tmax, 1);  /* acceptance ratio for delta */
+  int *psiCounter = intArray(1);    /* acceptance ratio for psi */
+  int **gammaCounter = intMatrix(*tmax, *n_grp);
+  int *zetaCounter = intArray(*n_grp);
+  int *vitemp = intArray(*n_grp);
+  int *treatSum = intArray(*tmax);
+  double dtemp, dtemp1, dtemp2, dtemp3;
+
+  /** get random seed **/
+  GetRNGstate();
+
+  /** Parameters for sensitive items **/
+  int n_dim = *n_cov;
+  if (*unconst) { /* dimension of delta */
+    n_dim = *n_cov + 1;
+  }
+
+  if (*unconst > 0) {
+    itemp = 0;
+    for (i = 0; i < *tmax; i++) {
+      itemp += ceiling[i];
+      itemp += floor[i];
+    }
+    if (itemp > 0)
+      error("Only constrained models are allowed with ceiling and floor effects\n");
+  }
+
+  /** parameters for fixed effects **/
+  double **deltaMatrix = doubleMatrix(*tmax, n_dim);
+  double **delta0Matrix = doubleMatrix(*tmax, n_dim);
+
+  itemp = 0; 
+  for (i = 0; i < *tmax; i++) 
+    for (j = 0; j < n_dim; j++)
+      deltaMatrix[i][j] = delta[itemp++];
+
+  itemp = 0; 
+  for (i = 0; i < *tmax; i++) 
+    for (j = 0; j < n_dim; j++)
+      delta0Matrix[i][j] = delta0[itemp++];
+
+  /** parameters for random effects **/
+  double ***gamma = doubleMatrix3D(*tmax, *n_grp, *n_rand); /* sensitive */
+  double *gamma0 = doubleArray(*n_rand);
+  double ***Sigma = doubleMatrix3D(*tmax, *n_rand, *n_rand);
+  double ***SigInv = doubleMatrix3D(*tmax, *n_rand, *n_rand);
+  double **zeta = doubleMatrix(*n_grp, *n_rand);  /* control */
+  double *zeta0 = doubleArray(*n_rand);
+  double **Phi = doubleMatrix(*n_rand, *n_rand);
+  double **PhiInv = doubleMatrix(*n_rand, *n_rand);
+
+  itemp = 0;
+  for (k = 0; k < *tmax; k++)
+    for (j = 0; j < *n_rand; j++)
+      for (i = 0; i < *n_rand; i++)
+	Sigma[k][i][j] = SigmaAll[itemp++];
+  for (k = 0; k < *tmax; k++)
+    dinv(Sigma[k], *n_rand, SigInv[k]);
+  
+  itemp = 0;
+  for (j = 0; j < *n_rand; j++)
+    for (i = 0; i < *n_rand; i++)
+      Phi[i][j] = PhiAll[itemp++];
+  dinv(Phi, *n_rand, PhiInv);
+
+  /* starting values for random effects from prior */
+  for (j = 0; j < *n_rand; j++) {
+    gamma0[j] = 0; 
+    zeta0[j] = 0;
+  }
+  for (i = 0; i < *tmax; i++) {
+    for (j = 0; j < *n_grp; j++) 
+      rMVN(gamma[i][j], gamma0, Sigma[i], *n_rand);
+  }
+  for (j = 0; j < *n_grp; j++) {
+    rMVN(zeta[j], zeta0, Phi, *n_rand);
+  }
+
+  /** Data **/
+  int **Zstar = intMatrix(*tmax, *n_samp);
+  int *Y0 = intArray(*n_samp);
+  double **X = doubleMatrix(*n_samp, n_dim);
+  double ***Xtemp = doubleMatrix3D(*tmax, *n_samp, n_dim);
+  double *Xdelta = doubleArray(*n_samp);
+  double *Xdelta1 = doubleArray(*n_samp);
+  double *Xpsi = doubleArray(*n_samp);
+  int **gtmp = intMatrix(*tmax, *n_samp);
+  double ****Vgtmp = doubleMatrix4D(*tmax, *n_grp, *max_samp_grp, *n_rand); 
+  int **Mitemp = intMatrix(*tmax, *n_grp); 
+  double ***Vgrp = doubleMatrix3D(*n_grp, *max_samp_grp, *n_rand);
+  
+  itemp = 0;
+  for (j = 0; j < *n_cov; j++)
+    for (i = 0; i < *n_samp; i++) 
+      X[i][j] = Xall[itemp++];
+  
+  itemp = 0;
+  for (j = 0; j < *n_grp; j++) 
+    vitemp[j] = 0; 
+  for (i = 0; i < *tmax; i++) {
+    treatSum[i] = 0;
+    for (j = 0; j < *n_grp; j++) 
+      Mitemp[i][j] = 0; 
+  }  
+  for (i = 0; i < *n_samp; i++) {
+    Y0[i] = Y[i];
+    for (j = 0; j < *n_rand; j++)
+      Vgrp[grp[i]][vitemp[grp[i]]][j] = Xall_rand[itemp++];
+    if (treat[i] > 0) {
+      gtmp[treat[i]-1][treatSum[treat[i]-1]] = grp[i];
+      for (j = 0; j < *n_cov; j++) 
+	Xtemp[treat[i]-1][treatSum[treat[i]-1]][j] = X[i][j];
+      for (j = 0; j < *n_rand; j++)
+	Vgtmp[treat[i]-1][grp[i]][Mitemp[treat[i]-1][grp[i]]][j] = Vgrp[grp[i]][vitemp[grp[i]]][j];
+      treatSum[treat[i]-1]++;
+      Mitemp[treat[i]-1][grp[i]]++;
+      if ((ceiling[treat[i]-1] == 1) && (Y[i] == (*J+1))) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");	
+      }
+      if ((floor[treat[i]-1] == 1) && (Y[i] == 0)) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    }
+    vitemp[grp[i]]++;
+  }
+
+  /** Prior **/
+  double ***A0delta = doubleMatrix3D(*tmax, n_dim, n_dim);
+  double **A0psi = doubleMatrix(*n_cov, *n_cov);
+  double ***S0 = doubleMatrix3D(*tmax, *n_rand, *n_rand);
+  double **T0 = doubleMatrix(*n_rand, *n_rand);
+
+  itemp = 0;
+  for (k = 0; k < *tmax; k++)
+    for (j = 0; j < n_dim; j++)
+      for (i = 0; i < n_dim; i++)
+	A0delta[k][i][j] = A0deltaAll[itemp++];
+
+  itemp = 0;
+  for (j = 0; j < *n_cov; j++)
+    for (i = 0; i < *n_cov; i++)
+      A0psi[i][j] = A0psiAll[itemp++];
+
+  itemp = 0;
+  for (k = 0; k < *tmax; k++)
+    for (j = 0; j < *n_rand; j++)
+      for (i = 0; i < *n_rand; i++)
+	S0[k][i][j] = S0All[itemp++];
+
+  itemp = 0;
+  for (j = 0; j < *n_rand; j++)
+    for (i = 0; i < *n_rand; i++)
+      T0[i][j] = T0All[itemp++];
+
+  /** Proposal precisoin **/
+  double ***deltaPro = doubleMatrix3D(*tmax, n_dim, n_dim);
+  double **psiPro = doubleMatrix(*n_cov, *n_cov);
+
+  itemp = 0;
+  for (k = 0; k < *tmax; k++)
+    for (j = 0; j < n_dim; j++)
+      for (i = 0; i < n_dim; i++)
+	deltaPro[k][i][j] = deltaVar[itemp++];
+
+  itemp = 0;
+  for (j = 0; j < *n_cov; j++)
+    for (i = 0; i < *n_cov; i++)
+      psiPro[i][j] = psiVar[itemp++];
+
+  /** Initializing the counters **/
+  itemp = 0; psiCounter[0] = 0; 
+  for (i = 0; i < *tmax; i++) {
+    deltaCounter[i][0] = 0; 
+    for (j = 0; j < *n_grp; j++) 
+      gammaCounter[i][j] = 0;
+  }
+  for (j = 0; j < *n_grp; j++) 
+    zetaCounter[j] = 0;
+
+  /** MCMC **/
+  if (*verbose) {
+    Rprintf("\n *** Starting posterior sampling... ***\n");
+  }
+  for (main_loop = 0; main_loop < *n_draws; main_loop++) {
+    for (j = 0; j < *n_grp; j++)
+      vitemp[j] = 0;
+    for (j = 0; j < *tmax; j++)
+      treatSum[j] = 0;
+    for (i = 0; i < *n_samp; i++) {
+      /* Sample Zstar */
+      if (treat[i] > 0) { 
+	if (Y[i] == (*J+1)) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	  Y0[i] = *J;
+	} else if (Y[i] == 0) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	  Y0[i] = 0;
+	} else {
+	  Xdelta[i] = 0;  Xpsi[i] = 0;  
+	  for (j = 0; j < *n_cov; j++) { /* fixed effects */
+	    Xdelta[i] += X[i][j]*deltaMatrix[treat[i]-1][j];
+	    Xpsi[i] += X[i][j]*psi[j];
+	  }
+	  for (j = 0; j < *n_rand; j++) { /* random effects */
+	    Xdelta[i] += Vgrp[grp[i]][vitemp[grp[i]]][j] * gamma[treat[i]-1][grp[i]][j];
+	    Xpsi[i] += Vgrp[grp[i]][vitemp[grp[i]]][j] * zeta[grp[i]][j];
+	  }
+	  if ((ceiling[treat[i]-1] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J-1;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = *J;
+	    }
+	  } else if ((floor[treat[i]-1] == 1) && (Y[i] == 1)) { /* floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xpsi[i])), 1)); 
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = 0;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 1;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 0;
+	    }
+	  } else { /* no ceiling and floor effects */
+	    if (*unconst) {
+	      Xdelta1[i] = Xdelta[i] + (Y[i] - 1) * deltaMatrix[treat[i]-1][*n_cov];
+	      Xdelta[i] += Y[i] * deltaMatrix[treat[i]-1][*n_cov];
+	      dtemp1 = exp(Xdelta1[i] - log1p(exp(Xdelta1[i])) + 
+			   dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    } else {
+	      dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			   dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    }
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xpsi[i])), 1));
+	    if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = Y[i] - 1;
+	    } else { 
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = Y[i];
+	    }
+	  }
+	}
+	if (*unconst) {
+	  X[i][*n_cov] = Y0[i];
+	  Xtemp[treat[i]-1][treatSum[treat[i]-1]][*n_cov] = Y0[i];
+	}
+	treatSum[treat[i]-1]++;
+      }
+      vitemp[grp[i]]++;
+    }
+
+    /* Sample delta */
+    for (k = 0; k < *tmax; k++) {
+      BinomLogitMixed(Zstar[k], Xtemp[k], Vgtmp[k], gtmp[k], deltaMatrix[k], gamma[k], SigInv[k], treatSum[k], 1,
+		      n_dim, *n_rand, *n_grp, delta0Matrix[k], A0delta[k], s0[k], S0[k], deltaPro[k], 
+		      tune_gamma, 1, deltaCounter[k], gammaCounter[k]);
+    } 
+
+    /* Sample psi */
+    BinomLogitMixed(Y0, X, Vgrp, grp, psi, zeta, PhiInv, *n_samp, *J, *n_cov, *n_rand, *n_grp, 
+		    psi0, A0psi, *t0, T0, psiPro, tune_zeta, 1, psiCounter, zetaCounter);
+    
+    /* Store the results */
+    if (main_loop >= *burnin) {
+      if (itempK == *keep) {
+	/* fixed effects */
+	for (i = 0; i < *tmax; i++) {
+	  for (j = 0; j < n_dim; j++) {
+	    allresults[itemp++] = deltaMatrix[i][j];
+	  }      
+	}
+	for (j = 0; j < *n_cov; j++) {
+	  allresults[itemp++] = psi[j];
+	}
+	/* Var-Cov matrices */
+	for (i = 0; i < *tmax; i++) {
+	  dinv(SigInv[i], *n_rand, Sigma[i]);
+	  for (j = 0; j < *n_rand; j++) {
+	    for (k = j; k < *n_rand; k++) {
+	      allresults[itemp++] = Sigma[i][j][k];
+	    }      
+	  }
+	}
+	dinv(PhiInv, *n_rand, Phi);
+	for (j = 0; j < *n_rand; j++) {
+	  for (k = j; k < *n_rand; k++) {
+	    allresults[itemp++] = Phi[j][k];
+	  }      
+	}
+	/* random effects */
+	for (i = 0; i < *tmax; i++) {
+	  for (j = 0; j < *n_grp; j++) {
+	    for (k = 0; k < *n_rand; k++) {
+	      allresults[itemp++] = gamma[i][j][k];
+	    }
+	  }
+	}
+	for (j = 0; j < *n_grp; j++) {
+	  for (k = 0; k < *n_rand; k++) {
+	    allresults[itemp++] = zeta[j][k];
+	  }
+	}
+	/* acceptance ratios */
+	for (i = 0; i < *tmax; i++) 
+	  allresults[itemp++] = ((double) deltaCounter[i][0] / (double) (main_loop + 1));
+	allresults[itemp++] = ((double) *psiCounter / (double) (main_loop + 1));
+	for (i = 0; i < *tmax; i++) 
+	  for (j = 0; j < *n_grp; j++)
+	    allresults[itemp++] = ((double) gammaCounter[i][j] / (double) (main_loop + 1));
+	for (j = 0; j < *n_grp; j++)
+	  allresults[itemp++] = ((double) zetaCounter[j] / (double) (main_loop + 1));
+	itempK = 1;
+      } else {
+	itempK++;
+      }
+    }
+
+    /* printing */
+    if (*verbose) {
+      if (main_loop == itempP) {
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
+	itempP += ftrunc((double) *n_draws/10); 
+	progress++;
+	Rprintf("      Sensitive item model (fixed effects):");
+	for (i = 0; i < *tmax; i++) {
+	  Rprintf(" %3g", fprec((double) deltaCounter[i][0] / (double) (main_loop + 1), 3));
+	}
+	Rprintf("\n      Control items model (fixed effects): %3g",
+		fprec((double) *psiCounter / (double) (main_loop + 1), 3));
+	for (i = 0; i < *tmax; i++) {
+	  Rprintf("\n      Sensitive item model (random effects for each group): %2d):", 
+		  i + 1);
+	  for (j = 0; j < *n_grp; j++) 
+	    Rprintf(" %3g", fprec((double) gammaCounter[i][j] / (double) (main_loop + 1), 3));
+	}
+	Rprintf("\n      Control item model (random effects for each group):");
+	for (j = 0; j < *n_grp; j++) 
+	  Rprintf(" %3g", fprec((double) zetaCounter[j] / (double) (main_loop + 1), 3));
+	Rprintf("\n");
+	R_FlushConsole(); 
+      }
+    }
+
+    /* allow for user interrupt */
+    R_CheckUserInterrupt();
+  }
+
+  /** write out the random seed **/
+  PutRNGstate();
+ 
+  /** freeing memory **/
+  free(Y0);
+  free(Xdelta);
+  free(Xdelta1);
+  free(Xpsi);
+  free(psiCounter);
+  free(zetaCounter);
+  free(vitemp);
+  free(treatSum);
+  free(gamma0);
+  free(zeta0);
+  FreeintMatrix(gtmp, *tmax);
+  FreeintMatrix(Mitemp, *tmax); 
+  FreeintMatrix(Zstar, *tmax);
+  FreeMatrix(zeta, *n_grp);
+  Free3DMatrix(gamma, *tmax, *n_grp);
+  Free4DMatrix(Vgtmp, *tmax, *n_grp, *max_samp_grp); 
+  FreeintMatrix(deltaCounter, *tmax);
+  FreeintMatrix(gammaCounter, *tmax);
+  FreeMatrix(deltaMatrix, *tmax);
+  FreeMatrix(delta0Matrix, *tmax);
+  Free3DMatrix(Sigma, *tmax, *n_rand);
+  Free3DMatrix(SigInv, *tmax, *n_rand);
+  FreeMatrix(Phi, *n_rand);
+  FreeMatrix(PhiInv, *n_rand);
+  FreeMatrix(X, *n_samp);
+  Free3DMatrix(Xtemp, *tmax, *n_samp);
+  Free3DMatrix(A0delta, *tmax, *n_cov);
+  FreeMatrix(A0psi, *n_cov);
+  Free3DMatrix(S0, *tmax, *n_rand);
+  FreeMatrix(T0, *n_rand);
+  Free3DMatrix(deltaPro, *tmax, *n_cov);
+  FreeMatrix(psiPro, *n_cov);
+  Free3DMatrix(Vgrp, *n_grp, *max_samp_grp);
+}
+
+
+
+/** 
+  Item Count Technique Binomial Mixed Effects Regression for the Multiple Sensitive Item Design
+  
+  This is the 2-level multilevel model 
+
+**/
+
+void ictregBinomMulti2Level(int *Y,             /* outcome vector */
+			    int *J,             /* # of control items */
+			    int *n_samp,        /* sample size */
+			    int *n_draws,       /* # of MCMC draws */
+			    int *treat,         /* treatment indicator vector: 0, 1, or 2 */
+			    int *tmax,          /* number of sensitive items */
+			    double *Xall,       /* individual-level covariates in a vector form */
+			    double *Vall,       /* village-level covariates in a vector form */
+			    double *beta,       /* individual-level coefs for control and sensitive items */
+			    double *beta_village, /* village-level coefs for control and sensitive items */
+			    int *n_cov,         /* # of individual-level covariates */
+			    int *n_covV,        /* # of village-level covariates */
+			    double *beta0,         /* prior mean for beta */
+			    double *beta0_village, /* prior mean for beta_village */
+			    double *A0betaAll,  /* prior precision for beta */
+			    double *A0beta_villageAll,  /* prior precision for beta_village */
+			    double *betaPro,    /* proposal precision for beta */
+			    int *ceiling,       /* ceiling effects */
+			    int *floor,         /* floor effects */
+			    int *village,       /* village indicator, 0, 1, ..., G-1 */
+			    int *n_village,     /* number of villages, G */
+			    double *alphaPro,   /* proposal precision for beta */
+			    double *sigma2All,  /* variances for random effects  */
+			    int *nu0,           /* prior df for sigma */
+			    double *s0,         /* prior scale for sigma */
+			    int *burnin,        /* number of burnins */
+			    int *keep,          /* keep every *th draw */
+			    int *verbose,       /* want to print progress? */
+			    double *allresults  /* storage for all results */
+			    ) {
+  
+  int i, j, k, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
+  int progress = 1;
+  int itempK = 1;
+  int n_grp = *tmax + 1;
+  int *vitemp = intArray(*n_village);
+  int *treatSum = intArray(*tmax);
+  double dtemp, dtemp1, dtemp2, dtemp3;
+
+  /** get random seed **/
+  GetRNGstate();
+
+  /** Individual level Data **/
+  int n_dim = *n_cov + *n_village;
+  int **Zstar = intMatrix(*tmax, *n_samp);
+  int *Y0 = intArray(*n_samp);
+  double **X = doubleMatrix(*n_samp, n_dim); /* village dummies plus individual covariates */
+  double ***Xtemp = doubleMatrix3D(*tmax, *n_samp, n_dim);
+  double *Xdelta = doubleArray(*n_samp);
+  double *Xdelta0 = doubleArray(*n_samp);
+  int **gtmp = intMatrix(*tmax, *n_samp);
+  
+  itemp = 0;
+  for (j = *n_village; j < n_dim; j++)
+    for (i = 0; i < *n_samp; i++) 
+      X[i][j] = Xall[itemp++];
+  
+  for (j = 0; j < *n_village; j++) 
+    vitemp[j] = 0; 
+  for (i = 0; i < *tmax; i++)
+    treatSum[i] = 0;
+
+  itemp = 0;
+  for (i = 0; i < *n_samp; i++) {
+    Y0[i] = Y[i];
+    /* village dummies */
+    for (j = 0; j < *n_village; j++)
+      X[i][j] = 0;
+    X[i][village[i]] = 1;
+    if (treat[i] > 0) {
+      /* village indicator for each treatment group */
+      gtmp[treat[i]-1][treatSum[treat[i]-1]] = village[i];
+      /* X matrix for each treatment group */
+      for (j = 0; j < n_dim; j++) 
+	Xtemp[treat[i]-1][treatSum[treat[i]-1]][j] = X[i][j];
+      treatSum[treat[i]-1]++;
+      if ((ceiling[treat[i]-1] == 1) && (Y[i] == (*J+1))) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");	
+      }
+      if ((floor[treat[i]-1] == 1) && (Y[i] == 0)) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    }
+    vitemp[village[i]]++;
+  }
+
+  /** Village level data **/
+  double **V = doubleMatrix(*n_village, *n_covV);
+
+  itemp = 0;
+  for (j = 0; j < *n_covV; j++)
+    for (i = 0; i < *n_village; i++) 
+      V[i][j] = Vall[itemp++];
+
+  /** parameters for fixed and random effects with starting values **/
+  double **delta = doubleMatrix(n_grp, n_dim);
+  double **delta_village = doubleMatrix(n_grp, *n_covV);
+  double **sigma2_village = doubleMatrix(n_grp, 1);
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_village[i][0] = sigma2All[itemp++];
+  /* PdoubleMatrix(sigma2_village, n_grp, 1); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = 0; j < *n_covV; j++)
+      delta_village[i][j] = beta_village[itemp++];
+  }
+  /* PdoubleMatrix(delta_village, n_grp, *n_covV); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_village; j < n_dim; j++)
+      delta[i][j] = beta[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta[i][j] = norm_rand() * sqrt(sigma2_village[i][0]);
+      for (k = 0; k < *n_covV; k++)
+	delta[i][j] += delta_village[i][k] * V[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta, n_grp, n_dim); */
+
+  /** Prior **/
+  double **delta0 = doubleMatrix(n_grp, n_dim);
+  double ***A0delta = doubleMatrix3D(n_grp, n_dim, n_dim);
+  double **delta0_village = doubleMatrix(n_grp, *n_covV);
+  double ***A0delta_village = doubleMatrix3D(n_grp, *n_covV, *n_covV);
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_village; j < n_dim; j++)
+      delta0[i][j] = beta0[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta0[i][j] = 0;
+      for (k = 0; k < *n_covV; k++)
+	delta0[i][j] += delta_village[i][k] * V[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {     
+    for (j = 0; j < *n_covV; j++)
+      delta0_village[i][j] = beta0_village[itemp++];
+  }
+  /* PdoubleMatrix(delta0_village, n_grp, *n_covV); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++)
+	A0delta[k][i][j] = A0betaAll[itemp++];
+      for (i = 0; i < *n_village; i++)
+	A0delta[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < n_dim; i++) {
+	if (i == j) 
+	  A0delta[k][i][j] = sigma2_village[k][0];
+	else 
+	  A0delta[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = 0; j < *n_covV; j++) {
+      for (i = 0; i < *n_covV; i++)
+	A0delta_village[k][i][j] = A0beta_villageAll[itemp++];
+    }
+  }
+  /* PdoubleMatrix3D(A0delta_village, n_grp, *n_covV, *n_covV); */
+
+  /** Proposal precisoin **/
+  double ***deltaPro = doubleMatrix3D(n_grp, n_dim, n_dim);
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < *n_village; i++)
+	if (i == j) 
+	  deltaPro[k][i][j] = alphaPro[itemp++];
+	else 
+	  deltaPro[k][i][j] = 0;
+      for (i = *n_village; i < n_dim; i++)
+	deltaPro[k][i][j] = 0;
+    }
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++) 
+	if (i == j) 
+	  deltaPro[k][i][j] = betaPro[itemp++];
+	else
+	  deltaPro[k][i][j] = 0;
+      for (i = 0; i < *n_village; i++) 
+	deltaPro[k][i][j] = 0;
+    }
+  /* PdoubleMatrix3D(deltaPro, n_grp, n_dim, n_dim); */
+
+  /** Counter to calculate acceptance ratio for delta */
+  int **deltaCounter = intMatrix(n_grp, 1);  
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) 
+    deltaCounter[i][0] = 0; 
+
+  /** MCMC **/
+  if (*verbose) 
+    Rprintf("\n *** Starting posterior sampling... ***\n");
+  for (main_loop = 0; main_loop < *n_draws; main_loop++) {
+    for (j = 0; j < *n_village; j++)
+      vitemp[j] = 0;
+    for (j = 0; j < *tmax; j++)
+      treatSum[j] = 0;
+    /* Sample Zstar */
+    for (i = 0; i < *n_samp; i++) {
+      if (treat[i] > 0) { 
+	if (Y[i] == (*J+1)) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	  Y0[i] = *J;
+	} else if (Y[i] == 0) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	  Y0[i] = 0;
+	} else {
+	  Xdelta[i] = 0; Xdelta0[i] = 0;
+	  for (j = 0; j < n_dim; j++) { 
+	    Xdelta[i] += X[i][j]*delta[treat[i]][j];
+	    Xdelta0[i] += X[i][j]*delta[0][j];
+	  }
+	  if ((ceiling[treat[i]-1] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J-1;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = *J;
+	    }
+	  } else if ((floor[treat[i]-1] == 1) && (Y[i] == 1)) { /* floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = 0;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 1;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 0;
+	    }
+	  } else { /* no ceiling and floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = Y[i] - 1;
+	    } else { 
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = Y[i];
+	    }
+	  }
+	}
+	treatSum[treat[i]-1]++;
+      }
+      vitemp[village[i]]++;
+    }
+
+    /* Sample delta for sensitive items */
+    for (k = 1; k < n_grp; k++) {
+      BinomLogit(Zstar[k-1], Xtemp[k-1], delta[k], treatSum[k-1], 1, n_dim, delta0[k], A0delta[k], deltaPro[k], 1, 
+		 deltaCounter[k]);
+    } 
+
+    /* Sample delta for control items */
+    BinomLogit(Y0, X, delta[0], *n_samp, *J, n_dim, delta0[0], A0delta[0], deltaPro[0], 1, deltaCounter[0]);
+    
+    /* Update the village level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, *n_covV, 1, 1, delta0_village[k], A0delta_village[k], 
+		 1, s0[k], nu0[k], 0);
+    }
+
+    /* Update the prior information */
+    for (i = 0; i < n_grp; i++) { 
+      for (j = 0; j < *n_village; j++) {
+	delta0[i][j] = 0;
+	for (k = 0; k < *n_covV; k++)
+	  delta0[i][j] += delta_village[i][k] * V[j][k];
+      }  
+    }
+
+    /* Store the results */
+    if (main_loop >= *burnin) {
+      if (itempK == *keep) {
+	/* fixed and random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_village; j < n_dim; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_village; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	/* village level coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_covV; j++) {
+	    allresults[itemp++] = delta_village[i][j];
+	  }      
+	}
+	/* sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_village[i][0];
+	}
+	/* acceptance ratios */
+	for (i = 0; i < n_grp; i++) 
+	  allresults[itemp++] = ((double) deltaCounter[i][0] / (double) (main_loop + 1));
+	itempK = 1;
+      } else {
+	itempK++;
+      }
+    }
+
+    /* printing */
+    if (*verbose) {
+      if (main_loop == itempP) {
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
+	itempP += ftrunc((double) *n_draws/10); 
+	progress++;
+	Rprintf("      Control item model:");
+	Rprintf(" %3g", fprec((double) deltaCounter[0][0] / (double) (main_loop + 1), 3));
+	Rprintf("\n");
+	for (i = 1; i < n_grp; i++) {
+	  Rprintf("      Sensitive item model %3d:", i);
+	  Rprintf(" %3g", fprec((double) deltaCounter[i][0] / (double) (main_loop + 1), 3));
+	  Rprintf("\n");
+	}
+	R_FlushConsole(); 
+      }
+    }
+
+    /* allow for user interrupt */
+    R_CheckUserInterrupt();
+  }
+
+  /** write out the random seed **/
+  PutRNGstate();
+ 
+  /** freeing memory **/
+  free(vitemp);
+  free(treatSum);
+  FreeintMatrix(Zstar, *tmax);
+  free(Y0);
+  FreeMatrix(X, *n_samp);
+  Free3DMatrix(Xtemp, *tmax, *n_samp);
+  free(Xdelta);
+  free(Xdelta0);
+  FreeintMatrix(gtmp, *tmax);
+  FreeMatrix(V, *n_village);
+  FreeMatrix(delta, n_grp);
+  FreeMatrix(delta_village, n_grp);
+  FreeMatrix(sigma2_village, n_grp);
+  FreeMatrix(delta0, n_grp);
+  Free3DMatrix(A0delta, n_grp, n_dim);
+  FreeMatrix(delta0_village, n_grp);
+  Free3DMatrix(A0delta_village, n_grp, *n_covV);
+  Free3DMatrix(deltaPro, n_grp, n_dim);
+  FreeintMatrix(deltaCounter, n_grp);
+
+}
+
+
+
+/** 
+  Item Count Technique Binomial Mixed Effects Regression for the Multiple Sensitive Item Design
+  
+  This is the 3-level multilevel model 
+
+**/
+
+void ictregBinomMulti3Level(int *Y,             /* outcome vector */
+			    int *J,             /* # of control items */
+			    int *n_samp,        /* sample size */
+			    int *n_draws,       /* # of MCMC draws */
+			    int *treat,         /* treatment indicator vector: 0, 1, or 2 */
+			    int *tmax,          /* number of sensitive items */
+			    double *Xall,       /* individual-level covariates in a vector form */
+			    double *Vall,       /* village-level covariates in a vector form */
+			    double *Wall,       /* district-level covariates in a vector form */
+			    double *beta,       /* individual-level coefs for control and sensitive items */
+			    double *beta_village,  /* village-level coefs for control and sensitive items */
+			    double *beta_district, /* district-level coefs for control and sensitive items */
+			    int *n_cov,         /* # of individual-level covariates */
+			    int *n_covV,        /* # of village-level covariates */
+			    int *n_covW,        /* # of district-level covariates */
+			    double *beta0,         /* prior mean for beta */
+			    double *beta0_village, /* prior mean for beta_village */
+			    double *beta0_district, /* prior mean for beta_district */
+			    double *A0betaAll,  /* prior precision for beta */
+			    double *A0beta_villageAll,  /* prior precision for beta_village */
+			    double *A0beta_districtAll,  /* prior precision for beta_district */
+			    double *betaPro,    /* proposal precision for beta */
+			    int *ceiling,       /* ceiling effects */
+			    int *floor,         /* floor effects */
+			    int *village,       /* village indicator, 0, 1, ..., G-1 */
+			    int *n_village,     /* number of villages, G */
+			    int *district,      /* district indicator, 0, 1, ..., D-1 */
+			    int *n_district,    /* number of districts, D */
+			    double *alphaPro,   /* proposal precision for beta */
+			    double *sigma2_villageAll,  /* variances for village level random effects  */
+			    double *sigma2_districtAll, /* variances for district level random effects  */
+			    int *nu0_village,           /* prior df for sigma2_village */
+			    double *s0_village,         /* prior scale for sigma2_vilalge */
+			    int *nu0_district,          /* prior df for sigma2_district */
+			    double *s0_district,        /* prior scale for sigma2_district */
+			    int *burnin,        /* number of burnins */
+			    int *keep,          /* keep every *th draw */
+			    int *verbose,       /* want to print progress? */
+			    double *allresults  /* storage for all results */
+			    ) {
+  
+  int i, j, k, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
+  int progress = 1;
+  int itempK = 1;
+  double dtemp, dtemp1, dtemp2, dtemp3;
+
+  /** get random seed **/
+  GetRNGstate();
+
+  /** Individual level Data **/
+  int n_grp = *tmax + 1;
+  int n_dim = *n_cov + *n_village;
+  int **Zstar = intMatrix(*tmax, *n_samp);
+  int *Y0 = intArray(*n_samp);
+  double **X = doubleMatrix(*n_samp, n_dim); /* village dummies plus individual covariates */
+  double ***Xtemp = doubleMatrix3D(*tmax, *n_samp, n_dim);
+  double *Xdelta = doubleArray(*n_samp);
+  double *Xdelta0 = doubleArray(*n_samp);
+  int **gtmp = intMatrix(*tmax, *n_samp);
+  int *vitemp = intArray(*n_village);
+  int *treatSum = intArray(*tmax);
+  
+  itemp = 0;
+  for (j = *n_village; j < n_dim; j++)
+    for (i = 0; i < *n_samp; i++) 
+      X[i][j] = Xall[itemp++];
+  
+  for (j = 0; j < *n_village; j++) 
+    vitemp[j] = 0; 
+  for (i = 0; i < *tmax; i++)
+    treatSum[i] = 0;
+
+  itemp = 0;
+  for (i = 0; i < *n_samp; i++) {
+    Y0[i] = Y[i];
+    /* village dummies */
+    for (j = 0; j < *n_village; j++)
+      X[i][j] = 0;
+    X[i][village[i]] = 1;
+    if (treat[i] > 0) {
+      /* village indicator for each treatment group */
+      gtmp[treat[i]-1][treatSum[treat[i]-1]] = village[i];
+      /* X matrix for each treatment group */
+      for (j = 0; j < n_dim; j++) 
+	Xtemp[treat[i]-1][treatSum[treat[i]-1]][j] = X[i][j];
+      treatSum[treat[i]-1]++;
+      if ((ceiling[treat[i]-1] == 1) && (Y[i] == (*J+1))) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");	
+      }
+      if ((floor[treat[i]-1] == 1) && (Y[i] == 0)) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    }
+    vitemp[village[i]]++;
+  }
+  /* PdoubleMatrix(X, *n_samp, n_dim); */
+
+  /** Village level data **/
+  int n_dimV = *n_covV + *n_district;
+  int *vitemp1 = intArray(*n_district);
+  double **V = doubleMatrix(*n_village, n_dimV); /* district dummies plus village level covariates */
+
+  for (i = 0; i < *n_district; i++) 
+    vitemp1[i] = 0;
+
+  itemp = 0;
+  for (j = *n_district; j < n_dimV; j++)
+    for (i = 0; i < *n_village; i++) 
+      V[i][j] = Vall[itemp++];
+
+  for (i = 0; i < *n_village; i++) {
+    for (j = 0; j < *n_district; j++)
+      V[i][j] = 0;
+    V[i][district[i]] = 1;
+    vitemp1[district[i]]++;
+  }
+  /* PdoubleMatrix(V, *n_village, n_dimV); */
+
+  /** District level data **/
+  double **W = doubleMatrix(*n_district, *n_covW);
+
+  itemp = 0;
+  for (j = 0; j < *n_covW; j++)
+    for (i = 0; i < *n_district; i++) 
+      W[i][j] = Wall[itemp++];
+  /* PdoubleMatrix(W, *n_district, *n_covW); */
+
+  /** parameters for fixed and random effects with starting values **/
+  double **delta = doubleMatrix(n_grp, n_dim);
+  double **delta_village = doubleMatrix(n_grp, n_dimV);
+  double **delta_district = doubleMatrix(n_grp, *n_covW);
+  double **sigma2_village = doubleMatrix(n_grp, 1);
+  double **sigma2_district = doubleMatrix(n_grp, 1);
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_village[i][0] = sigma2_villageAll[itemp++];
+  /* PdoubleMatrix(sigma2_village, n_grp, 1); */
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_district[i][0] = sigma2_districtAll[itemp++];
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = 0; j < *n_covW; j++)
+      delta_district[i][j] = beta_district[itemp++];
+  }
+  /* PdoubleMatrix(delta_district, n_grp, *n_covW); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_district; j < n_dimV; j++)
+      delta_village[i][j] = beta_village[itemp++];
+    for (j = 0; j < *n_district; j++) {
+      delta_village[i][j] = norm_rand() * sqrt(sigma2_district[i][0]);
+      for (k = 0; k < *n_covW; k++)
+	delta_village[i][j] += delta_district[i][k] * W[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta_village, n_grp, n_dimV); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_village; j < n_dim; j++)
+      delta[i][j] = beta[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta[i][j] = norm_rand() * sqrt(sigma2_village[i][0]);
+      for (k = 0; k < n_dimV; k++)
+	delta[i][j] += delta_village[i][k] * V[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta, n_grp, n_dim); */
+
+
+  /** Prior **/
+  double **delta0 = doubleMatrix(n_grp, n_dim);
+  double ***A0delta = doubleMatrix3D(n_grp, n_dim, n_dim);
+  double **delta0_village = doubleMatrix(n_grp, n_dimV);
+  double ***A0delta_village = doubleMatrix3D(n_grp, n_dimV, n_dimV);
+  double **delta0_district = doubleMatrix(n_grp, *n_covW);
+  double ***A0delta_district = doubleMatrix3D(n_grp, *n_covW, *n_covW);
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_village; j < n_dim; j++)
+      delta0[i][j] = beta0[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta0[i][j] = 0;
+      for (k = 0; k < n_dimV; k++)
+	delta0[i][j] += delta_village[i][k] * V[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_district; j < n_dimV; j++)
+      delta0_village[i][j] = beta0_village[itemp++];
+    for (j = 0; j < *n_district; j++) {
+      delta0_village[i][j] = 0;
+      for (k = 0; k < *n_covW; k++)
+	delta0_village[i][j] += delta_district[i][k] * W[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {     
+    for (j = 0; j < *n_covW; j++)
+      delta0_district[i][j] = beta0_district[itemp++];
+  }
+  /* PdoubleMatrix(delta0_district, n_grp, *n_covW); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++)
+	A0delta[k][i][j] = A0betaAll[itemp++];
+      for (i = 0; i < *n_village; i++)
+	A0delta[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < n_dim; i++) {
+	if (i == j) 
+	  A0delta[k][i][j] = sigma2_village[k][0];
+	else 
+	  A0delta[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_district; j < n_dimV; j++) {
+      for (i = *n_district; i < n_dimV; i++)
+	A0delta_village[k][i][j] = A0beta_villageAll[itemp++];
+      for (i = 0; i < *n_district; i++)
+	A0delta_village[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_district; j++) {
+      for (i = 0; i < n_dimV; i++) {
+	if (i == j) 
+	  A0delta_village[k][i][j] = sigma2_district[k][0];
+	else 
+	  A0delta_village[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = 0; j < *n_covW; j++) {
+      for (i = 0; i < *n_covW; i++)
+	A0delta_district[k][i][j] = A0beta_districtAll[itemp++];
+    }
+  }
+  /* PdoubleMatrix3D(A0delta_district, n_grp, *n_covW, *n_covW); */
+
+  /** Proposal precisoin **/
+  double ***deltaPro = doubleMatrix3D(n_grp, n_dim, n_dim);
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < *n_village; i++)
+	if (i == j) 
+	  deltaPro[k][i][j] = alphaPro[itemp++];
+	else 
+	  deltaPro[k][i][j] = 0;
+      for (i = *n_village; i < n_dim; i++)
+	deltaPro[k][i][j] = 0;
+    }
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++) 
+	if (i == j) 
+	  deltaPro[k][i][j] = betaPro[itemp++];
+	else
+	  deltaPro[k][i][j] = 0;
+      for (i = 0; i < *n_village; i++) 
+	deltaPro[k][i][j] = 0;
+    }
+  /* PdoubleMatrix3D(deltaPro, n_grp, n_dim, n_dim); */
+
+  /** Counter to calculate acceptance ratio for delta */
+  int **deltaCounter = intMatrix(n_grp, 1);  
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) 
+    deltaCounter[i][0] = 0; 
+
+  /** MCMC **/
+  if (*verbose) 
+    Rprintf("\n *** Starting posterior sampling... ***\n");
+  for (main_loop = 0; main_loop < *n_draws; main_loop++) {
+    for (j = 0; j < *n_village; j++)
+      vitemp[j] = 0;
+    for (j = 0; j < *tmax; j++)
+      treatSum[j] = 0;
+    /* Sample Zstar */
+    for (i = 0; i < *n_samp; i++) {
+      if (treat[i] > 0) { 
+	if (Y[i] == (*J+1)) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	  Y0[i] = *J;
+	} else if (Y[i] == 0) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	  Y0[i] = 0;
+	} else {
+	  Xdelta[i] = 0; Xdelta0[i] = 0;
+	  for (j = 0; j < n_dim; j++) { 
+	    Xdelta[i] += X[i][j]*delta[treat[i]][j];
+	    Xdelta0[i] += X[i][j]*delta[0][j];
+	  }
+	  if ((ceiling[treat[i]-1] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J-1;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = *J;
+	    }
+	  } else if ((floor[treat[i]-1] == 1) && (Y[i] == 1)) { /* floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = 0;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 1;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 0;
+	    }
+	  } else { /* no ceiling and floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = Y[i] - 1;
+	    } else { 
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = Y[i];
+	    }
+	  }
+	}
+	treatSum[treat[i]-1]++;
+      }
+      vitemp[village[i]]++;
+    }
+
+    /* Sample delta for sensitive items */
+    for (k = 1; k < n_grp; k++) {
+      BinomLogit(Zstar[k-1], Xtemp[k-1], delta[k], treatSum[k-1], 1, n_dim, delta0[k], A0delta[k], deltaPro[k], 1, 
+		 deltaCounter[k]);
+    } 
+
+    /* Sample delta for control items */
+    BinomLogit(Y0, X, delta[0], *n_samp, *J, n_dim, delta0[0], A0delta[0], deltaPro[0], 1, deltaCounter[0]);
+    
+    /* Update the village level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, n_dimV, 1, 1, delta0_village[k], A0delta_village[k], 
+		 1, s0_village[k], nu0_village[k], 0);
+    }
+
+    /* Update the district level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta_village[k], W, delta_district[k], sigma2_district[k], *n_district, *n_covW, 1, 1, delta0_district[k], 
+		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0);
+    }
+
+    /* Update the prior information */
+    for (i = 0; i < n_grp; i++) { 
+      for (j = 0; j < *n_village; j++) {
+	delta0[i][j] = 0;
+	for (k = 0; k < n_dimV; k++)
+	  delta0[i][j] += delta_village[i][k] * V[j][k];
+      } 
+      for (j = 0; j < *n_district; j++) {
+	delta0_village[i][j] = 0;
+	for (k = 0; k < *n_covW; k++)
+	  delta0_village[i][j] += delta_district[i][k] * W[j][k];
+      } 
+    }
+
+    /* Store the results */
+    if (main_loop >= *burnin) {
+      if (itempK == *keep) {
+	/* individual level fixed effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_village; j < n_dim; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	/* individual level random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_village; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	/* village level fixed effects coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_district; j < n_dimV; j++) {
+	    allresults[itemp++] = delta_village[i][j];
+	  }      
+	}
+	/* village level random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_district; j++) {
+	    allresults[itemp++] = delta_village[i][j];
+	  }      
+	}
+	/* district level fixed effects coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_covW; j++) {
+	    allresults[itemp++] = delta_district[i][j];
+	  }      
+	}
+	/* village level sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_village[i][0];
+	}
+	/* district level sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_district[i][0];
+	}
+	/* acceptance ratios */
+	for (i = 0; i < n_grp; i++) 
+	  allresults[itemp++] = ((double) deltaCounter[i][0] / (double) (main_loop + 1));
+	itempK = 1;
+      } else {
+	itempK++;
+      }
+    }
+
+    /* printing */
+    if (*verbose) {
+      if (main_loop == itempP) {
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
+	itempP += ftrunc((double) *n_draws/10); 
+	progress++;
+	Rprintf("      Control item model:");
+	Rprintf(" %3g", fprec((double) deltaCounter[0][0] / (double) (main_loop + 1), 3));
+	Rprintf("\n");
+	for (i = 1; i < n_grp; i++) {
+	  Rprintf("      Sensitive item model %3d:", i);
+	  Rprintf(" %3g", fprec((double) deltaCounter[i][0] / (double) (main_loop + 1), 3));
+	  Rprintf("\n");
+	}
+	R_FlushConsole(); 
+      }
+    }
+
+    /* allow for user interrupt */
+    R_CheckUserInterrupt();
+  }
+
+  /** write out the random seed **/
+  PutRNGstate();
+ 
+  /** freeing memory **/
+  free(vitemp);
+  free(treatSum);
+  FreeintMatrix(Zstar, *tmax);
+  free(Y0);
+  FreeMatrix(X, *n_samp);
+  Free3DMatrix(Xtemp, *tmax, *n_samp);
+  free(Xdelta);
+  free(Xdelta0);
+  FreeintMatrix(gtmp, *tmax);
+  FreeMatrix(V, *n_village);
+  free(vitemp1);
+  FreeMatrix(W, *n_district);
+  FreeMatrix(delta, n_grp);
+  FreeMatrix(delta_village, n_grp);
+  FreeMatrix(delta_district, n_grp);
+  FreeMatrix(sigma2_village, n_grp);
+  FreeMatrix(sigma2_district, n_grp);
+  FreeMatrix(delta0, n_grp);
+  FreeMatrix(delta0_village, n_grp);
+  FreeMatrix(delta0_district, n_grp);
+  Free3DMatrix(A0delta, n_grp, n_dim);
+  Free3DMatrix(A0delta_village, n_grp, n_dimV);
+  Free3DMatrix(A0delta_district, n_grp, *n_covW);
+  Free3DMatrix(deltaPro, n_grp, n_dim);
+  FreeintMatrix(deltaCounter, n_grp); 
+
+}
+
+
+
+/** 
+  Item Count Technique Binomial Mixed Effects Regression for the Multiple Sensitive Item Design
+  
+  This is the 4-level multilevel model 
+
+**/
+
+void ictregBinomMulti4Level(int *Y,             /* outcome vector */
+			    int *J,             /* # of control items */
+			    int *n_samp,        /* sample size */
+			    int *n_draws,       /* # of MCMC draws */
+			    int *treat,         /* treatment indicator vector: 0, 1, or 2 */
+			    int *tmax,          /* number of sensitive items */
+			    double *Xall,       /* individual-level covariates in a vector form */
+			    double *Vall,       /* village-level covariates in a vector form */
+			    double *Wall,       /* district-level covariates in a vector form */
+			    double *Zall,       /* province-level covariates in a vector form */
+			    double *beta,       /* individual-level coefs for control and sensitive items */
+			    double *beta_village,  /* village-level coefs for control and sensitive items */
+			    double *beta_district, /* district-level coefs for control and sensitive items */
+			    double *beta_province, /* province-level coefs for control and sensitive items */
+			    int *n_cov,         /* # of individual-level covariates */
+			    int *n_covV,        /* # of village-level covariates */
+			    int *n_covW,        /* # of district-level covariates */
+			    int *n_covZ,        /* # of province-level covariates */
+			    double *beta0,         /* prior mean for beta */
+			    double *beta0_village, /* prior mean for beta_village */
+			    double *beta0_district, /* prior mean for beta_district */
+			    double *beta0_province, /* prior mean for beta_province */
+			    double *A0betaAll,  /* prior precision for beta */
+			    double *A0beta_villageAll,  /* prior precision for beta_village */
+			    double *A0beta_districtAll,  /* prior precision for beta_district */
+			    double *A0beta_provinceAll,  /* prior precision for beta_province */
+			    double *betaPro,    /* proposal precision for beta */
+			    int *ceiling,       /* ceiling effects */
+			    int *floor,         /* floor effects */
+			    int *village,       /* village indicator, 0, 1, ..., G-1 */
+			    int *n_village,     /* number of villages, G */
+			    int *district,      /* district indicator, 0, 1, ..., D-1 */
+			    int *n_district,    /* number of districts, D */
+			    int *province,      /* province indicator, 0, 1, ..., P-1 */
+			    int *n_province,    /* number of districts, P */
+			    double *alphaPro,   /* proposal precision for beta */
+			    double *sigma2_villageAll,  /* variances for village level random effects  */
+			    double *sigma2_districtAll, /* variances for district level random effects  */
+			    double *sigma2_provinceAll, /* variances for province level random effects  */
+			    int *nu0_village,           /* prior df for sigma2_village */
+			    double *s0_village,         /* prior scale for sigma2_vilalge */
+			    int *nu0_district,          /* prior df for sigma2_district */
+			    double *s0_district,        /* prior scale for sigma2_district */
+			    int *nu0_province,          /* prior df for sigma2_province */
+			    double *s0_province,        /* prior scale for sigma2_province */
+			    int *burnin,        /* number of burnins */
+			    int *keep,          /* keep every *th draw */
+			    int *verbose,       /* want to print progress? */
+			    double *allresults  /* storage for all results */
+			    ) {
+  
+  int i, j, k, main_loop, itemp, itempP = ftrunc((double) *n_draws/10);
+  int progress = 1;
+  int itempK = 1;
+  double dtemp, dtemp1, dtemp2, dtemp3;
+
+  /** get random seed **/
+  GetRNGstate();
+
+  /** Individual level Data **/
+  int n_grp = *tmax + 1;
+  int n_dim = *n_cov + *n_village;
+  int **Zstar = intMatrix(*tmax, *n_samp);
+  int *Y0 = intArray(*n_samp);
+  double **X = doubleMatrix(*n_samp, n_dim); /* village dummies plus individual covariates */
+  double ***Xtemp = doubleMatrix3D(*tmax, *n_samp, n_dim);
+  double *Xdelta = doubleArray(*n_samp);
+  double *Xdelta0 = doubleArray(*n_samp);
+  int **gtmp = intMatrix(*tmax, *n_samp);
+  int *vitemp = intArray(*n_village);
+  int *treatSum = intArray(*tmax);
+  
+  itemp = 0;
+  for (j = *n_village; j < n_dim; j++)
+    for (i = 0; i < *n_samp; i++) 
+      X[i][j] = Xall[itemp++];
+  
+  for (j = 0; j < *n_village; j++) 
+    vitemp[j] = 0; 
+  for (i = 0; i < *tmax; i++)
+    treatSum[i] = 0;
+
+  itemp = 0;
+  for (i = 0; i < *n_samp; i++) {
+    Y0[i] = Y[i];
+    /* village dummies */
+    for (j = 0; j < *n_village; j++)
+      X[i][j] = 0;
+    X[i][village[i]] = 1;
+    if (treat[i] > 0) {
+      /* village indicator for each treatment group */
+      gtmp[treat[i]-1][treatSum[treat[i]-1]] = village[i];
+      /* X matrix for each treatment group */
+      for (j = 0; j < n_dim; j++) 
+	Xtemp[treat[i]-1][treatSum[treat[i]-1]][j] = X[i][j];
+      treatSum[treat[i]-1]++;
+      if ((ceiling[treat[i]-1] == 1) && (Y[i] == (*J+1))) {
+	error("ceiling effects are allowed in Bayesian models only when no treated observation takes Y = J+1\n");	
+      }
+      if ((floor[treat[i]-1] == 1) && (Y[i] == 0)) {
+	error("floor effects are allowed in Bayesian models only when no treated observation takes Y = 0\n");
+      }
+    }
+    vitemp[village[i]]++;
+  }
+  /* PdoubleMatrix(X, *n_samp, n_dim); */
+
+  /** Village level data **/
+  int n_dimV = *n_covV + *n_district;
+  int *vitemp1 = intArray(*n_district);
+  double **V = doubleMatrix(*n_village, n_dimV); /* district dummies plus village level covariates */
+
+  for (i = 0; i < *n_district; i++) 
+    vitemp1[i] = 0;
+
+  itemp = 0;
+  for (j = *n_district; j < n_dimV; j++)
+    for (i = 0; i < *n_village; i++) 
+      V[i][j] = Vall[itemp++];
+
+  for (i = 0; i < *n_village; i++) {
+    for (j = 0; j < *n_district; j++)
+      V[i][j] = 0;
+    V[i][district[i]] = 1;
+    vitemp1[district[i]]++;
+  }
+  /* PdoubleMatrix(V, *n_village, n_dimV); */
+  
+  /** District level data **/
+  int n_dimW = *n_covW + *n_province;
+  int *vitemp2 = intArray(*n_province);
+  double **W = doubleMatrix(*n_district, n_dimW); /* province dummies plus district level covariates */
+
+  for (i = 0; i < *n_province; i++) 
+    vitemp2[i] = 0;
+
+  itemp = 0;
+  for (j = *n_province; j < n_dimW; j++)
+    for (i = 0; i < *n_district; i++) 
+      W[i][j] = Wall[itemp++];
+
+  for (i = 0; i < *n_district; i++) {
+    for (j = 0; j < *n_province; j++)
+      W[i][j] = 0;
+    W[i][province[i]] = 1;
+    vitemp2[province[i]]++;
+  }
+  /* PdoubleMatrix(W, *n_district, n_dimW); */
+
+  /** Province level data **/
+  double **Z = doubleMatrix(*n_province, *n_covZ);
+
+  itemp = 0;
+  for (j = 0; j < *n_covZ; j++)
+    for (i = 0; i < *n_province; i++) 
+      Z[i][j] = Zall[itemp++];
+  /* PdoubleMatrix(Z, *n_province, *n_covZ); */
+
+  /** parameters for fixed and random effects with starting values **/
+  double **delta = doubleMatrix(n_grp, n_dim);
+  double **delta_village = doubleMatrix(n_grp, n_dimV);
+  double **delta_district = doubleMatrix(n_grp, n_dimW);
+  double **delta_province = doubleMatrix(n_grp, *n_covZ);
+  double **sigma2_village = doubleMatrix(n_grp, 1);
+  double **sigma2_district = doubleMatrix(n_grp, 1);
+  double **sigma2_province = doubleMatrix(n_grp, 1);
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_village[i][0] = sigma2_villageAll[itemp++];
+  /* PdoubleMatrix(sigma2_village, n_grp, 1); */
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_district[i][0] = sigma2_districtAll[itemp++];
+
+  itemp = 0;
+  for (i = 0; i < n_grp; i++)
+    sigma2_province[i][0] = sigma2_provinceAll[itemp++];
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = 0; j < *n_covZ; j++)
+      delta_province[i][j] = beta_province[itemp++];
+  }
+  /* PdoubleMatrix(delta_district, n_grp, *n_covW); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_province; j < n_dimW; j++)
+      delta_district[i][j] = beta_district[itemp++];
+    for (j = 0; j < *n_province; j++) {
+      delta_district[i][j] = norm_rand() * sqrt(sigma2_province[i][0]);
+      for (k = 0; k < *n_covZ; k++)
+	delta_district[i][j] += delta_province[i][k] * Z[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta_village, n_grp, n_dimV); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_district; j < n_dimV; j++)
+      delta_village[i][j] = beta_village[itemp++];
+    for (j = 0; j < *n_district; j++) {
+      delta_village[i][j] = norm_rand() * sqrt(sigma2_district[i][0]);
+      for (k = 0; k < n_dimW; k++)
+	delta_village[i][j] += delta_district[i][k] * W[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta_village, n_grp, n_dimV); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {
+    for (j = *n_village; j < n_dim; j++)
+      delta[i][j] = beta[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta[i][j] = norm_rand() * sqrt(sigma2_village[i][0]);
+      for (k = 0; k < n_dimV; k++)
+	delta[i][j] += delta_village[i][k] * V[j][k];
+    }
+  }
+  /* PdoubleMatrix(delta, n_grp, n_dim); */
+
+
+  /** Prior **/
+  double **delta0 = doubleMatrix(n_grp, n_dim);
+  double ***A0delta = doubleMatrix3D(n_grp, n_dim, n_dim);
+  double **delta0_village = doubleMatrix(n_grp, n_dimV);
+  double ***A0delta_village = doubleMatrix3D(n_grp, n_dimV, n_dimV);
+  double **delta0_district = doubleMatrix(n_grp, n_dimW);
+  double ***A0delta_district = doubleMatrix3D(n_grp, n_dimW, n_dimW);
+  double **delta0_province = doubleMatrix(n_grp, *n_covZ);
+  double ***A0delta_province = doubleMatrix3D(n_grp, *n_covZ, *n_covZ);
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_village; j < n_dim; j++)
+      delta0[i][j] = beta0[itemp++];
+    for (j = 0; j < *n_village; j++) {
+      delta0[i][j] = 0;
+      for (k = 0; k < n_dimV; k++)
+	delta0[i][j] += delta_village[i][k] * V[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_district; j < n_dimV; j++)
+      delta0_village[i][j] = beta0_village[itemp++];
+    for (j = 0; j < *n_district; j++) {
+      delta0_village[i][j] = 0;
+      for (k = 0; k < n_dimW; k++)
+	delta0_village[i][j] += delta_district[i][k] * W[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) { 
+    for (j = *n_province; j < n_dimW; j++)
+      delta0_district[i][j] = beta0_district[itemp++];
+    for (j = 0; j < *n_province; j++) {
+      delta0_district[i][j] = 0;
+      for (k = 0; k < *n_covZ; k++)
+	delta0_district[i][j] += delta_province[i][k] * Z[j][k];
+    }  
+  }
+  /* PdoubleMatrix(delta0, n_grp, n_dim); */
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) {     
+    for (j = 0; j < *n_covZ; j++)
+      delta0_province[i][j] = beta0_province[itemp++];
+  }
+  /* PdoubleMatrix(delta0_district, n_grp, *n_covW); */
+
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++)
+	A0delta[k][i][j] = A0betaAll[itemp++];
+      for (i = 0; i < *n_village; i++)
+	A0delta[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < n_dim; i++) {
+	if (i == j) 
+	  A0delta[k][i][j] = sigma2_village[k][0];
+	else 
+	  A0delta[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_district; j < n_dimV; j++) {
+      for (i = *n_district; i < n_dimV; i++)
+	A0delta_village[k][i][j] = A0beta_villageAll[itemp++];
+      for (i = 0; i < *n_district; i++)
+	A0delta_village[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_district; j++) {
+      for (i = 0; i < n_dimV; i++) {
+	if (i == j) 
+	  A0delta_village[k][i][j] = sigma2_district[k][0];
+	else 
+	  A0delta_village[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = *n_province; j < n_dimW; j++) {
+      for (i = *n_province; i < n_dimW; i++)
+	A0delta_district[k][i][j] = A0beta_districtAll[itemp++];
+      for (i = 0; i < *n_province; i++)
+	A0delta_district[k][i][j] = 0;
+    }
+    for (j = 0; j < *n_province; j++) {
+      for (i = 0; i < n_dimW; i++) {
+	if (i == j) 
+	  A0delta_district[k][i][j] = sigma2_province[k][0];
+	else 
+	  A0delta_district[k][i][j] = 0;
+      } 
+    }
+  }
+  /* PdoubleMatrix3D(A0delta, n_grp, n_dim, n_dim); */
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++) {
+    for (j = 0; j < *n_covZ; j++) {
+      for (i = 0; i < *n_covZ; i++)
+	A0delta_province[k][i][j] = A0beta_provinceAll[itemp++];
+    }
+  }
+  /* PdoubleMatrix3D(A0delta_district, n_grp, *n_covW, *n_covW); */
+
+  /** Proposal precisoin **/
+  double ***deltaPro = doubleMatrix3D(n_grp, n_dim, n_dim);
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = 0; j < *n_village; j++) {
+      for (i = 0; i < *n_village; i++)
+	if (i == j) 
+	  deltaPro[k][i][j] = alphaPro[itemp++];
+	else 
+	  deltaPro[k][i][j] = 0;
+      for (i = *n_village; i < n_dim; i++)
+	deltaPro[k][i][j] = 0;
+    }
+
+  itemp = 0;
+  for (k = 0; k < n_grp; k++)
+    for (j = *n_village; j < n_dim; j++) {
+      for (i = *n_village; i < n_dim; i++) 
+	if (i == j) 
+	  deltaPro[k][i][j] = betaPro[itemp++];
+	else
+	  deltaPro[k][i][j] = 0;
+      for (i = 0; i < *n_village; i++) 
+	deltaPro[k][i][j] = 0;
+    }
+  /* PdoubleMatrix3D(deltaPro, n_grp, n_dim, n_dim); */
+
+  /** Counter to calculate acceptance ratio for delta */
+  int **deltaCounter = intMatrix(n_grp, 1);  
+
+  itemp = 0; 
+  for (i = 0; i < n_grp; i++) 
+    deltaCounter[i][0] = 0; 
+
+  /** MCMC **/
+  if (*verbose) 
+    Rprintf("\n *** Starting posterior sampling... ***\n");
+  for (main_loop = 0; main_loop < *n_draws; main_loop++) {
+    for (j = 0; j < *n_village; j++)
+      vitemp[j] = 0;
+    for (j = 0; j < *tmax; j++)
+      treatSum[j] = 0;
+    /* Sample Zstar */
+    for (i = 0; i < *n_samp; i++) {
+      if (treat[i] > 0) { 
+	if (Y[i] == (*J+1)) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	  Y0[i] = *J;
+	} else if (Y[i] == 0) {
+	  Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	  Y0[i] = 0;
+	} else {
+	  Xdelta[i] = 0; Xdelta0[i] = 0;
+	  for (j = 0; j < n_dim; j++) { 
+	    Xdelta[i] += X[i][j]*delta[treat[i]][j];
+	    Xdelta0[i] += X[i][j]*delta[0][j];
+	  }
+	  if ((ceiling[treat[i]-1] == 1) && (Y[i] == *J)) { /* ceiling effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J-1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp2 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(*J, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J-1;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = *J;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = *J;
+	    }
+	  } else if ((floor[treat[i]-1] == 1) && (Y[i] == 1)) { /* floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(1, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp3 = exp(- log1p(exp(Xdelta[i])) + dbinom(0, *J, 1 / (1 + exp(-Xdelta0[i])), 1)); 
+	    dtemp = unif_rand();
+	    if (dtemp < (dtemp1 / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = 0;
+	    } else if (dtemp < ((dtemp1 + dtemp2) / (dtemp1 + dtemp2 + dtemp3))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 1;
+	    } else {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = 0;
+	    }
+	  } else { /* no ceiling and floor effects */
+	    dtemp1 = exp(Xdelta[i] - log1p(exp(Xdelta[i])) + 
+			 dbinom(Y[i] - 1, *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    dtemp2 = exp(- log1p(exp(Xdelta[i])) + dbinom(Y[i], *J, 1 / (1 + exp(-Xdelta0[i])), 1));
+	    if (unif_rand() < (dtemp1 / (dtemp1 + dtemp2))) {
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 1;
+	      Y0[i] = Y[i] - 1;
+	    } else { 
+	      Zstar[treat[i]-1][treatSum[treat[i]-1]] = 0;
+	      Y0[i] = Y[i];
+	    }
+	  }
+	}
+	treatSum[treat[i]-1]++;
+      }
+      vitemp[village[i]]++;
+    }
+
+    /* Sample delta for sensitive items */
+    for (k = 1; k < n_grp; k++) {
+      BinomLogit(Zstar[k-1], Xtemp[k-1], delta[k], treatSum[k-1], 1, n_dim, delta0[k], A0delta[k], deltaPro[k], 1, 
+		 deltaCounter[k]);
+    } 
+
+    /* Sample delta for control items */
+    BinomLogit(Y0, X, delta[0], *n_samp, *J, n_dim, delta0[0], A0delta[0], deltaPro[0], 1, deltaCounter[0]);
+    
+    /* Update the village level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, n_dimV, 1, 1, delta0_village[k], A0delta_village[k], 
+		 1, s0_village[k], nu0_village[k], 0);
+    }
+
+    /* Update the district level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta_village[k], W, delta_district[k], sigma2_district[k], *n_district, n_dimW, 1, 1, delta0_district[k], 
+		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0);
+    }
+
+    /* Update the province level model */
+    for (k = 0; k < n_grp; k++) {
+      bNormalReg(delta_district[k], Z, delta_province[k], sigma2_province[k], *n_province, *n_covZ, 1, 1, delta0_province[k], 
+		 A0delta_province[k], 1, s0_province[k], nu0_province[k], 0);
+    }
+
+    /* Update the prior information */
+    for (i = 0; i < n_grp; i++) { 
+      for (j = 0; j < *n_village; j++) {
+	delta0[i][j] = 0;
+	for (k = 0; k < n_dimV; k++)
+	  delta0[i][j] += delta_village[i][k] * V[j][k];
+      } 
+      for (j = 0; j < *n_district; j++) {
+	delta0_village[i][j] = 0;
+	for (k = 0; k < n_dimW; k++)
+	  delta0_village[i][j] += delta_district[i][k] * W[j][k];
+      } 
+      for (j = 0; j < *n_province; j++) {
+	delta0_district[i][j] = 0;
+	for (k = 0; k < *n_covZ; k++)
+	  delta0_district[i][j] += delta_province[i][k] * Z[j][k];
+      } 
+    }
+
+    /* Store the results */
+    if (main_loop >= *burnin) {
+      if (itempK == *keep) {
+	/* individual level fixed effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_village; j < n_dim; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	/* individual level random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_village; j++) {
+	    allresults[itemp++] = delta[i][j];
+	  }      
+	}
+	/* village level fixed effects coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_district; j < n_dimV; j++) {
+	    allresults[itemp++] = delta_village[i][j];
+	  }      
+	}
+	/* village level random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_district; j++) {
+	    allresults[itemp++] = delta_village[i][j];
+	  }      
+	}
+	/* district level fixed effects coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = *n_province; j < n_dimW; j++) {
+	    allresults[itemp++] = delta_district[i][j];
+	  }      
+	}
+	/* district level random effects */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_province; j++) {
+	    allresults[itemp++] = delta_district[i][j];
+	  }      
+	}
+	/* province level fixed effects coefficients */
+	for (i = 0; i < n_grp; i++) {
+	  for (j = 0; j < *n_covZ; j++) {
+	    allresults[itemp++] = delta_province[i][j];
+	  }      
+	}
+	/* village level sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_village[i][0];
+	}
+	/* district level sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_district[i][0];
+	}
+	/* province level sigmas */
+	for (i = 0; i < n_grp; i++) {
+	  allresults[itemp++] = sigma2_province[i][0];
+	}
+	/* acceptance ratios */
+	for (i = 0; i < n_grp; i++) 
+	  allresults[itemp++] = ((double) deltaCounter[i][0] / (double) (main_loop + 1));
+	itempK = 1;
+      } else {
+	itempK++;
+      }
+    }
+
+    /* printing */
+    if (*verbose) {
+      if (main_loop == itempP) {
+	Rprintf("\n%3d percent done.\n    Metropolis acceptance ratios\n", progress*10);
+	itempP += ftrunc((double) *n_draws/10); 
+	progress++;
+	Rprintf("      Control item model:");
+	Rprintf(" %3g", fprec((double) deltaCounter[0][0] / (double) (main_loop + 1), 3));
+	Rprintf("\n");
+	for (i = 1; i < n_grp; i++) {
+	  Rprintf("      Sensitive item model %3d:", i);
+	  Rprintf(" %3g", fprec((double) deltaCounter[i][0] / (double) (main_loop + 1), 3));
+	  Rprintf("\n");
+	}
+	R_FlushConsole(); 
+      }
+    }
+
+    /* allow for user interrupt */
+    R_CheckUserInterrupt();
+  }
+
+  /** write out the random seed **/
+  PutRNGstate();
+ 
+  /** freeing memory **/
+  free(vitemp);
+  free(treatSum);
+  FreeintMatrix(Zstar, *tmax);
+  free(Y0);
+  FreeMatrix(X, *n_samp);
+  Free3DMatrix(Xtemp, *tmax, *n_samp);
+  free(Xdelta);
+  free(Xdelta0);
+  FreeintMatrix(gtmp, *tmax);
+  FreeMatrix(V, *n_village);
+  free(vitemp1);
+  FreeMatrix(W, *n_district);
+  free(vitemp2);
+  FreeMatrix(Z, *n_province);
+  FreeMatrix(delta, n_grp);
+  FreeMatrix(delta_village, n_grp);
+  FreeMatrix(delta_district, n_grp);
+  FreeMatrix(delta_province, n_grp);
+  FreeMatrix(sigma2_village, n_grp);
+  FreeMatrix(sigma2_district, n_grp);
+  FreeMatrix(sigma2_province, n_grp);
+  FreeMatrix(delta0, n_grp);
+  FreeMatrix(delta0_village, n_grp);
+  FreeMatrix(delta0_district, n_grp);
+  FreeMatrix(delta0_province, n_grp);
+  Free3DMatrix(A0delta, n_grp, n_dim);
+  Free3DMatrix(A0delta_village, n_grp, n_dimV);
+  Free3DMatrix(A0delta_district, n_grp, n_dimW);
+  Free3DMatrix(A0delta_province, n_grp, *n_covZ);
+  Free3DMatrix(deltaPro, n_grp, n_dim);
+  FreeintMatrix(deltaCounter, n_grp); 
+
+}
 
 
 /**
@@ -988,7 +3149,6 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
       denom += dbinom(Y[i], J, 1 / (1 + exp(-Xbeta[i]-Zgamma[i])), 1);
       numer += dbinom(Y[i], J, 1 / (1 + exp(-Xbeta1[i]-Zgamma[i])), 1);
     }
-    /* Rejection */
     if (unif_rand() < fmin2(1.0, exp(numer-denom))) {
       acc_fixed[0]++;
       for (j = 0; j < n_fixed; j++)
@@ -997,11 +3157,15 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
 	Xbeta[i] = Xbeta1[i];
     }
     /** STEP 2: Update Random Effects Given Fixed Effects **/
-    dinv(Psi, n_random, mtemp);
-    for (i = 0; i < n_random; i++)
-      for (j = 0; j < n_random; j++)
-	mtemp[i][j] *= tune_random[j];
     for (j = 0; j < n_grp; j++) {
+      for (i = 0; i < n_random; i++)
+	for (k = 0; k < n_random; k++) {
+	  if (i == k) {
+	    mtemp[i][i] = tune_random[j];
+	  } else {
+	    mtemp[i][k] = 0;
+	  }
+	}
       rMVN(gamma1, gamma[j], mtemp, n_random);
       /* Calculating the ratio (log scale) */
       /* prior */
@@ -1012,14 +3176,14 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
 	vitemp[k] = 0;
       for (i = 0; i < n_samp; i++) {
 	if (grp[i] == j) {
+	  Zgamma1[i] = 0;
 	  for (k = 0; k < n_random; k++)
-	    Zgamma1[i] = Zgamma[i] - Z[j][vitemp[j]][k]*(gamma[j][k]-gamma1[k]);
+	    Zgamma1[i] += Z[j][vitemp[j]][k]*gamma1[k];
 	  denom += dbinom(Y[i], J, 1 / (1 + exp(-Xbeta[i]-Zgamma[i])), 1);
 	  numer += dbinom(Y[i], J, 1 / (1 + exp(-Xbeta[i]-Zgamma1[i])), 1);
 	}
 	vitemp[grp[i]]++;
       }
-      /* Rejection */
       if (unif_rand() < fmin2(1.0, exp(numer-denom))) {
 	acc_random[j]++;
 	for (k = 0; k < n_random; k++)
@@ -1041,7 +3205,7 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
 	for (k = 0; k < n_random; k++)
 	  mtemp[j][k] += gamma[i][j] * gamma[i][k];
     dinv(mtemp, n_random, mtemp1);
-    rWish(Psi, mtemp1, tau0+n_grp, n_random);
+    rWish(Psi, mtemp1, (tau0+n_grp), n_random);
   }
 
   /* freeing memory */
@@ -1056,3 +3220,101 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
   FreeMatrix(mtemp, n_random);
   FreeMatrix(mtemp1, n_random);
 } /* end of mixed effects logit */
+
+
+/*** 
+     Bayesian Normal Regression: see Chap.14 of Gelman et al. (2004) 
+       both proper and improper priors (and their combinations)
+       allowed for beta and sig2. 
+***/
+void bNormalReg(double *Y,    
+		double **X,
+		double *beta,  /* coefficients */
+		double *sig2,  /* variance */
+		int n_samp,    /* sample size */
+		int n_cov,     /* # of covariates */
+		int addprior,  /* Should prior on beta be incorporated
+				  into the data matrix? */
+		int pbeta,     /* Is prior proper for beta? */
+		double *beta0, /* prior mean for normal */
+		double **A0,   /* prior precision for normal; can be
+				  set to zero to induce improper prior
+				  for beta alone
+			       */
+		int psig2,     /* 0: improper prior for sig2
+				  p(sig2|X) \propto 1/sig2
+				  1: proper prior for sig2
+				  p(sigma2|X) = InvChi2(nu0, s0)
+			       */
+		double s0,     /* prior scale for InvChi2 */
+		int nu0,       /* prior d.f. for InvChi2 */
+		int sig2fixed  /* 1: sig2 fixed, 0: sig2 sampled */ 
+		) {
+  /* model parameters */
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+
+  /* storage parameters and loop counters */
+  int i, j, k;  
+
+  /* D = [X Y] */
+  double **D = doubleMatrix(n_samp + n_cov, n_cov + 1);
+  for (i = 0; i < n_samp; i++) {
+    D[i][n_cov] = Y[i];
+    for (j = 0; j < n_cov; j++)
+      D[i][j] = X[i][j];
+  }
+
+  /* read the proper prior for beta as additional data points */
+  if (addprior) {
+    dcholdc(A0, n_cov, mtemp);
+    for(i = 0; i < n_cov; i++) {
+      D[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	D[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  } 
+  
+  /* SS matrix */
+  for(j = 0; j <= n_cov; j++)
+    for(k = 0; k <= n_cov; k++)
+      SS[j][k]=0;
+  for(i = 0;i < n_samp + n_cov; i++)
+    for(j = 0;j <= n_cov; j++)
+      for(k = 0; k <= n_cov; k++) 
+	SS[j][k] += D[i][j]*D[i][k];
+  
+  /* SWEEP SS matrix */
+  for(j = 0; j < n_cov; j++)
+    SWP(SS, j, n_cov+1);
+
+  /* draw sig2 from its marginal dist */
+  for(j = 0; j < n_cov; j++)
+    mean[j] = SS[j][n_cov];
+  if (!sig2fixed) {
+    if (psig2) {  /* proper prior for sig2 */
+      if (pbeta)   /* proper prior for beta */
+	sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
+       else        /* improper prior for beta */
+	sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
+    } else         /* improper prior for sig2 */
+      sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
+  }
+
+  /* draw beta from its conditional given sig2 */
+  for(j = 0; j < n_cov; j++)
+    for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
+  rMVN(beta, mean, V, n_cov);
+
+  /* freeing memory */
+  free(mean);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+  FreeMatrix(D, n_samp);
+}
+
