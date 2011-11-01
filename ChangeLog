@@ -8,3 +8,4 @@ version      date  description
 3.0      04/05/11  Prediction and prediction plots for differences in proportions and comparison between list and direct survey item predictions; formulae for ceiling and floor fits; numerous bug fixes
 4.0      05/04/11  Bayesian MCMC standard design estimator added; output improved; bug fixes
 4.1      05/22/11  Bayesian MCMC multiple sensitive design estimator added
+4.2      11/01/11  Minor update with several bug fixes

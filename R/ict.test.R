@@ -133,11 +133,33 @@ ict.test <- function(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRU
                           (length(pi.y1)+1):(length(pi.y1) + length(pi.y0))]
     }
 
-    ## save pi (s.e.) table for printing)
+    ## create pi and s.e. table for printing
+
+    y.comb.tb <- c(0:J, 0:J)
+    t.comb.tb <- c(rep(1, J+1), rep(0, J+1))
     
-    tb <- round(rbind(cbind(pi.y1, sqrt(diag(cov.pi.y1))), cbind(pi.y0, sqrt(diag(cov.pi.y0)))), 4)
-    rownames(tb) <- c(paste("pi(y = ", 1:length(pi.y1), ", t = 1)", sep = ""),
-                      paste("pi(y = ", 1:length(pi.y0), ", t = 0)", sep = ""))
+    sd.tb <- rep(NA, length(y.comb.tb))
+    for(j in 1:length(y.comb.tb)) {
+      
+      if(t.comb.tb[j]==1) sd.tb[j] <- sqrt(((mean(y[treat==1] <= y.comb.tb[j])*(1-mean(y[treat==1] <= y.comb.tb[j])))/sum(treat==1) + (mean(y[treat==0] <= y.comb.tb[j])*(1-mean(y[treat==0] <= y.comb.tb[j])))/sum(treat==0))) 
+      
+      if(t.comb.tb[j]==0) sd.tb[j] <- sqrt(((mean(y[treat==1] <= (y.comb.tb[j]-1+1))*(1-mean(y[treat==1] <= (y.comb.tb[j]-1+1))))/sum(treat==1) + (mean(y[treat==0] <= (y.comb.tb[j]-1+0))*(1-mean(y[treat==0] <= (y.comb.tb[j]-1+0))))/sum(treat==0)))
+      
+    }
+    
+    pi.y1.tb <- rep(NA, J+1)
+    for(j in 0:J) {
+      pi.y1.tb[j+1] <- mean(y[treat==0] <= j) - mean(y[treat==1] <= j)
+    }
+    
+    pi.y0.tb <- rep(NA, J+1)
+    for(j in 0:J) {
+      pi.y0.tb[j+1] <- mean(y[treat==1] <= j) - mean(y[treat==0] <= (j - 1))
+    }
+    
+    tb <- round(rbind(cbind(pi.y1.tb, sd.tb[1:(J+1)]), cbind(pi.y0.tb, sd.tb[(J+2):((J+1)*2)])), 4)
+    rownames(tb) <- c(paste("pi(y = ", 0:J, ", t = 1)", sep = ""),
+                      paste("pi(y = ", 0:J, ", t = 0)", sep = ""))
     colnames(tb) <- c("est.", "s.e.")
     
     

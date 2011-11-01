@@ -3,6 +3,6 @@
   title <- packageDescription(pkg, lib.loc = mylib)$Title
   ver <- packageDescription(pkg, lib.loc = mylib)$Version
   author <- packageDescription(pkg, lib.loc = mylib)$Author
-  cat(paste("\n", pkg, ": ", title, "\nVersion: ", ver, "\nAuthor: ", author, "\n\n", sep=""))
+  packageStartupMessage(pkg, ": ", title, "\nVersion: ", ver, "\nAuthor: ", author, "\n")
 }
 

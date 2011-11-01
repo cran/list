@@ -3022,7 +3022,7 @@ print.summary.ictreg <- function(x, ...){
         if (x$ceiling == TRUE)
           mu.par <- c(mu.par, x$par.ceiling)
         
-        try(draws <- mvrnorm(n = n.draws, mu = mu.par, Sigma = x$vcov, tol = 1e-7))
+        try(draws <- mvrnorm(n = n.draws, mu = mu.par, Sigma = x$vcov, tol = 1e-1))
         
         if (exists("draws")) {
           
@@ -3066,6 +3066,9 @@ print.summary.ictreg <- function(x, ...){
             }
             
           }
+
+          if(x$ceiling==TRUE | x$floor == TRUE)
+            cat("Quasi-Bayesian approximation estimates\n")
           
           if(x$ceiling==TRUE) {
             liar.ceiling <- mean(liar.ceiling.sims)
@@ -3074,7 +3077,7 @@ print.summary.ictreg <- function(x, ...){
             liar.ceiling.pop.se <- sd(liar.ceiling.pop.sims)/sqrt(nrow(x$x))
             cat("Ceiling liar cond. prob. est. = ", round(liar.ceiling,5), " (s.e. = ",
                 round(liar.ceiling.se,5), ")\nCeiling liar pop. prop. est. = ", round(liar.ceiling.pop,5), " (s.e. = ",
-                round(liar.ceiling.pop.se,5), ")\n\n", sep = "")
+                round(liar.ceiling.pop.se,5), ")\n", sep = "")
           } 
           
           if(x$floor==TRUE) {
@@ -3084,48 +3087,53 @@ print.summary.ictreg <- function(x, ...){
             liar.floor.pop.se <- sd(liar.floor.pop.sims)/sqrt(nrow(x$x))
             cat("Floor liar cond. prob. est. = ",round(liar.floor,5), " (s.e. = ",
                 round(liar.floor.se,5), ")\nFloor liar pop. prop. est. = ",round(liar.floor.pop,5), " (s.e. = ",
-                round(liar.floor.pop.se,5), ")\n\n", sep = "")
+                round(liar.floor.pop.se,5), ")\n", sep = "")
           } 
           
-        } else {
-          ## cannot use mvrnorm()
-          
-          coef.h <- x$par.control
-          coef.g <- x$par.treat
-          
-          if(x$floor == TRUE) {
-            coef.ql <- x$par.floor
-            qlX <- logistic(x$x %*% coef.ql)
-          }
-          if(x$ceiling == TRUE) {
-            coef.qu <- x$par.ceiling
-            quX <- logistic(x$x %*% coef.qu)
-          }
-          
-          hX <- logistic(x$x %*% coef.h)
-          gX <- logistic(x$x %*% coef.g)
-          
-          hX0 <- dbinom(x = 0, size = x$J, prob = hX, log = FALSE)
-          hXJ <- dbinom(x = x$J, size = x$J, prob = hX, log = FALSE)
-          
-          if (x$ceiling == TRUE) {
-            liar.ceiling <- sum(quX * hXJ * gX) / sum(hXJ * gX)
-            liar.ceiling.pop <- (1/n) * sum(quX * hXJ * gX)
-            cat("Ceiling liar conditional probability:", round(liar.ceiling,5), "\n")
-            cat("Ceiling liar population proportion:", round(liar.ceiling.pop,5),"\n")
-          }
-          if (x$floor == TRUE) {
-            liar.floor <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
-            liar.floor.pop <- (1/n) * sum(qlX * hX0 * gX)
-            cat("Floor liar cond. prob. est. =", round(liar.floor,5), "\n")
-            cat("Floor liar pop. prop. est. =", round(liar.floor.pop,5),"\n")
-          }
-          
-          cat("\nNote: covariance matrix was not computationally singular,\n")
-          cat("so std. errors for the proportion estimates could not be calculated.\n\n")
-          
+          ##} else {
+        }
+
+        ## cannot use mvrnorm()
+        ## cannot use mvrnorm()
+        
+        coef.h <- x$par.control
+        coef.g <- x$par.treat
+        
+        if(x$floor == TRUE) {
+          coef.ql <- x$par.floor
+          qlX <- logistic(x$x %*% coef.ql)
+        }
+        if(x$ceiling == TRUE) {
+          coef.qu <- x$par.ceiling
+          quX <- logistic(x$x %*% coef.qu)
         }
         
+        hX <- logistic(x$x %*% coef.h)
+        gX <- logistic(x$x %*% coef.g)
+        
+        hX0 <- dbinom(x = 0, size = x$J, prob = hX, log = FALSE)
+        hXJ <- dbinom(x = x$J, size = x$J, prob = hX, log = FALSE)
+
+        if(x$ceiling == TRUE | x$floor == TRUE)
+          cat("\nMaximum likelihood estimates\n")
+        if (x$ceiling == TRUE) {
+          liar.ceiling <- sum(quX * hXJ * gX) / sum(hXJ * gX)
+          liar.ceiling.pop <- (1/n) * sum(quX * hXJ * gX)
+          cat("Ceiling liar cond. prob. est. =", round(liar.ceiling,5), "\n")
+          cat("Ceiling liar pop. prop. est. =", round(liar.ceiling.pop,5),"\n")
+        }
+        if (x$floor == TRUE) {
+          liar.floor <- sum(qlX * hX0 * gX) / sum(hX0 * gX)
+          liar.floor.pop <- (1/n) * sum(qlX * hX0 * gX)
+          cat("Floor liar cond. prob. est. =", round(liar.floor,5), "\n")
+          cat("Floor liar pop. prop. est. =", round(liar.floor.pop,5),"\n")
+        }
+        if(!exists("draws")) {
+          cat("\nNote: covariance matrix was not computationally singular,\n")
+          cat("so std. errors for the proportion estimates could not be calculated.\n\n")
+        } else {
+          cat("\n")
+        }
       }
       
     }
