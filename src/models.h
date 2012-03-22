@@ -11,3 +11,20 @@ void bNormalReg(double *Y, double **X, double *beta, double *sig2,
 		int n_samp, int n_cov, int addprior, int pbeta, 
 		double *beta0, double **A0, int psig2, double s0, 
 		int nu0, int sig2fixed);
+
+void RobitGibbs(int *Y, double **X, double *beta, int n_samp, int n_cov, int prior, double *beta0, double **A0,	int df,	int n_gen);
+
+void endorseoprobitMCMC(int *Y, double **X, double *beta, 
+			 double *tau, int n_samp, int n_cov, int n_cat, 
+			 int prior, double *beta0, double **A0, int mda, 
+			 int mh, double *prop, int *accept, int n_gen);
+ 
+void bNormalReg1(double **X, double *beta, 
+		 int n_samp, int n_cov, int prior, 
+		 double *beta0, double **A0, double *tau, 
+		 int df, int n_gen);
+
+void bNormalReg2(double **D, double *beta, double *sig2, 
+		 int n_samp, int n_cov, int addprior, int pbeta, 
+		 double *beta0, double **A0, int psig2, double s0, 
+		 int nu0, int sig2fixed);

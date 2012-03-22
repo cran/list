@@ -113,3 +113,38 @@ double ddet(double **X, int size, int give_log)
   else
     return(exp(2.0*logdet));
 }
+
+/* mean */
+double mean(double *X, int n)
+{
+  int i;
+  double temp = 0;
+
+  for (i = 0; i < n; i++)
+    temp += X[i];
+
+  temp /= n;
+  return  temp;
+}
+
+/* unbiased variance */
+double var(double *X, int n, int unbiased)
+{
+  int i;
+  double Xbar, e;
+  double temp = 0;
+
+  Xbar = mean(X, n);
+  for (i = 0; i < n; i++) {
+    e = X[i] - Xbar;
+    temp += (e * e);
+  }
+
+  if (unbiased) {
+    temp /= (n - 1);
+  } else {
+    temp /= n;
+  }
+
+  return temp;
+}

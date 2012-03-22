@@ -18,7 +18,7 @@ ictregBayesHier(formula, data = parent.frame(),
 		sigma.start.level.2, sigma.df.level.2, sigma.scale.level.2, 
 		sigma.start.level.3, sigma.df.level.3, sigma.scale.level.3, 
 		sigma.start.level.4, sigma.df.level.4, sigma.scale.level.4, 
-		delta.tune, alpha.tune, ceiling = FALSE, floor = FALSE, 
+		delta.tune, alpha.tune, 
 		verbose = TRUE, ...)
 } 
 
@@ -63,8 +63,6 @@ ictregBayesHier(formula, data = parent.frame(),
 \item{delta.A0.level.4}{Optional matrix of prior precisions for the sensitive item fit parameters for the fourth level of the hierarchical model, a matrix of dimension the number of covariates.}
 \item{delta.tune}{A required vector of tuning parameters for the Metropolis algorithm for the sensitive item fit. This must be set and refined by the user until the acceptance ratios are approximately .4 (reported in the output).}
 \item{alpha.tune}{An optional vector of tuning parameters for the Metropolis algorithm for the random effects.}
-\item{ceiling}{A vector indicating whether ceiling effects are estimated for each sensitive item.}
-\item{floor}{A vector indicating whether floor effects are estimated for each sensitive item.}
 \item{verbose}{A logical value indicating whether model diagnostics are printed out during fitting.}
 \item{...}{further arguments to be passed to NLS regression commands.}
 }
@@ -106,7 +104,7 @@ If the data includes multiple sensitive items, the following object is also incl
 
 \references{
 Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
-  Political Analysis. Forthcoming. available at 
+  Political Analysis, Vol. 20, No 1 (Winter). available at 
   \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
@@ -138,7 +136,6 @@ draws <- mvrnorm(n = 3, mu = coef(mle.estimates.multi),
 
 bayesDraws.1 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ 1, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[1, 8:9], draws[1, 2:3], draws[1, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
@@ -148,7 +145,6 @@ bayesDraws.1 <- ictregBayesHier(y ~ male + college,
 
 bayesDraws.2 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ 1, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[2, 8:9], draws[2, 2:3], draws[2, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
@@ -158,7 +154,6 @@ bayesDraws.2 <- ictregBayesHier(y ~ male + college,
 
 bayesDraws.3 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ 1, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[3, 8:9], draws[3, 2:3], draws[3, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
@@ -180,7 +175,6 @@ draws <- mvrnorm(n = 3, mu = coef(mle.estimates.multi),
 
 bayesDraws.1 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ age, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[1, 8:9], draws[1, 2:3], draws[1, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
@@ -190,7 +184,6 @@ bayesDraws.1 <- ictregBayesHier(y ~ male + college,
 
 bayesDraws.2 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ age, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[2, 8:9], draws[2, 2:3], draws[2, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),
@@ -200,7 +193,6 @@ bayesDraws.2 <- ictregBayesHier(y ~ male + college,
 
 bayesDraws.3 <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ age, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[3, 8:9], draws[3, 2:3], draws[3, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),

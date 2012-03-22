@@ -43,7 +43,7 @@ Either a single predict object can be plotted, or a group of them combined with 
 
 \references{
 Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
-  Political Analysis. Forthcoming. available at 
+  Political Analysis, Vol. 20, No 1 (Winter). available at 
   \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item

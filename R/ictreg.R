@@ -1607,30 +1607,32 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           } else {
             coef.qufit.start <- rep(0, nPar.ceiling)
           }
-          
-          if (ceiling.fit=="glm") {
-            qufit <- glm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-                                          paste(x.vars.ceiling, collapse=" + "))),
-                         weights = dtmpC$w, family = binomial(logit),
-                         start = coef.qufit.start, data = dtmpC,
-                         control = glm.control(maxit = maxIter))
-          } else if(ceiling.fit=="bayesglm") {
-            ##qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-            ##                                   paste(x.vars.ceiling, collapse=" + "))),
-            ##                  weights = dtmpC$w, family = binomial(logit),
-            ##                  start = coef.qufit.start,
-            ##                  data = dtmpC, control = glm.control(maxit = maxIter), scaled = F)
-            if (intercept.only.ceiling == F) {
-              qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-                                                 paste(x.vars.ceiling, collapse=" + "))),
-                                weights = dtmpC$w, family = binomial(logit),
-                                start = coef.qufit.start, data = dtmpC,
-                                control = glm.control(maxit = maxIter), scaled = F)
-            } else {
-              qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
-                                weights = dtmpC$w, family = binomial(logit),
-                                start = coef.qufit.start, data = dtmpC,
-                                control = glm.control(maxit = maxIter), scaled = F)
+
+          if (ceiling == TRUE) {
+            if (ceiling.fit=="glm") {
+              qufit <- glm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                                            paste(x.vars.ceiling, collapse=" + "))),
+                           weights = dtmpC$w, family = binomial(logit),
+                           start = coef.qufit.start, data = dtmpC,
+                           control = glm.control(maxit = maxIter))
+            } else if(ceiling.fit=="bayesglm") {
+              ##qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+              ##                                   paste(x.vars.ceiling, collapse=" + "))),
+              ##                  weights = dtmpC$w, family = binomial(logit),
+              ##                  start = coef.qufit.start,
+              ##                  data = dtmpC, control = glm.control(maxit = maxIter), scaled = F)
+              if (intercept.only.ceiling == F) {
+                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                                                   paste(x.vars.ceiling, collapse=" + "))),
+                                  weights = dtmpC$w, family = binomial(logit),
+                                  start = coef.qufit.start, data = dtmpC,
+                                  control = glm.control(maxit = maxIter), scaled = F)
+              } else {
+                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                                  weights = dtmpC$w, family = binomial(logit),
+                                  start = coef.qufit.start, data = dtmpC,
+                                  control = glm.control(maxit = maxIter), scaled = F)
+              }
             }
           }
           
@@ -1641,24 +1643,25 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             coef.qlfit.start <- rep(0, nPar.floor)
           }
 
-          
-          if(floor.fit=="glm") {
-            qlfit <- glm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-                                          paste(x.vars.floor, collapse=" + "))), weights = dtmpF$w,
-                         family = binomial(logit), start = coef.qlfit.start, data = dtmpF,
-                         control = glm.control(maxit = maxIter))
-          } else if(floor.fit=="bayesglm") {
-            if (intercept.only.floor == F) {
-              qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-                                                 paste(x.vars.floor, collapse=" + "))),
-                                weights = dtmpF$w, family = binomial(logit),
-                                start = coef.qlfit.start, data = dtmpF,
-                                control = glm.control(maxit = maxIter), scaled = F)
-            } else {
-              qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
-                                weights = dtmpF$w, family = binomial(logit),
-                                start = coef.qlfit.start, data = dtmpF,
-                                control = glm.control(maxit = maxIter), scaled = F)
+          if (floor == TRUE) {
+            if(floor.fit=="glm") {
+              qlfit <- glm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                                            paste(x.vars.floor, collapse=" + "))), weights = dtmpF$w,
+                           family = binomial(logit), start = coef.qlfit.start, data = dtmpF,
+                           control = glm.control(maxit = maxIter))
+            } else if(floor.fit=="bayesglm") {
+              if (intercept.only.floor == F) {
+                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                                                   paste(x.vars.floor, collapse=" + "))),
+                                  weights = dtmpF$w, family = binomial(logit),
+                                  start = coef.qlfit.start, data = dtmpF,
+                                  control = glm.control(maxit = maxIter), scaled = F)
+              } else {
+                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                                  weights = dtmpF$w, family = binomial(logit),
+                                  start = coef.qlfit.start, data = dtmpF,
+                                  control = glm.control(maxit = maxIter), scaled = F)
+              }
             }
           }
           
@@ -1718,7 +1721,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         
         llik <- llik - p.prior.floor - p.prior.ceiling
         
-        vcov.mle <- solve(-MLEfit$hessian, tol = 1e-7)
+        vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
         se.mle <- sqrt(diag(vcov.mle))
         
       } # end of boundary ml
@@ -1778,17 +1781,20 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     try(names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = ""), silent = T)
     
     if(exists("coef.glm.control")) {
-      fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
-                                         paste(paste("beta", 1:length(coef.glm.control),sep=""),
-                                               collapse= ","), "))")) , start = coef.glm.control,
-                       control = nls.control(maxiter=maxIter, warnOnly=TRUE))
+      try(fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
+                                             paste(paste("beta", 1:length(coef.glm.control),sep=""),
+                                                   collapse= ","), "))")) , start = coef.glm.control,
+                           control = nls.control(maxiter=maxIter, warnOnly=TRUE)), silent = T)
     } else {
-      fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
-                                         paste(paste("beta", 1:length(coef.glm.control),sep=""),
-                                               collapse= ","), "))")) ,
-                       control = nls.control(maxiter=maxIter, warnOnly=TRUE))
+      try(fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
+                                             paste(paste("beta", 1:length(coef.glm.control),sep=""),
+                                                   collapse= ","), "))")) ,
+                           control = nls.control(maxiter=maxIter, warnOnly=TRUE)), silent = T)
     }
-				
+
+    if(!exists("fit.treat"))
+      fit.treat <- lm(y.treatment.pred ~ x.treatment - 1)
+      
     vcov.twostep.modified <- function(coef.treat, coef.control, J,
                                       x1, y1, x0, y0, fit.nonsensitive = "nls") {
       
@@ -1884,16 +1890,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     par.treat.nls.mod <- coef(fit.treat)
     par.control.nls.mod <- do.call(c, par.control.list)
     
-    vcov.twostep <- vcov.twostep.modified(par.treat.nls.mod, par.control.list,
-                                 J, x.treatment, y.treatment, x.control, y.control,
-                                          fit.nonsensitive)
-    se.twostep <- sqrt(diag(vcov.twostep))
+    if(method == "nls") {
+      vcov.twostep <- vcov.twostep.modified(par.treat.nls.mod, par.control.list,
+                                            J, x.treatment, y.treatment, x.control, y.control,
+                                            fit.nonsensitive)
+      se.twostep <- sqrt(diag(vcov.twostep))
+    }
     
     ##
     ## Run maximum likelihood method
     
     if(method == "ml"){
-      
+
       coef.control.start <- par.control.nls.mod
       coef.treat.start <- par.treat.nls.mod
       
@@ -2000,8 +2008,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         
         nPar <- length(par) / (J+1)
         
-        x.treat <- X[treat==1,]
-        y.treat <- y[treat==1,]
+        x.treat <- X[treat==1, , drop = FALSE]
+        y.treat <- y[treat==1, , drop = FALSE]
         
         n.treat <- nrow(x.treat)
         

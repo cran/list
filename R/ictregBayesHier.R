@@ -1,5 +1,6 @@
 
-ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group.level.3, group.level.4, formula.level.2, formula.level.3, formula.level.4, treat="treat", J, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, delta.start.level.1, delta.mu0.level.1, delta.A0.level.1, delta.start.level.2, delta.mu0.level.2, delta.A0.level.2, delta.start.level.3, delta.mu0.level.3, delta.A0.level.3, delta.start.level.4, delta.mu0.level.4, delta.A0.level.4, sigma.start.level.1, sigma.df.level.1, sigma.scale.level.1, sigma.start.level.2, sigma.df.level.2, sigma.scale.level.2, sigma.start.level.3, sigma.df.level.3, sigma.scale.level.3, sigma.start.level.4, sigma.df.level.4, sigma.scale.level.4, delta.tune, alpha.tune, ceiling = FALSE, floor = FALSE, verbose = TRUE, ...){
+ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group.level.3, group.level.4, formula.level.2, formula.level.3, formula.level.4, treat="treat", J, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, delta.start.level.1, delta.mu0.level.1, delta.A0.level.1, delta.start.level.2, delta.mu0.level.2, delta.A0.level.2, delta.start.level.3, delta.mu0.level.3, delta.A0.level.3, delta.start.level.4, delta.mu0.level.4, delta.A0.level.4, sigma.start.level.1, sigma.df.level.1, sigma.scale.level.1, sigma.start.level.2, sigma.df.level.2, sigma.scale.level.2, sigma.start.level.3, sigma.df.level.3, sigma.scale.level.3, sigma.start.level.4, sigma.df.level.4, sigma.scale.level.4, delta.tune, alpha.tune, ##ceiling = FALSE, floor = FALSE,
+                            verbose = TRUE, ...){
 
   ictreg.call <- match.call()
   
@@ -9,7 +10,8 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
   mf <- match.call(expand.dots = FALSE)
   
   ## make all other call elements null in mf <- NULL in next line
-  mf$group.level.2 <- mf$group.level.3 <- mf$group.level.4 <- mf$formula.level.2 <- mf$formula.level.3 <- mf$formula.level.4 <- mf$treat <- mf$J <- mf$fit.start <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$delta.mu0 <- mf$delta.A0 <- mf$delta.tune <- mf$delta.start.level.1 <- mf$delta.mu0.level.1 <- mf$delta.A0.level.1 <- mf$delta.start.level.2 <- mf$delta.mu0.level.2 <- mf$delta.A0.level.2 <- mf$delta.start.level.3 <- mf$delta.mu0.level.3 <- mf$delta.A0.level.3 <- mf$delta.start.level.4 <- mf$delta.mu0.level.4 <- mf$delta.A0.level.4 <- mf$sigma.start.level.1 <- mf$sigma.df.level.1 <- mf$sigma.scale.level.1 <- mf$sigma.start.level.2 <- mf$sigma.df.level.2 <- mf$sigma.scale.level.2 <- mf$sigma.start.level.3 <- mf$sigma.df.level.3 <- mf$sigma.scale.level.3 <- mf$sigma.start.level.4 <- mf$sigma.df.level.4 <- mf$sigma.scale.level.4 <- mf$alpha.tune <- mf$ceiling <- mf$floor <- mf$verbose <- NULL
+  mf$group.level.2 <- mf$group.level.3 <- mf$group.level.4 <- mf$formula.level.2 <- mf$formula.level.3 <- mf$formula.level.4 <- mf$treat <- mf$J <- mf$fit.start <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$delta.mu0 <- mf$delta.A0 <- mf$delta.tune <- mf$delta.start.level.1 <- mf$delta.mu0.level.1 <- mf$delta.A0.level.1 <- mf$delta.start.level.2 <- mf$delta.mu0.level.2 <- mf$delta.A0.level.2 <- mf$delta.start.level.3 <- mf$delta.mu0.level.3 <- mf$delta.A0.level.3 <- mf$delta.start.level.4 <- mf$delta.mu0.level.4 <- mf$delta.A0.level.4 <- mf$sigma.start.level.1 <- mf$sigma.df.level.1 <- mf$sigma.scale.level.1 <- mf$sigma.start.level.2 <- mf$sigma.df.level.2 <- mf$sigma.scale.level.2 <- mf$sigma.start.level.3 <- mf$sigma.df.level.3 <- mf$sigma.scale.level.3 <- mf$sigma.start.level.4 <- mf$sigma.df.level.4 <- mf$sigma.scale.level.4 <- mf$alpha.tune <- mf$verbose <- NULL
+  ## mf$ceiling <- mf$floor <- NULL
 
   mf[[1]] <- as.name("model.frame")
   mf$na.action <- 'na.pass'
@@ -214,10 +216,10 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
     
   ## multi code
  
-  if (length(ceiling) == 1)
-    ceiling <- rep(ceiling, length(treatment.values))
-  if (length(floor) == 1)
-    floor <- rep(floor, length(treatment.values))
+  ##if (length(ceiling) == 1)
+  ##  ceiling <- rep(ceiling, length(treatment.values))
+  ##if (length(floor) == 1)
+  ##  floor <- rep(floor, length(treatment.values))
  
   ## mixed multi model
   
@@ -304,23 +306,13 @@ if (missing("delta.mu0.level.4"))
   if (missing("alpha.tune"))
     alpha.tune = rep(0.001, n.grp2)
 
-  print(paste("Running a",levels,"level model."))
-
   if (levels==2) {
-      save(y.all, x.all, v.all, file = "~/desktop/t.RData")
-
-    ##save(y.all, t, x.all, v.all, J, grp2, ceiling, floor,
-    ##                                    n.draws, burnin, thin, verbose, delta.start,
-    ##                                    delta.start.level.1, sigma.start.level.1, delta.mu0, 
-    ##                                    delta.A0, delta.mu0.level.1, delta.A0.level.1,
-    ##                                    sigma.df.level.1, sigma.scale.level.1,
-    ##                                    delta.tune, alpha.tune, file = "~/desktop/bobob.rdata")
 
 ##delta.grp.mu0 = 0, delta.grp.A0 = diag(1), 
 ##delta.grp.mu0 = delta.mu0.level.1, delta.grp.A0 = delta.A0.level.1,
     
     fit <- ictregBayesMulti2Level.fit(Y = y.all, treat = t, X = as.matrix(x.all), V = as.matrix(v.all), J = J, grp = as.numeric(grp2),
-                                      ceiling = ceiling, floor = floor,
+                                      ##ceiling = ceiling, floor = floor,
                                       n.draws = n.draws, burnin = burnin, thin = thin, verbose = verbose, delta.start = delta.start.level.1,
                                       delta.grp.start = delta.start.level.2, sigma.start = sigma.start.level.2, delta.mu0 = delta.mu0.level.1, 
                                       delta.A0 = delta.A0.level.1, delta.grp.mu0 = delta.mu0.level.2, delta.grp.A0 = delta.A0.level.2,
@@ -328,11 +320,10 @@ if (missing("delta.mu0.level.4"))
                                       delta.tune = delta.tune, alpha.tune = alpha.tune, ...)
 
   } else if (levels==3){
-      save(y.all, x.all, v.all, w.all, file = "~/desktop/t.RData")
 
     fit <- ictregBayesMulti3Level.fit(Y = y.all, treat = t, X = as.matrix(x.all), V = as.matrix(v.all), W = as.matrix(w.all), J = J,
                                       grp1 = as.numeric(grp2), grp2 = as.numeric(grp3),
-                                      ceiling = ceiling, floor = floor,
+                                      ##ceiling = ceiling, floor = floor,
                                       n.draws = n.draws, burnin = burnin, thin = thin, verbose = verbose, delta.start = delta.start.level.1,
                                       delta.grp1.start = delta.start.level.2, delta.grp2.start = delta.start.level.3,
                                       sigma.grp1.start = sigma.start.level.2, sigma.grp2.start = sigma.start.level.3,
@@ -344,41 +335,9 @@ if (missing("delta.mu0.level.4"))
                                       delta.tune = delta.tune, alpha.tune = alpha.tune, ...)
   } else if (levels==4){
 
-    ##save( y.all, treat, x.all, v.all, w.all,  J,
-     ##                                 grp2, grp3,
-     ##                                 ceiling, floor,
-     ##                                 n.draws,  burnin, thin, verbose, delta.start,
-     ##                                 delta.start.level.1, delta.start.level.2,
-     ##                                 sigma.start.level.1, sigma.start.level.2, delta.mu0, 
-     ##                                 delta.A0, delta.mu0.level.1, delta.mu0.level.2,
-     ##                                 delta.A0.level.1, delta.A0.level.2,
-     ##                                 sigma.df.level.1, sigma.scale.level.1,
-     ##                                 sigma.df.level.2, sigma.scale.level.2,
-     ##                                 delta.tune, alpha.tune, file = "poppop.RData")
-
-    ##save(w.all, file = "wall.RData")
-    save(y.all, x.all, v.all, w.all, z.all, file = "~/desktop/t.RData")
-
-    ##save.list <- list(Y = y.all, treat = t, X = as.matrix(x.all), V = as.matrix(v.all), W = as.matrix(w.all), Z = as.matrix(z.all), J = J,
-    ##                                  grp1 = as.numeric(grp2), grp2 = as.numeric(grp3), grp3 = as.numeric(grp4),
-    ##                                  ceiling = ceiling, floor = floor,
-    ##                                  n.draws = n.draws, burnin = burnin, thin = thin, verbose = verbose, delta.start = delta.start,
-    ##                                  delta.grp1.start = delta.start.level.2, delta.grp2.start = delta.start.level.3,
-    ##                                  delta.grp3.start = delta.start.level.4,
-    ##                                  sigma.grp1.start = sigma.start.level.2, sigma.grp2.start = sigma.start.level.3,
-    ##                                  sigma.grp3.start = sigma.start.level.4, delta.mu0 = delta.mu0, 
-    ##                                  delta.A0 = delta.A0, delta.grp1.mu0 = delta.mu0.level.2, delta.grp2.mu0 = delta.mu0.level.3,
-    ##                                  delta.grp3.mu0 = delta.mu0.level.4,
-    ##                                  delta.grp1.A0 = delta.A0.level.2, delta.grp2.A0 = delta.A0.level.3, delta.grp3.A0 = delta.A0.level.4,
-    ##                                  sigma.grp1.df = sigma.df.level.2, sigma.grp1.scale = sigma.scale.level.2,
-    ##                                  sigma.grp2.df = sigma.df.level.3, sigma.grp2.scale = sigma.scale.level.3,
-    ##                                  sigma.grp3.df = sigma.df.level.4, sigma.grp3.scale = sigma.scale.level.4,
-    ##                                  delta.tune = delta.tune, alpha.tune = alpha.tune)
-    ##save(save.list, file = "~/desktop/savelist.RData")
-
     fit <- ictregBayesMulti4Level.fit(Y = y.all, treat = t, X = as.matrix(x.all), V = as.matrix(v.all), W = as.matrix(w.all), Z = as.matrix(z.all), J = J,
                                       grp1 = as.numeric(grp2), grp2 = as.numeric(grp3), grp3 = as.numeric(grp4),
-                                      ceiling = ceiling, floor = floor,
+                                     ## ceiling = ceiling, floor = floor,
                                       n.draws = n.draws, burnin = burnin, thin = thin, verbose = verbose, delta.start = delta.start.level.1,
                                       delta.grp1.start = delta.start.level.2, delta.grp2.start = delta.start.level.3,
                                       delta.grp3.start = delta.start.level.4,
@@ -936,7 +895,9 @@ predict.ictregBayesHier <- function(object, newdata, se.fit = FALSE,
 
 
 
-ictregBayesMulti2Level.fit <- function(Y, treat, X, V, J, grp, ceiling, floor, n.draws, burnin, thin,
+ictregBayesMulti2Level.fit <- function(Y, treat, X, V, J, grp,
+                                       ##ceiling, floor,
+                                       n.draws, burnin, thin,
                                        verbose, delta.start, delta.grp.start, sigma.start, delta.mu0, 
                                        delta.A0, delta.grp.mu0, delta.grp.A0, sigma.df, sigma.scale,
                                        delta.tune, alpha.tune) {
@@ -1064,7 +1025,9 @@ ictregBayesMulti2Level.fit <- function(Y, treat, X, V, J, grp, ceiling, floor, n
             as.integer(k), as.integer(n.covV), as.double(delta.mu0.all),
             as.double(delta.grp.mu0.all), as.double(delta.A0.all),
             as.double(delta.grp.A0.all), as.double(delta.tune.all),
-            as.integer(ceiling), as.integer(floor), as.integer(grp-1),
+            ##as.integer(ceiling), as.integer(floor),
+            0, 0,
+            as.integer(grp-1),
             as.integer(n.grp), as.double(alpha.tune.all),
             as.double(sigma.start.all), as.integer(sigma.df.all),
             as.double(sigma.scale.all), as.integer(burnin),
@@ -1083,7 +1046,8 @@ ictregBayesMulti2Level.fit <- function(Y, treat, X, V, J, grp, ceiling, floor, n
 
 
 
-ictregBayesMulti3Level.fit <- function(Y, treat, X, V, W, J, grp1, grp2, ceiling, floor, n.draws, burnin,
+ictregBayesMulti3Level.fit <- function(Y, treat, X, V, W, J, grp1, grp2, ##ceiling, floor,
+                                       n.draws, burnin,
                                        thin, verbose, delta.start, delta.grp1.start, delta.grp2.start,
                                        sigma.grp1.start, sigma.grp2.start, delta.mu0, delta.A0,
                                        delta.grp1.mu0, delta.grp1.A0, delta.grp2.mu0, delta.grp2.A0,
@@ -1265,7 +1229,8 @@ ictregBayesMulti3Level.fit <- function(Y, treat, X, V, W, J, grp1, grp2, ceiling
             as.double(delta.grp1.mu0.all), as.double(delta.grp2.mu0.all),
             as.double(delta.A0.all), as.double(delta.grp1.A0.all),
             as.double(delta.grp2.A0.all), as.double(delta.tune.all),
-            as.integer(ceiling), as.integer(floor), as.integer(grp1-1),
+           ## as.integer(ceiling), as.integer(floor),
+            0, 0, as.integer(grp1-1),
             as.integer(n.grp1), as.integer(grp2-1), as.integer(n.grp2),
             as.double(alpha.tune.all), as.double(sigma.grp1.start.all),
             as.double(sigma.grp2.start.all), as.integer(sigma.grp1.df.all),
@@ -1288,7 +1253,8 @@ ictregBayesMulti3Level.fit <- function(Y, treat, X, V, W, J, grp1, grp2, ceiling
 
 
 
-ictregBayesMulti4Level.fit <- function(Y, treat, X, V, W, Z, J, grp1, grp2, grp3, ceiling, floor,
+ictregBayesMulti4Level.fit <- function(Y, treat, X, V, W, Z, J, grp1, grp2, grp3,
+                                       ##ceiling, floor,
                                        n.draws, burnin, thin, verbose, delta.start, delta.grp1.start,
                                        delta.grp2.start, delta.grp3.start, sigma.grp1.start,
                                        sigma.grp2.start, sigma.grp3.start, delta.mu0, delta.A0,
@@ -1526,7 +1492,8 @@ ictregBayesMulti4Level.fit <- function(Y, treat, X, V, W, Z, J, grp1, grp2, grp3
             as.double(delta.grp2.mu0.all), as.double(delta.grp3.mu0.all),
             as.double(delta.A0.all), as.double(delta.grp1.A0.all),
             as.double(delta.grp2.A0.all), as.double(delta.grp3.A0.all),
-            as.double(delta.tune.all), as.integer(ceiling), as.integer(floor),
+            as.double(delta.tune.all), ##as.integer(ceiling), as.integer(floor),
+            0, 0,
             as.integer(grp1-1), as.integer(n.grp1), as.integer(grp2-1), as.integer(n.grp2),
             as.integer(grp3-1), as.integer(n.grp3), as.double(alpha.tune.all),
             as.double(sigma.grp1.start.all), as.double(sigma.grp2.start.all),

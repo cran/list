@@ -385,6 +385,7 @@ void ictregBinomMulti(int *Y,             /* outcome vector */
       itemp += ceiling[i];
       itemp += floor[i];
     }
+    Rprintf("%5d\n", itemp);
     if (itemp > 0)
       error("Only constrained models are allowed with ceiling and floor effects\n");
   }
@@ -3317,4 +3318,461 @@ void bNormalReg(double *Y,
   FreeMatrix(mtemp, n_cov);
   FreeMatrix(D, n_samp);
 }
+
+
+/*** 
+     Bayesian Normal Regression: see Chap.14 of Gelman et al. (2004) 
+       both proper and improper priors (and their combinations)
+       allowed for beta and sig2. 
+***/
+void bNormalReg2(double **D,    /* data [X Y] */
+		double *beta,  /* coefficients */
+		double *sig2,  /* variance */
+		int n_samp,    /* sample size */
+		int n_cov,     /* # of covariates */
+		int addprior,  /* Should prior on beta be incorporated
+				  into D? */
+		int pbeta,     /* Is prior proper for beta? */
+		double *beta0, /* prior mean for normal */
+		double **A0,   /* prior precision for normal; can be
+				  set to zero to induce improper prior
+				  for beta alone
+			       */
+		int psig2,     /* 0: improper prior for sig2
+				  p(sig2|X) \propto 1/sig2
+				  1: proper prior for sig2
+				  p(sigma2|X) = InvChi2(nu0, s0)
+			       */
+		double s0,     /* prior scale for InvChi2 */
+		int nu0,       /* prior d.f. for InvChi2 */
+		int sig2fixed  /* 1: sig2 fixed, 0: sig2 sampled */ 
+		) {
+  /* model parameters */
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+
+  /* storage parameters and loop counters */
+  int i, j, k;  
+
+  /* read the proper prior for beta as additional data points */
+  if (addprior) {
+    dcholdc(A0, n_cov, mtemp);
+    for(i = 0; i < n_cov; i++) {
+      D[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	D[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  } 
+  
+  /* SS matrix */
+  for(j = 0; j <= n_cov; j++)
+    for(k = 0; k <= n_cov; k++)
+      SS[j][k]=0;
+  for(i = 0;i < n_samp + n_cov; i++)
+    for(j = 0;j <= n_cov; j++)
+      for(k = 0; k <= n_cov; k++) 
+	SS[j][k] += D[i][j]*D[i][k];
+  
+  /* SWEEP SS matrix */
+  for(j = 0; j < n_cov; j++)
+    SWP(SS, j, n_cov+1);
+
+  /* draw sig2 from its marginal dist */
+  for(j = 0; j < n_cov; j++)
+    mean[j] = SS[j][n_cov];
+  if (!sig2fixed) {
+    if (psig2) {  /* proper prior for sig2 */
+      if (pbeta)   /* proper prior for beta */
+	sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
+       else        /* improper prior for beta */
+	sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
+    } else         /* improper prior for sig2 */
+      sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
+  }
+
+  /* draw beta from its conditional given sig2 */
+  for(j = 0; j < n_cov; j++)
+    for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
+  rMVN(beta, mean, V, n_cov);
+
+  /* freeing memory */
+  free(mean);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+}
+
+
+/*** 
+   A Gibbs Sampler for Binary Student-t Regression by   
+   Chuanhai Liu
+***/ 
+
+void RobitGibbs(int *Y,        /* binary outcome variable */
+		double **X,    /* covariate matrix */
+		double *beta,  /* coefficients */
+		int n_samp,    /* # of obs */ 
+		int n_cov,     /* # of covariates */
+		int prior,     /* Should prior be included in X? */
+		double *beta0, /* prior mean */
+		double **A0,   /* prior precision */
+		int df,        /* degrees of freedom */
+		int n_gen      /* # of gibbs draws */
+		) {
+  
+  /* model parameters */
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double *W = doubleArray(n_samp);
+  double *tau = doubleArray(n_samp);
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+
+  /* storage parameters and loop counters */
+  int i, j, k, main_loop;  
+  double dtemp;
+  
+  /* read the prior as additional data points */
+  if (prior) {
+    dcholdc(A0, n_cov, mtemp);
+    for(i = 0; i < n_cov; i++) {
+      X[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	X[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	X[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  }
+
+  /* Gibbs Sampler! */
+  for(main_loop = 1; main_loop <= n_gen; main_loop++){
+    for (i = 0; i < n_samp; i++){
+      dtemp = 0;
+      for (j = 0; j < n_cov; j++) 
+	dtemp += X[i][j]*beta[j]; 
+      if(Y[i] == 0)
+	W[i] = TruncT(dtemp-1000,0,dtemp,df,1,1);
+      else
+	W[i] = TruncT(0,dtemp+1000,dtemp,df,1,1);
+      X[i][n_cov] = W[i];
+      tau[i] = rgamma(((double)df + 1)/2, 
+		      ((double)df + (W[i] - dtemp)*(W[i] - dtemp))/2);
+    }
+
+    /* SS matrix */
+    for(j = 0; j <= n_cov; j++)
+      for(k = 0; k <= n_cov; k++)
+	SS[j][k]=0;
+    for(i = 0;i < n_samp; i++)
+      for(j = 0;j <= n_cov; j++)
+	for(k = 0; k <= n_cov; k++) 
+	  SS[j][k] += X[i][j]*X[i][k]*tau[i];
+    dtemp = rgamma(((double) df)/2, ((double) df)/2);
+    for(i = n_samp;i < n_samp+n_cov; i++)
+      for(j = 0;j <= n_cov; j++)
+	for(k = 0; k <= n_cov; k++) 
+	  SS[j][k] += X[i][j]*X[i][k]*dtemp;
+   
+    /* SWEEP SS matrix */
+    for(j = 0; j < n_cov; j++)
+      SWP(SS, j, n_cov+1);
+
+    /* draw beta */    
+    for(j = 0; j < n_cov; j++)
+      mean[j] = SS[j][n_cov];
+    for(j = 0; j < n_cov; j++)
+      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k];
+    rMVN(beta, mean, V, n_cov);
+ 
+    R_CheckUserInterrupt();
+  } /* end of Gibbs sampler */
+
+  /* freeing memory */
+  free(W);
+  free(tau);
+  free(mean);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+}
+
+
+
+
+/***
+     A Gibbs sampler for ordered probit regression for ideal point estimation.
+     works only if n_cov = 2, alpha is sampled from the marginal, and beta
+     is sampled from the conditional truncated below at 0.
+ ***/
+
+
+void endorseoprobitMCMC(int *Y,        /* ordinal outcome variable: 0, 1,
+					   dots, J-1 */
+			 double **X,    /* covariate matrix */
+			 double *beta,  /* coefficients */
+			 double *tau,   /* J cut points: the first
+					   cutpoint is set to 0 and the last
+					   cutpoint is set to tau_{J-1}+1000 */
+			 int n_samp,    /* # of obs */ 
+			 int n_cov,     /* # of covariates */
+			 int n_cat,     /* # of categories: J */
+			 int prior,     /* Should prior be included in X? */
+			 double *beta0, /* prior mean */
+			 double **A0,   /* prior precision */
+			 int mda,       /* use marginal data augmentation? */
+			 int mh,        /* use metropolis-hasting step? */
+			 double *prop,  /* J-2 proposal variances for MH step */
+			 int *accept,   /* counter for acceptance */
+			 int n_gen      /* # of gibbs draws */
+			 ) {
+
+  /* model parameters */
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_samp);           /* means for each obs */
+  double *mbeta = doubleArray(n_cov);           /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double *W = doubleArray(n_samp);
+  double *Wmax = doubleArray(n_cat);  /* max of W in each categry: 0, 1,
+					 ..., J-1 */
+  double *Wmin = doubleArray(n_cat);  /* min of W in each category: 0, 1, 
+					 ..., J-1 */
+  
+  /* storage parameters and loop counters */
+  int i, j, k, main_loop;  
+  double dtemp;
+  double *dvtemp = doubleArray(n_cat); dvtemp[0] = tau[0];
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+  
+  /* marginal data augmentation */
+  double sig2; sig2 = 1;
+  int nu0; nu0 = 1;
+  double s0; s0 = 1;
+
+  /* read the prior as additional data points */
+  if (prior) {
+    dcholdc(A0, n_cov, mtemp);
+    for(i = 0; i < n_cov; i++) {
+      X[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	X[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	X[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  }
+
+  /* Gibbs Sampler! */
+  for(main_loop = 1; main_loop <= n_gen; main_loop++){
+    for (i = 0; i < n_samp; i++){
+      mean[i] = 0;
+      for (j = 0; j < n_cov; j++) {
+	mean[i] += X[i][j]*beta[j]; 
+      }
+    }
+
+    /* Sampling tau with MH step */
+    if (mh) {
+      for (j = 1; j < (n_cat-1); j++) {
+	dvtemp[j] = TruncNorm(dvtemp[j-1], tau[j+1], tau[j], prop[j-1], 1);
+      }
+      dtemp = 0; dvtemp[n_cat-1] = dvtemp[n_cat-2] + 1000;
+      for (j = 1; j < (n_cat-1); j++) 
+	dtemp = dtemp + log(pnorm(tau[j+1]-tau[j], 0, sqrt(prop[j-1]), 1, 0) -
+			    pnorm(dvtemp[j-1]-tau[j], 0, sqrt(prop[j-1]), 1, 0)) -
+	  log(pnorm(dvtemp[j+1]-dvtemp[j], 0, sqrt(prop[j-1]), 1, 0) -
+	      pnorm(tau[j-1]-dvtemp[j], 0, sqrt(prop[j-1]), 1, 0));
+      for (i = 0; i < n_samp; i++) {
+	if (Y[i] == (n_cat-1))  
+	  dtemp = dtemp + pnorm(dvtemp[n_cat-2]-mean[i], 0, 1, 0, 1) -
+	    pnorm(tau[n_cat-2]-mean[i], 0, 1, 0, 1);
+	else if (Y[i] > 0) 
+	  dtemp = dtemp + log(pnorm(dvtemp[Y[i]]-mean[i], 0, 1, 1, 0) -
+			      pnorm(dvtemp[Y[i]-1]-mean[i], 0, 1, 1, 0)) -
+	    log(pnorm(tau[Y[i]]-mean[i], 0, 1, 1, 0) -
+		pnorm(tau[Y[i]-1]-mean[i], 0, 1, 1, 0));
+      }
+      if (unif_rand() < exp(dtemp)) {
+	accept[0]++;
+	for (j = 1; j < n_cat; j++) {
+	  tau[j] = dvtemp[j];
+	}
+      }
+    } 
+
+    /* Sampling the Latent Variable */
+    if (!mh) {
+      Wmin[0] = tau[0]; Wmax[0] = tau[0]-10;
+      for (j = 1; j < n_cat; j++) {
+	Wmin[j] = tau[j];
+	Wmax[j] = tau[j-1];
+      }
+    }
+
+    if (mda) /* marginal data augmentation */ 
+      sig2 = s0/rchisq((double)nu0);
+
+    for (i = 0; i < n_samp; i++){
+      if (Y[i] == 0) {
+	W[i] = TruncNorm(mean[i]-1000,0,mean[i],1,0);
+      } else if (Y[i] < 0) {
+	W[i] = mean[i] + norm_rand();
+      } else {
+	W[i] = TruncNorm(tau[Y[i]-1],tau[Y[i]],mean[i],1,0);
+      }
+      if (!mh) {
+	Wmax[Y[i]] = fmax2(Wmax[Y[i]], W[i]);
+	Wmin[Y[i]] = fmin2(Wmin[Y[i]], W[i]);
+      }
+      X[i][n_cov] = W[i]*sqrt(sig2);
+    }
+
+    /* SS matrix */
+    for(j = 0; j <= n_cov; j++)
+      for(k = 0; k <= n_cov; k++)
+	SS[j][k]=0;
+    for(i = 0; i < n_samp+n_cov; i++)
+      for(j = 0; j <= n_cov; j++)
+	for(k = 0; k <= n_cov; k++) 
+	  SS[j][k] += X[i][j]*X[i][k];
+    
+    /* SWEEP SS matrix */
+    for(j = 0; j < n_cov; j++)
+      SWP(SS, j, n_cov+1);
+    
+    /* draw beta */    
+    for(j = 0; j < n_cov; j++)
+      mbeta[j] = SS[j][n_cov];
+    if (mda) 
+      sig2=(SS[n_cov][n_cov]+s0)/rchisq((double)n_samp+nu0);
+    for(j = 0; j < n_cov; j++)
+      for(k = 0; k < n_cov; k++)
+	V[j][k]=-SS[j][k]*sig2;
+
+
+/*     Rprintf("   Variance-covariance matrix\n"); */
+/*     for (j = 0; j < n_cov; j++) { */
+/*       for (k = 0; k < n_cov; k++) */
+/* 	Rprintf("   %5g", V[j][k]); */
+/*       Rprintf("\n"); */
+/*     } */
+
+
+    beta[0] = mbeta[0] + norm_rand()*sqrt(V[0][0]);
+/*     Rprintf("   Sampled alpha: %5g\n", beta[0]); */
+    
+    beta[1] = TruncNorm(0, 10000,
+			mbeta[1] + (V[0][1] / V[0][0])*(beta[0] - mbeta[0]),
+			V[1][1] - (V[0][1]*V[0][1] / V[0][0]), 0);
+/*     Rprintf("   Sampled beta: %5g\n", beta[1]); */
+
+/*     rMVN(beta, mbeta, V, n_cov); */
+
+    /* rescaling the parameters */
+    if (mda) {
+      for (j = 0; j < n_cov; j++) 
+	beta[j] /= sqrt(sig2);
+      for (i = 0; i < n_samp; i++)
+	X[i][n_cov] /= sqrt(sig2);
+    }
+
+    /* sampling taus without MH-step */
+    if (!mh) { 
+      for (j = 1; j < n_cat-1; j++) {
+	tau[j] = runif(fmax2(tau[j-1], Wmax[j]), 
+		       fmin2(tau[j+1], Wmin[j+1]));
+      }
+      tau[n_cat-1] = tau[n_cat-2] + 1000;
+    }
+    R_FlushConsole(); 
+    R_CheckUserInterrupt();
+  } /* end of Gibbs sampler */
+  
+  /* freeing memory */
+  FreeMatrix(SS, n_cov+1);
+  free(mean);
+  free(mbeta);
+  FreeMatrix(V, n_cov);
+  free(W);
+  free(Wmax);
+  free(Wmin);
+  free(dvtemp);
+  FreeMatrix(mtemp, n_cov);
+}
+
+
+void bNormalReg1(double **X,    /* [X Y] */
+		 double *beta,  /* coefficients */
+		 int n_samp,    /* # of obs */ 
+		 int n_cov,     /* # of covariates */
+		 int prior,     /* Should prior be included in X? */
+		 double *beta0, /* prior mean */
+		 double **A0,   /* prior precision */
+		 double *tau,  /* precision for each observation */
+		 int df,        /* degrees of freedom */
+		 int n_gen      /* # of gibbs draws */
+		 ) {
+  
+  /* model parameters */
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+
+  /* storage parameters and loop counters */
+  int i, j, k, main_loop;  
+  
+  /* read the prior as additional data points */
+  if (prior) {
+    dcholdc(A0, n_cov, mtemp);
+    for(i = 0; i < n_cov; i++) {
+      X[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	X[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	X[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  }
+
+  /* Gibbs Sampler! */
+  for(main_loop = 1; main_loop <= n_gen; main_loop++){
+
+    /* SS matrix */
+    for(j = 0; j <= n_cov; j++)
+      for(k = 0; k <= n_cov; k++)
+	SS[j][k]=0;
+    for(i = 0;i < n_samp; i++)
+      for(j = 0;j <= n_cov; j++)
+	for(k = 0; k <= n_cov; k++) 
+	  SS[j][k] += X[i][j]*X[i][k]*tau[i];
+    for(i = n_samp;i < n_samp+n_cov; i++)
+      for(j = 0;j <= n_cov; j++)
+	for(k = 0; k <= n_cov; k++) 
+	  SS[j][k] += X[i][j]*X[i][k];
+   
+    /* SWEEP SS matrix */
+    for(j = 0; j < n_cov; j++)
+      SWP(SS, j, n_cov+1);
+
+    /* draw beta */    
+    for(j = 0; j < n_cov; j++)
+      mean[j] = SS[j][n_cov];
+    for(j = 0; j < n_cov; j++)
+      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k];
+    rMVN(beta, mean, V, n_cov);
+ 
+    R_CheckUserInterrupt();
+  } /* end of Gibbs sampler */
+
+  /* freeing memory */
+  free(mean);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+}
+
+
+
 

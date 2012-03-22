@@ -57,8 +57,7 @@ double TruncNorm(
   if (invcdf) {  /* inverse cdf method */
     z = qnorm(runif(pnorm(stlb, 0, 1, 1, 0), pnorm(stub, 0, 1, 1, 0)),
 	      0, 1, 1, 0); 
-  }
-  else { /* rejection sampling method */
+  } else { /* rejection sampling method */
     double tol=2.0;
     double temp, M, u, exp_par;
     int flag=0;  /* 1 if stlb, stub <-tol */
@@ -92,6 +91,32 @@ double TruncNorm(
   return(z*sigma + mu); 
 }
 
+/* Truncated Student t distribution */
+
+double TruncT(double lb,  /* lower bound */
+	      double ub,  /* upper bound */
+	      double mu,  /* mean */
+	      int df,     /* degrees of freedom */
+              double var, /* scale^2 */
+	      int invcdf  /* use inverse cdf method? */
+	      ) {
+
+  double z;
+  double dtemp;
+  double sigma = sqrt(var);
+  double stlb = (lb-mu)/sigma;  /* standardized lower bound */
+  double stub = (ub-mu)/sigma;  /* standardized upper bound */
+
+  if (invcdf) {
+    z = qt(runif(pt(stlb, df, 1, 0), pt(stub, df, 1, 0)), df, 1, 0);
+    return(z*sigma + mu);
+  } else {
+    dtemp = var*((double) df)/rchisq(df);
+    z = TruncNorm(lb, ub, mu, dtemp, 0);
+    return(z);
+  }
+
+}
 
 /* Sample from the MVN dist */
 void rMVN(                      

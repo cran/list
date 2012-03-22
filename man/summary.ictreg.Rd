@@ -29,7 +29,7 @@ The conditional probability of lying for the ceiling model is the probability th
 
 \references{
 Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
-  Political Analysis. Forthcoming. available at 
+  Political Analysis, Vol. 20, No 1 (Winter). available at 
   \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
@@ -45,20 +45,20 @@ Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
 \examples{
 data(race)
 \dontrun{
-# Fit standard design ML model with floor and ceiling effects
-# Replicates Table 7 Columns 7-8 in Blair and Imai (2010)
+# Fit standard design ML model with ceiling effects
+# Replicates Table 7 Columns 3-4 in Blair and Imai (2012)
 
-floor.results <- ictreg(y ~ age + college + male + south, 
-   treat = "treat", J = 3, data = affirm, method = "ml",
-   fit.start = "nls", floor = TRUE, floor.fit = "bayesglm")
+ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+		   	  J = 3, data = affirm, method = "ml", fit.start = "nls",
+			  ceiling = TRUE, ceiling.fit = "bayesglm",
+			  ceiling.formula = ~ age + college + male + south)
 
 # Summarize fit object and generate conditional probability 
-# of floor liars the population proportion of floor liars,
+# of ceiling liars the population proportion of ceiling liars,
 # both with standard errors.
-# Replicates Table 7 Columns 7-8 last row in Blair and Imai (2010)
+# Replicates Table 7 Columns 3-4 last row in Blair and Imai (2012)
 
-
-summary(floor.results, boundary.proportions = TRUE)
+summary(ceiling.results, boundary.proportions = TRUE)
 }
 
 }

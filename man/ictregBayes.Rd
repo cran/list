@@ -12,8 +12,8 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 	    psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, 
 	    delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, 
             delta.tune, psi.tune, gamma.tune, zeta.tune, 
-	    formula.mixed, group.mixed, ceiling = FALSE, floor = FALSE, 
-	    verbose = TRUE, ...)
+	    formula.mixed, group.mixed, 
+	    verbose = TRUE, robit = FALSE, df = 5, ...)
 } 
 
 \arguments{ 
@@ -45,9 +45,9 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 \item{zeta.tune}{An optional vector of tuning parameters for the Metropolis algorithm for the sensitive item fit for the random effects. This can be set and refined by the user until the acceptance ratios are approximately .4 (reported in the output).}
 \item{formula.mixed}{To specify a mixed effects model, include this formula object for the group-level fit. ~1 allows intercepts to vary, and including covariates in the formula allows the slopes to vary also.}
 \item{group.mixed}{A numerical group indicator specifying which group each individual belongs to for a mixed effects model.}
-\item{ceiling}{A vector indicating whether ceiling effects are estimated for each sensitive item.}
-\item{floor}{A vector indicating whether floor effects are estimated for each sensitive item.}
 \item{verbose}{A logical value indicating whether model diagnostics are printed out during fitting.}
+\item{robit}{A logical value indicating whether the robit model is used for the sensitive item fit or logistic regression is used (default).}
+\item{df}{Degrees of freedom for the robit model for the sensitive item fit, only used if \code{robit} is set to \code{TRUE}.}
 \item{...}{further arguments to be passed to NLS regression commands.}
 }
 
@@ -88,7 +88,7 @@ If the data includes multiple sensitive items, the following object is also incl
 
 \references{
 Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
-  Political Analysis. Forthcoming. available at 
+  Political Analysis, Vol. 20, No 1 (Winter). available at 
   \url{http://imai.princeton.edu/research/listP.html}
 
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item

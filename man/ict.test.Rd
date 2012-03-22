@@ -26,7 +26,7 @@ ict.test(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRUE,
 
 \references{
 Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments." 
-  Political Analysis. Forthcoming. available at 
+  Political Analysis, Vol. 20, No 1 (Winter). available at 
   \url{http://imai.princeton.edu/research/listP.html}
 }
 
