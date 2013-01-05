@@ -184,7 +184,7 @@ ict.test <- function(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRU
       
       par.y1 <- rep(0, length(pi.y1))
       
-      Dmat <- 2*solve(cov.pi.y1)
+      Dmat <- 2*ginv(cov.pi.y1)
       Amat <- diag(length(pi.y1))
       
       if (sum(pi.y1 < 0) > 0) {
@@ -250,7 +250,7 @@ ict.test <- function(y, treat, J = NA, alpha = 0.05, n.draws = 250000, gms = TRU
       
       par.y0 <- rep(0, length(pi.y0))
       
-      Dmat <- 2*solve(cov.pi.y0)
+      Dmat <- 2*ginv(cov.pi.y0)
       Amat <- diag(length(pi.y0))
       
       if (sum(pi.y0 < 0) > 0) {

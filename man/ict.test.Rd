@@ -44,8 +44,10 @@ data(race)
 # Replicates results on Blair and Imai (2010) pg. 30
 
 test.value.affirm <- ict.test(affirm$y, affirm$treat, J = 3, gms = TRUE)
+print(test.value.affirm)
 
 test.value.race <- ict.test(race$y, race$treat, J = 3, gms = TRUE)
+print(test.value.race)
 
 }
  

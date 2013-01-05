@@ -13,3 +13,4 @@ version      date  description
 	varying-intercept and varying slope models added; Bayesian ceiling
 	and floor effects added; many bug fixes
 5.1      03/23/12  Bug fixes   
+5.2      01/05/13  Bug fixes

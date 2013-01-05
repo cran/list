@@ -13,7 +13,8 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   mf <- match.call(expand.dots = FALSE)
   
   # make all other call elements null in mf <- NULL in next line
-  mf$treat <- mf$J <- mf$constrained.single <- mf$constrained.multi <- mf$verbose <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$psi.start <- mf$delta.mu0 <- mf$psi.mu0 <- mf$delta.A0 <- mf$psi.A0 <- mf$delta.tune <- mf$psi.tune <- mf$fit.start <- mf$formula.mixed <- mf$group.mixed <- mf$Sigma.start <- mf$Phi.start <- mf$Sigma.df <- mf$Sigma.scale <- mf$Phi.df <- mf$Phi.scale <- mf$gamma.tune <- mf$zeta.tune <- mf$robit <- mf$df <- mf$endorse.options <- NULL
+  mf$treat <- mf$J <- mf$constrained.single <- mf$constrained.multi <- mf$verbose <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$psi.start <- mf$delta.mu0 <- mf$psi.mu0 <- mf$delta.A0 <- mf$psi.A0 <- mf$delta.tune <- mf$psi.tune <- mf$fit.start <- mf$formula.mixed <- mf$group.mixed <- mf$Sigma.start <- mf$Phi.start <- mf$Sigma.df <- mf$Sigma.scale <- mf$Phi.df <- mf$Phi.scale <- mf$gamma.tune <- mf$zeta.tune <- mf$robit <- mf$df <- NULL
+  ##<- mf$endorse.options <- NULL
   ## mf$ceiling <- mf$floor <- NULL
   mf[[1]] <- as.name("model.frame")
   mf$na.action <- 'na.pass'
@@ -1786,7 +1787,7 @@ ictregBayesEndorse <- function(
                 tau = matrix(as.double(temp$tauStore), byrow = TRUE,
                   ncol = (max.L-1)*J, nrow = printout),
                 x = if (x.sd) matrix(as.double(temp$xStore), byrow = TRUE, ncol = 1,
-                  nrow = printout) else matix(as.double(temp$xStore), byrow = TRUE, ncol = N,
+                  nrow = printout) else matrix(as.double(temp$xStore), byrow = TRUE, ncol = N,
                     nrow = printout),
                 lambda = matrix(as.double(temp$lambdaStore), byrow = TRUE,
                   ncol = J * M * K, nrow = printout),

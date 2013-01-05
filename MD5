@@ -1,9 +1,9 @@
-3ac3ed117190604a590433392bd7eb84 *ChangeLog
-f846ea554f0b78047b5eab05e201fc62 *DESCRIPTION
+3557999f48cb8c8e60f65bcf99b7b392 *ChangeLog
+8190c10215b71f914a708c4f5c4a4dc8 *DESCRIPTION
 6e11561dea0047f4c33369ba32e33bbe *NAMESPACE
-994bac68e884f62e20a742c6708387e8 *R/ict.test.R
+80c93eb81c832d2749629078d325d7e6 *R/ict.test.R
 d5fde610949c6ce2617775d62205a7e2 *R/ictreg.R
-00ff77089386bb604eb495eed9ace4ca *R/ictregBayes.R
+7bf4d702574bcc3973cd803bf3806707 *R/ictregBayes.R
 073abb95d499e9cd746f394b4e67cea2 *R/ictregBayesHier.R
 ec4443e184561e51fe47df7c5fac42eb *R/onAttach.R
 c850e0b5d106a8801db3079ff289355c *data/affirm.tab.gz
@@ -12,7 +12,7 @@ c850e0b5d106a8801db3079ff289355c *data/affirm.tab.gz
 ce8fd733e5d0bba2bef1701abdacbd00 *data/race.tab.gz
 3aa4bb43360487b812a42723da5c17f4 *inst/CITATION
 d382035f2354e193ccccc50a91bab29c *man/affirm.Rd
-3922362c6e61c04cb836dceafa59cd6a *man/ict.test.Rd
+43641e310c0404716f0d7d8a6ce19ac4 *man/ict.test.Rd
 c51e7663a346e9e1c5dc03e14e61ffac *man/ictreg.Rd
 64766bd2f3fb45ebc55f2053a9ee9e7f *man/ictregBayes.Rd
 00cfa89d21181b00c0c62e537a82ab24 *man/ictregBayesHier.Rd
