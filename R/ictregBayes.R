@@ -1,8 +1,8 @@
 
-ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constrained.single = c("full","none","intercept"), constrained.multi = TRUE, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, delta.start, psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, psi.tune, gamma.tune, zeta.tune, formula.mixed, group.mixed,
+ictregBayes <- function(formula, data = parent.frame(), treat = "treat", J, constrained.single = c("full","none","intercept"), constrained.multi = TRUE, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, delta.start, psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, psi.tune, gamma.tune, zeta.tune, formula.mixed, group.mixed,
                         ##ceiling = FALSE, floor = FALSE,
-                        verbose = TRUE, robit = FALSE, df = 5,
-                        ##endorse.options,
+                        verbose = TRUE, sensitive.model = c("logit", "robit", "probit"), df = 5,
+                        endorse.options,
                         ...){
 
   ictreg.call <- match.call() 
@@ -13,9 +13,10 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   mf <- match.call(expand.dots = FALSE)
   
   # make all other call elements null in mf <- NULL in next line
-  mf$treat <- mf$J <- mf$constrained.single <- mf$constrained.multi <- mf$verbose <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$psi.start <- mf$delta.mu0 <- mf$psi.mu0 <- mf$delta.A0 <- mf$psi.A0 <- mf$delta.tune <- mf$psi.tune <- mf$fit.start <- mf$formula.mixed <- mf$group.mixed <- mf$Sigma.start <- mf$Phi.start <- mf$Sigma.df <- mf$Sigma.scale <- mf$Phi.df <- mf$Phi.scale <- mf$gamma.tune <- mf$zeta.tune <- mf$robit <- mf$df <- NULL
-  ##<- mf$endorse.options <- NULL
-  ## mf$ceiling <- mf$floor <- NULL
+  mf$treat <- mf$J <- mf$constrained.single <- mf$constrained.multi <- mf$verbose <- mf$n.draws <- mf$burnin <- mf$thin <- mf$delta.start <- mf$psi.start <- mf$delta.mu0 <- mf$psi.mu0 <- mf$delta.A0 <- mf$psi.A0 <- mf$delta.tune <- mf$psi.tune <- mf$fit.start <- mf$formula.mixed <- mf$group.mixed <- mf$Sigma.start <- mf$Phi.start <- mf$Sigma.df <- mf$Sigma.scale <- mf$Phi.df <- mf$Phi.scale <- mf$gamma.tune <- mf$zeta.tune <- mf$sensitive.model <- mf$df <- mf$endorse.options <- NULL
+
+    ##mf$ceiling <- mf$floor <- NULL
+
   mf[[1]] <- as.name("model.frame")
   mf$na.action <- 'na.pass'
   mf <- eval.parent(mf)
@@ -27,8 +28,8 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   # get mixed effects group-level predictors
   mixed <- missing("group.mixed") == FALSE
 
-  ##endorse <- missing("endorse.options") == FALSE
-  endorse <- FALSE
+  endorse <- missing("endorse.options") == FALSE
+  ##endorse <- FALSE
 
   if (mixed == TRUE) {
 
@@ -73,10 +74,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
     control.label <- condition.labels[1]
     
   } else {
-    ##condition.labels <- as.character(paste("Sensitive Item",sort(unique(t))))
-    ##condition.labels[which(condition.labels == "Sensitive Item 0")] <- "Control Items"
-    ##treatment.labels <- condition.labels[condition.labels != "Control Items"]
-    ##control.label <- "Control Items"
     condition.labels <- sort(unique(t))
     treatment.labels <- condition.labels[condition.labels != 0]
     control.label <- 0
@@ -111,11 +108,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   } else {
     multi <- FALSE
   }
-
-  ##if(multi == TRUE & length(ceiling)==1)
-  ##  ceiling <- rep(ceiling, length(treatment.values))
-  ##if(multi == TRUE & length(floor)==1)
-  ##  floor <- rep(floor, length(treatment.values))
   
   n <- nrow(x.treatment) + nrow(x.control)
   if (mixed == TRUE)
@@ -181,18 +173,10 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   if (missing("delta.tune") & endorse == FALSE) {
     stop("The Metropolis tuning input object delta.tune is required.")
 
-    ##if (multi == FALSE)
-    ##  delta.tune <- diag(.002, nPar)
-    ##else
-    ##  delta.tune <- diag(.002, nPar + (1-constrained.multi))
   }
   if (missing("psi.tune")) {
     stop("The Metropolis tuning input object psi.tune is required.") 
 
-    ##if (multi == FALSE)
-    ##  psi.tune <- diag(.0005, nPar)
-    ##else
-    ##  psi.tune <- diag(.0002, nPar)
   }
 
   if (mixed == TRUE) {
@@ -231,7 +215,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
     if ((missing(delta.start) & endorse == FALSE) | missing(psi.start))
       ictreg.fit <- ictreg(formula, data = data, treat = treat, J = J, method = fit.start, constrained = mle.constrained)
 
-    if (missing(delta.start))
+    if (missing(delta.start) & endorse == FALSE)
       delta.start <- ictreg.fit$par.treat
     if (missing(psi.start))
       psi.start <- ictreg.fit$par.control
@@ -245,27 +229,36 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
       if (mixed == FALSE) {
         
         ## do standard single sensitive item design
-        
-        ##ictregBayes.fit(reg$y, reg$treat, reg$x, 3, FALSE, 20000, 10000, 0, TRUE, coef(reg)[1:3], coef(reg)[4:6],
-        ##                    rep(0, 3), rep(0, 3), 0.01*diag(3), 0.01*diag(3), diag(0.002, 3), diag(0.0005, 3))
+    
         ictregBayes.fit <- ictregBayes.fit(Y = y.all, treat = t, X = x.all, J = J, constrained = constrained.pass,
                                            n.draws = n.draws, burnin = burnin, thin = thin, verbose = verbose,
                                            delta.start = delta.start, psi.start = psi.start,
                                            delta.mu0 = delta.mu0, psi.mu0 = psi.mu0, delta.A0 = delta.A0, psi.A0 = psi.A0,
                                            delta.tune = delta.tune, psi.tune = psi.tune,
                                            ##ceiling = ceiling, floor = floor,
+                                           0, 0,
+                                           robit = (sensitive.model == "robit"),
+                                           probit = (sensitive.model == "probit"), df = df,
                                            ...)
+
+        save(ictregBayes.fit, file = "~/desktop/res.RData")
         
         if (constrained.single == "full" | constrained.single == "intercept")
           M <- 1
         else
           M <- 2
+
+        if(sensitive.model != "logit")
+          M <- M - 1
         
         fit <- c()
         fit$delta <- ictregBayes.fit[, 1:nPar, drop = FALSE]
         fit$psi <- ictregBayes.fit[, (nPar+1):(ncol(ictregBayes.fit)-M-1), drop = FALSE]
-        fit$delta.accept <- ictregBayes.fit[nrow(ictregBayes.fit), ncol(ictregBayes.fit)-M, drop = FALSE]
-        fit$psi.accept <- ictregBayes.fit[nrow(ictregBayes.fit), (ncol(ictregBayes.fit)-M+1):ncol(ictregBayes.fit), drop = FALSE]
+        if(sensitive.model == "logit")
+          fit$delta.accept <- ictregBayes.fit[nrow(ictregBayes.fit), ncol(ictregBayes.fit)-M, drop = FALSE]
+        fit$psi.accept <- ictregBayes.fit[nrow(ictregBayes.fit),
+                                          (ncol(ictregBayes.fit)-M+
+                                           as.numeric(sensitive.model == "logit")):ncol(ictregBayes.fit), drop = FALSE]
         
         rownames(fit$delta) <- rownames(fit$psi) <-
           seq(from = n.draws - burnin + 1 + thin + 1,
@@ -276,20 +269,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
       } else {
         
         ## do mixed effects single sensitive item design
-        
-        ##res <- ictregBayesMixed.fit(y, treat, x, z, J, grp, FALSE, 11000, 1000, 10, TRUE,
-        ##                            delta, psi, Sigma, Phi, rep(0, ncol(x)), rep(0, ncol(x)), 
-        ##                            diag(ncol(x))*10, diag(ncol(x))*10, ncol(z)+1, diag(ncol(z))*0.1, 
-        ##                            ncol(z)+1, diag(ncol(z))*0.1, diag(ncol(x))*0.0001, diag(ncol(x))*0.0001,
-        ##                            rep(0.001, n.grp), rep(0.001, n.grp))
-        
-        ## ictregBayesMixed.fit <- (Y, treat, X, Z, J, grp, constrained, n.draws, burnin,
-        ##		     		 thin, verbose, delta.start, psi.start, Sigma.start, 
-        ##                             Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, 
-        ##                             Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, 
-        ##                             psi.tune, gamma.tune, zeta.tune)
-        
-                                        #print(paste("constraint", constrained.pass))
         
         fit <- ictregBayesMixed.fit(Y = y.all, treat = t, X = x.all, Z = z.all, J = J,
                                     grp = as.numeric(grp), constrained = constrained.pass,
@@ -302,9 +281,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
                                     gamma.tune = gamma.tune, zeta.tune = zeta.tune,
                                     ##ceiling = ceiling, floor = floor,
                                     ...)
-        
-        ##save(fit, file = "/home/gblair/bing.rdata")
-        
+                
         rownames(fit$delta) <- rownames(fit$psi) <- names(fit$Sigma) <-
           names(fit$Phi) <- rownames(fit$gamma) <- rownames(fit$zeta) <-
             seq(from = n.draws - burnin + 1 + thin + 1,
@@ -320,20 +297,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
         
       }
       
-      ##if (constrained.single == "full") {
-      ##  colnames(ictregBayes.fit) <- c(paste("sensitive.", coef.names,sep=""),
-      ##                                 paste("control.", coef.names,sep=""), "acceptance.sensitive", "acceptance.control")  
-      ## } else if (constrained.single == "intercept") {
-      ##   colnames(ictregBayes.fit) <- c(paste("sensitive.", coef.names,sep=""),
-      ##                                  c(paste("control.", coef.names,sep=""), "control.Zstar"),
-      ##                                  "acceptance.sensitive", "acceptance.control")  
-      ## } else {
-      ##   colnames(ictregBayes.fit) <- c(paste("sensitive.", coef.names,sep=""),
-      ##                                  paste("control.psi0.", coef.names,sep=""),
-      ##                                  paste("control.psi1.", coef.names,sep=""),
-      ##                                  "acceptance.sensitive", "acceptance.psi0", "acceptance.psi1")
-      ## }
-      
       constrained.output <- constrained.single
     } else {
       
@@ -347,7 +310,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
                                  psi.mu0 = psi.mu0, 
                                  psi.A0 = psi.A0,
                                  psi.tune = psi.tune,
-                                 robit = robit,
+                                 robit = (sensitive.model == "robit"), probit = (sensitive.model == "probit"),
                                  df = df), endorse.options)))
 
       constrained.output <- TRUE
@@ -357,10 +320,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   } else {
     
     ## multi code
-    
-    ##ictregBayesMulti.fit(reg3$y, reg3$treat, reg3$x, 3, FALSE, 10000, 5000, 0, TRUE,
-    ##                         list("1" = coef(reg3)[7:13], "2" = coef(reg3)[14:20]), coef(reg2)[1:6],
-    ##                         rep(0, 7), rep(0, 6), 0.01*diag(7), 0.01*diag(6), diag(0.002, 7), diag(0.0002, 6))
     
     if (missing(delta.start) | missing(psi.start)) {
       if (constrained.multi == T)
@@ -387,16 +346,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
       
       if (mixed == FALSE) {
         
-        ##save.list <- list(Y = y.all, treat = t, X = x.all, J = J,
-        ##                  constrained = constrained.multi,
-        ##                  n.draws = n.draws, burnin = burnin, thin = thin,  verbose = verbose,
-        ##                  delta.start = delta.start, psi.start = psi.start,
-        ##                  delta.mu0 = delta.mu0, psi.mu0 = psi.mu0, delta.A0 = delta.A0,
-        ##                  psi.A0 = psi.A0, delta.tune = delta.tune, psi.tune = psi.tune,
-                          ##ceiling = ceiling, floor = floor
-        ##                  )
-        ##save(save.list, file = "~/desktop/temptemp.RData")
-        
         ictregBayesMulti.fit <- ictregBayesMulti.fit(Y = y.all, treat = t, X = x.all, J = J,
                                                      constrained = constrained.multi,
                                                      n.draws = n.draws, burnin = burnin, thin = thin,  verbose = verbose,
@@ -406,25 +355,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
                                                      ##ceiling = ceiling, floor = floor,
                                                      ...)
         
-        ##res2 <- ictregBayesMulti.fit(reg2$y, reg2$treat, reg2$x, 3, TRUE, 10000, 5000, 0, TRUE,
-        ##                         list("1" = coef(reg2)[7:12], "2" = coef(reg2)[13:18]), coef(reg2)[1:6],
-        ##                         rep(0, 6), rep(0, 6), 0.01*diag(6), 0.01*diag(6), diag(0.002, 6), diag(0.0002, 6))
-        
-        ##colnamesTemp <- convergeNames <- c()
-        ##for (m in 1:length(treatment.labels)) {
-        ##  if (constrained.multi == TRUE)
-        ##    colnamesTemp <- c(colnamesTemp, paste("sensitive.", treatment.labels[m], ".", coef.names, sep = ""))
-        ##  else
-        ##    colnamesTemp <- c(colnamesTemp, paste("sensitive.", treatment.labels[m], ".", c(coef.names, "y_i(0)"), sep = ""))
-        
-        ##  convergeNames <- c(convergeNames, paste("acceptance.sensitive.", treatment.labels[m], sep = ""))
-        ##}
-        
-        ##colnames(ictregBayesMulti.fit) <- c(colnamesTemp,
-        ##                                    paste("control.", control.label, ".", coef.names,sep=""),
-        ##                                    convergeNames, "acceptance.control")
-        
-        
+       
         iter.names <-  seq(from = n.draws - burnin + 1 + thin + 1,
                            to = n.draws - burnin + thin + 1 + floor((n.draws - burnin)/(thin + 1)) * (thin + 1),
                            by = thin + 1)
@@ -438,9 +369,10 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
         }
         fit$psi <- ictregBayesMulti.fit[, (length(treatment.labels)*nPar + 1):
                                         (ncol(ictregBayesMulti.fit)-length(treatment.labels)-1), drop = FALSE]
-        fit$delta.accept <- ictregBayesMulti.fit[nrow(ictregBayesMulti.fit),
-                                                 (ncol(ictregBayesMulti.fit)-length(treatment.labels)):
-                                                 (ncol(ictregBayesMulti.fit)-1), drop = FALSE]
+        if(sensitive.model == "logit")
+          fit$delta.accept <- ictregBayesMulti.fit[nrow(ictregBayesMulti.fit),
+                                                   (ncol(ictregBayesMulti.fit)-length(treatment.labels)):
+                                                   (ncol(ictregBayesMulti.fit)-1), drop = FALSE]
         rownames(fit$psi) <- iter.names
         
         fit$psi <- mcmc(data = fit$psi, start = 1, thin = 1, end = nrow(fit$psi))
@@ -450,29 +382,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
       } else {
         
         ## mixed multi model
-        
-        ##fit <- ictregBayesMixed.fit(Y = y.all, treat = t, X = x.all, Z = z.all, J = J,
-        ##                            grp = as.numeric(grp), constrained = constrained.single == "full",
-        ##                            n.draws = n.draws, burnin = burnin, thin = thin,  verbose = verbose,
-        ##                            delta.start = delta.start, psi.start = psi.start,
-        ##                            Sigma.start = Sigma.start, Phi.start = Phi.start,
-        ##                            Sigma.df, Sigma.scale, Phi.df, Phi.scale,
-        ##                            delta.mu0 = delta.mu0, psi.mu0 = psi.mu0, delta.A0 = delta.A0,
-        ##                            psi.A0 = psi.A0, delta.tune = delta.tune, psi.tune = psi.tune,
-        ##                            gamma.tune = gamma.tune, zeta.tune = zeta.tune, ...)
-        
-        ##ictregBayesMixed.fit(y, treat, x, z, J, grp, FALSE, 11000, 1000, 10, TRUE,
-        ##                                     start[i, 1:ncol(x)], start[i, (ncol(x)+1):ncol(start)],
-        ##                                     diag(ncol(z)), diag(ncol(z)), rep(0, ncol(x)), rep(0, ncol(x)), 
-        ##                                     diag(ncol(x))*10, diag(ncol(x))*10, ncol(z)+1, diag(ncol(z))*0.01, 
-        ##                                     ncol(z)+1, diag(ncol(z))*0.01, diag(ncol(x))*0.0001, diag(ncol(x))*0.0001,
-        ##                                     rep(0.001, n.grp), rep(0.001, n.grp))
-        
-        ##ictregBayesMultiMixed.fit <- (Y, treat, X, Z, J, grp, constrained, n.draws, burnin,
-        ##                                thin, verbose, delta.start, psi.start, Sigma.start, 
-        ##                                Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, 
-        ##                                Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, 
-        ##                                psi.tune, gamma.tune, zeta.tune) {
         
         fit <- ictregBayesMultiMixed.fit(Y = y.all, treat = t, X = x.all, Z = z.all, J = J,
                                          grp = as.numeric(grp), constrained = constrained.multi,
@@ -522,7 +431,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
                                 psi.mu0 = psi.mu0, 
                                 psi.A0 = psi.A0,
                                 psi.tune = psi.tune,
-                                robit = robit,
+                                robit = (sensitive.model == "robit"), probit = (sensitive.model == "probit"),
                                 df = df), endorse.options)))
 
       constrained.output <- TRUE
@@ -535,7 +444,8 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   fit$multi <- multi
   fit$mixed <- mixed
   fit$constrained <- constrained.output
-  fit$delta.start <- delta.start
+  if(endorse == FALSE)
+    fit$delta.start <- delta.start
   fit$psi.start <- psi.start
   if (endorse == FALSE)
     fit$delta.mu0 <- delta.mu0
@@ -550,6 +460,7 @@ ictregBayes <- function(formula, data = parent.frame(), treat="treat", J, constr
   fit$treat.labels <- treatment.labels
   fit$control.label <- control.label
   fit$coef.names <- coef.names
+  fit$sensitive.model <- sensitive.model
   fit$call <- match.call()
   
   class(fit) <- "ictregBayes"
@@ -824,14 +735,16 @@ print.summary.ictregBayes <- function(x, ...) {
       print(matrix(c(round(cbind(coef(x)$delta[[k]], sd.ictregBayes(x)$delta[[k]]),5)),
                    nrow = length(x$coef.names), ncol = 2, byrow = FALSE,
                    dimnames = list(x$coef.names, c("Est.", "S.E."))))
-      cat("\nMetropolis acceptance ratio:", round(x$delta.accept[[k]], 3), "\n")    
+      if(x$sensitive.model == "logit")
+        cat("\nMetropolis acceptance ratio:", round(x$delta.accept[[k]], 3), "\n")    
     }
   } else {
     
     cat("\nSensitive item \n")
     print(matrix(c(round(cbind(coef(x)$delta, sd.ictregBayes(x)$delta),5)), nrow = length(x$coef.names), ncol = 2, byrow = FALSE,
                  dimnames = list(x$coef.names, c("Est.", "S.E."))))
-    cat("\nMetropolis acceptance ratio:", round(x$delta.accept, 3), "\n")
+    if(x$sensitive.model == "logit")
+      cat("\nMetropolis acceptance ratio:", round(x$delta.accept, 3), "\n")
     
   }
     
@@ -872,7 +785,8 @@ print.summary.ictregBayes.list <- function(x, ...) {
       print(matrix(c(round(cbind(coef(x)$delta[[k]], sd.ictregBayes.list(x)$delta[[k]]),5)),
                    nrow = length(x$coef.names), ncol = 2, byrow = FALSE,
                    dimnames = list(x$coef.names, c("Est.", "S.E."))))
-    cat("\nMetropolis acceptance ratio:", round(x$delta.accept[[k]], 3), "\n")
+    if(x$sensitive.model == "logit")
+      cat("\nMetropolis acceptance ratio:", round(x$delta.accept[[k]], 3), "\n")
     cat("\nGelman-Rubin statistics:\n")
     
     gelmanrubin <- round(gelman.diag(x$delta[[k]])$psrf[,1],4)
@@ -1086,12 +1000,17 @@ predict.ictregBayes <- function(object, newdata, newdata.diff, direct.glm, se.fi
 }
  
 ictregBayes.fit <- function(Y, treat, X, J, constrained,
-                            ##ceiling, floor,
+                            ceiling, floor,
                             n.draws, burnin, thin, verbose,
                             delta.start, psi.start, delta.mu0,
                             psi.mu0, delta.A0, psi.A0, delta.tune,
-                            psi.tune) {
+                            psi.tune, robit, probit, df) {
 
+  levels.treat <- as.numeric(names(table(treat)))
+  
+  ## "treat" variable should be a factor variable here where the base level is control
+  tmax <- length(levels.treat) - 1
+  
   n <- length(Y)
   k <- ncol(X)
   n.par <- 2*(k + 1)
@@ -1123,32 +1042,73 @@ ictregBayes.fit <- function(Y, treat, X, J, constrained,
     n.par <- n.par + 1
   }
 
-  res <- .C("ictregBinom", as.integer(Y), as.integer(J), as.integer(n),
-            as.integer(n.draws), as.integer(treat), as.double(X), 
-            as.double(delta.start), as.double(psi.start), as.integer(k),
-            as.double(delta.mu0), as.double(psi.mu0), as.double(delta.A0),
-            as.double(psi.A0), as.double(delta.tune), as.double(psi.tune),
-            as.integer(constrained),
-            ##as.integer(ceiling), as.integer(floor),
-            0, 0,
-            as.integer(burnin), as.integer(keep), as.integer(verbose),
-            allresults = double(n.par*floor((n.draws - burnin)/keep)),
-	    PACKAGE = "list")$allresults
+  if (probit) {
+    
+    ## no need for deltaCounter
+    n.par <- n.par - tmax
+    ## no unconstrained model for now
+    if (constrained == 1)
+      stop("only constrained model is allowed for probit regression")
 
+    res <- .C("ictregBinomMultiProbit", as.integer(Y), as.integer(J),
+              as.integer(n), as.integer(n.draws), as.integer(treat), as.integer(1), 
+              as.double(X), as.double(delta.start),
+              as.double(psi.start), as.integer(k),
+              as.double(delta.mu0),
+              as.double(psi.mu0), as.double(delta.A0),
+              as.double(psi.A0), 
+              as.double(psi.tune), 
+              0, 0,
+              as.integer(burnin), as.integer(keep), as.integer(verbose),
+              allresults = double(n.par*floor((n.draws - burnin)/keep)),
+              PACKAGE = "list")$allresults
+    
+  } else if (robit) {
+    
+    ## no need for deltaCounter
+    n.par <- n.par - tmax
+    ## no unconstrained model for now
+    if (constrained == 1)
+      stop("only constrained model is allowed for robit regression")
+
+    res <- .C("ictregBinomMultiRobit", as.integer(Y), as.integer(J),
+              as.integer(n), as.integer(n.draws), as.integer(treat), as.integer(1), 
+              as.double(X), as.double(delta.start),
+              as.double(psi.start), as.integer(k),
+              as.double(delta.mu0),
+              as.double(psi.mu0), as.double(delta.A0),
+              as.double(psi.A0), 
+              as.double(psi.tune), as.integer(df),
+              0, 0,
+              as.integer(burnin), as.integer(keep), as.integer(verbose),
+              allresults = double(n.par*floor((n.draws - burnin)/keep)),
+              PACKAGE = "list")$allresults
+    
+  } else {
+    res <- .C("ictregBinom", as.integer(Y), as.integer(J), as.integer(n),
+              as.integer(n.draws), as.integer(treat), as.double(X), 
+              as.double(delta.start), as.double(psi.start), as.integer(k),
+              as.double(delta.mu0), as.double(psi.mu0), as.double(delta.A0),
+              as.double(psi.A0), as.double(delta.tune), as.double(psi.tune),
+              as.integer(constrained),
+              ##as.integer(ceiling), as.integer(floor),
+              0, 0,
+              as.integer(burnin), as.integer(keep), as.integer(verbose),
+              allresults = double(n.par*floor((n.draws - burnin)/keep)),
+              PACKAGE = "list")$allresults
+  }
   res <- matrix(res, byrow = TRUE, ncol = n.par)
-
+  
   class(res) <- "ictregBayes"
   return(res)
             
 }
 
 ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
-                                 ##ceiling, floor,
+                                 ceiling, floor,
                                  n.draws, burnin, thin, verbose,
                                  delta.start, psi.start, delta.mu0, psi.mu0, delta.A0, psi.A0,
                                  delta.tune, psi.tune, robit = FALSE, df = 5) {
-
-  print("Runing ictregBayesMulti.fit")
   
   n <- length(Y)
   k <- ncol(X)
@@ -1218,12 +1178,12 @@ ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
     res <- .C("ictregBinomMultiRobit", as.integer(Y), as.integer(J),
               as.integer(n), as.integer(n.draws), as.integer(treat), as.integer(tmax), 
               as.double(X), as.double(delta.start.all),
-              as.double(psi.start), as.integer(k), as.double(delta.mu0.all),
+              as.double(psi.start), as.integer(k),
+              as.double(delta.mu0.all),
               as.double(psi.mu0), as.double(delta.A0.all),
               as.double(psi.A0), 
               as.double(psi.tune), as.integer(df),
-              ##as.integer(ceiling), as.integer(floor),
-              0,0,
+              as.integer(ceiling), as.integer(floor),
               as.integer(burnin), as.integer(keep), as.integer(verbose),
               allresults = double(n.par*floor((n.draws - burnin)/keep)),
               PACKAGE = "list")$allresults
@@ -1235,7 +1195,7 @@ ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
               as.double(psi.mu0), as.double(delta.A0.all),
               as.double(psi.A0), as.double(delta.tune.all),
               as.double(psi.tune), as.integer(!constrained),
-              ##as.integer(ceiling), as.integer(floor),
+              as.integer(ceiling), as.integer(floor),
               0,0,
               as.integer(burnin), as.integer(keep), as.integer(verbose),
               allresults = double(n.par*floor((n.draws - burnin)/keep)),
@@ -1443,8 +1403,6 @@ ictregBayesMultiMixed.fit <- function(Y, treat, X, Z, J, grp, constrained,
 
   res <- matrix(res, byrow = TRUE, ncol = n.par)
 
-  ##save(res, file = "/home/gblair/res.rdata")
-
   if (constrained) {
     return(list(delta = res[, 1:(k*tmax), drop = FALSE], psi = res[, (k*tmax + 1):(k*(tmax+1)), drop = FALSE], 
                 Sigma = res[, (k*(tmax+1) + 1):(k*(tmax+1) + m*(m+1)/2*tmax), drop = FALSE],
@@ -1490,63 +1448,70 @@ Robit <- function(Y, X, beta.start, sims, beta0, A0, df) {
 ### Combining endorsement and list experiments
 ###
 
-ictregBayesEndorse <- function(
-                               Y.list,
-                               treat.list,
-                               ##X.list,  ## use data from endorse
-                               J.list,
-                               ##constrained,  ## not available this version
-                               ##ceiling, floor,
-                               ##n.draws,
-                               ##burnin,
-                               ##thin,
-                               verbose,
-                               ##delta.start,
-                               psi.start,
-                               ##delta.mu0,
-                               psi.mu0,
-                               ##delta.A0,
-                               psi.A0,
-                               ##delta.tune,
-                               psi.tune,
-                               robit = FALSE,
-                               df = 5,
-                               
-                               Y, # = list(Q1 = c(VARIABLE NAMES), ...)
-                               data,
-                               treat = NA, # Recommended: N * J matrix of treatment status
-                               na.strings = 99,
-                               formula = NA,
-                               x.start = 0,  # scalar or vector of length N
-                               s.start = 0,  # scalar or N * J matrix
-                               beta.start = 1, # scalar or J * 2 matrix
-                               tau.start = NA,   # J * max(L_{j}) matrix
-                               lambda.start = 0, # scalar or (J * M) * K matrix
-                               omega2.start = 1, #scalar or J * K matrix
-                               theta.start = 0,   #scalar or vector of length K * M
-                               phi2.start = 1, # scalar or vector of length K * M
-                               delta.start = 0, # scalar or vector of length M
-                               mu.beta = 0, #scalar or J * 2 matrix
-                               mu.x = 0, # scalar or vector of length N
-                               mu.theta = 0, # scalar or vector of length M
-                               mu.delta = 0, # scalar or vector of length M
-                               precision.beta = 0.1, # scalar or 2 * 2 diagonal matrix
-                               precision.x = 1,    # scalar
-                               precision.theta = 0.1,# scalar or vector of length M
-                               precision.delta = 0.1, # scalar or M * M matrix
-                               s0.omega2= 1,
-                               nu0.omega2 = 1,
-                               s0.phi2 = 1,
-                               nu0.phi2 = 1,
-                               MCMC = 20000,
-                               burn = 1000,
-                               thin = 1,
-                               mda = TRUE,
-                               mh = TRUE,
-                               prop = 0.001,
-                               x.sd = TRUE,
-                               tau.out = FALSE
-                               ) {
+ictregBayesEndorse <- function( ## START LIST OPTIONS
+                    Y.list,
+                    treat.list,
+                    ##X.list,  ## use data from endorse
+                    J.list,
+                    ##constrained,  ## not available this version
+                    ##ceiling, floor,
+                    ##n.draws,
+                    ##burnin,
+                    ##thin,
+                    ##verbose,
+                    ##delta.start,
+                    psi.start,
+                    ##delta.mu0,
+                    psi.mu0,
+                    ##delta.A0,
+                    psi.A0,
+                    ##delta.tune,
+                    psi.tune,
+                    robit = FALSE,
+                    df = 5, ## END LIST OPTIONS
+                    
+                    Y,
+                    data,
+                    treat = NA,
+                    na.strings = 99,
+                    covariates = FALSE,
+                    identical.lambda = FALSE,
+                    formula = NA,
+                    x.start = 0,
+                    s.start = 0,
+                    beta.start = 1,
+                    tau.start = NA,
+                    lambda.start = 0,
+                    omega2.start = .1,
+                    ##theta.start = 0,
+                    ##phi2.start = .1,
+                    delta.start = 0,
+                    mu.beta = 0,
+                    mu.x = 0,
+                    mu.lambda = 0,
+                    mu.delta = 0,
+                    precision.beta = 0.04,
+                    precision.x = 1,
+                    precision.lambda = 0.04,
+                    precision.delta = 0.04,
+                    s0.omega2= 3,
+                    nu0.omega2 = 5,
+                    s0.phi2 = 3,
+                    nu0.phi2 = 5,
+                    MCMC = 20000,
+                    burn = 1000,
+                    thin = 1,
+                    mda = FALSE,
+                    mh = TRUE,
+                    prop = 0.001,
+                    x.sd = TRUE,
+                    tau.out = FALSE,
+                    s.out = FALSE,
+                    verbose = TRUE,
+                    seed.store = FALSE,
+                    update = FALSE,
+                    update.start = NULL,
+                    probit = FALSE) {
 
   ## stuff added for list experiment
 
@@ -1566,12 +1531,15 @@ ictregBayesEndorse <- function(
   
   ##
   
-  
-  for (i in 1:M) {
-    data <- data[!is.na(cov.mat[, i]),]
-    cov.mat <- cov.mat[!is.na(cov.mat[, i]), ]
-  }
-  
+  if (covariates == FALSE) formula <- ~ 1
+
+
+  ##cov.mat <- model.matrix(formula, data)
+  ##M <- ncol(cov.mat)
+
+  data <- data[complete.cases(cov.mat),]
+  cov.mat <- cov.mat[complete.cases(cov.mat), ]
+
   N <- nrow(data)
   J <- length(Y)
   
@@ -1599,8 +1567,8 @@ ictregBayesEndorse <- function(
 
         if (is.na(treat[1])) {
           endorse[, i] <- eval(parse(text = paste("ifelse(!is.na(data$", varname,
-                                      "), j - 1, endorse[, i])",
-                                      sep = "")))
+                                       "), j - 1, endorse[, i])",
+                                       sep = "")))
         }
       }
     }
@@ -1618,8 +1586,8 @@ ictregBayesEndorse <- function(
 
         if (is.na(treat[1])) {
           endorse[, i] <- eval(parse(text = paste("ifelse(!is.na(data$", varname,
-                                        "), j - 1, endorse[, i])",
-                                        sep = "")))
+                                       "), j - 1, endorse[, i])",
+                                       sep = "")))
         }
       }
     }
@@ -1644,205 +1612,271 @@ ictregBayesEndorse <- function(
     K <- max(treat)
   }
 
-  if (is.na(tau.start[1])) {
-    tau.start <- matrix(-99, nrow = J, ncol = max.L)
+  if (update) {
 
-    for (j in 1:J){
-      temp.tau <- seq(from = 0, to = .5 * (L[j] - 2), by = .5)
-      for (i in 1:(L[j] - 1)) {
-        tau.start[j, i] <- temp.tau[i]
+    beta.start <- update.start$beta.start    
+    tau.start <- update.start$tau.start
+    x.start <- update.start$x.start
+    s.start <- update.start$s.start
+    lambda.start <- update.start$lambda.start
+    omega2.start <- update.start$omega2.start
+    psi.start <- update.start$psi.start
+    delta.start <- update.start$delta.start
+    .Random.seed <- update.start$seed
+
+  } else {
+    if (is.na(tau.start[1])) {
+      tau.start <- matrix(-99, nrow = J, ncol = max.L - 1)
+
+      for (j in 1:J){
+        temp.tau <- seq(from = 0, to = .5 * (L[j] - 2), by = .5)
+        for (i in 1:(L[j] - 1)) {
+          tau.start[j, i] <- temp.tau[i]
+        }
+        ##tau.start[j, L[j]] <- max(temp.tau) + 1000
       }
-      tau.start[j, L[j]] <- max(temp.tau) + 1000
     }
-  }
-  
-  if (length(x.start) == 1) {
-    x.start <- rep(x.start, times = N)
-  }
+    
+    if (length(x.start) == 1) {
+      x.start <- rep(x.start, times = N)
+    }
 
-  if (length(s.start) == 1) {
-    s.start <- matrix(s.start, nrow = N, ncol = J)
-  }
+    if (length(s.start) == 1) {
+      s.start <- matrix(s.start, nrow = N, ncol = J)
+    }
 
-  if (length(beta.start) == 1) {
-    beta.start <- matrix(beta.start, nrow = J, ncol = 2)
-  }
+    if (length(beta.start) == 1) {
+      beta.start <- matrix(beta.start, nrow = J, ncol = 2)
+    }
 
-  if (length(lambda.start) == 1) {
-    lambda.start <- matrix(lambda.start, nrow = J * M, ncol = K)
-  }
+    if (length(lambda.start) == 1) {
+      lambda.start <- matrix(lambda.start, nrow = M, ncol = K)
+    }
 
-  if (length(omega2.start) == 1) {
-    omega2.start <- matrix(omega2.start, nrow = J, ncol = K)
-  }
+    if (length(omega2.start) == 1) {
+      omega2.start <- matrix(omega2.start, nrow = 1, ncol = K)
+    }
 
-  if (length(theta.start) == 1) {
-    theta.start <- rep(theta.start, times = K * M)
-  }
+    if (length(delta.start) == 1) {
+      delta.start <- rep(delta.start, times = M)
+    }
 
-  if (length(phi2.start) == 1) {
-    phi2.start <- rep(phi2.start, times = K * M)
-  }
-
-  if (length(delta.start) == 1) {
-    delta.start <- rep(delta.start, times = M)
   }
   
   if (length(mu.beta) == 1) {
     mu.beta <- matrix(mu.beta, nrow = J, ncol = 2)
   }
 
-  if (length(mu.x) == 1) {
-    mu.x <- rep(mu.x, times = N)
+  if (length(mu.lambda) == 1) {
+    mu.lambda <- rep(mu.lambda, times = M) 
   }
 
-  if (length(mu.theta) == 1) {
-    mu.theta <- rep(mu.theta, times = M)
-  }
-
-  if (length(mu.delta) == 1) {
-    mu.delta <- rep(mu.delta, times = M)
-  }
-
-  precision.beta <- diag(precision.beta, nrow = 2, ncol = 2)
-
-  precision.delta <- diag(precision.delta, nrow = M, ncol = M)
-
-  if (length(precision.theta) == 1) {
-    precision.theta <- diag(precision.theta, M)
-  }
-
-  if (length(prop) == 1) {
-    prop <- rep(prop, times = max.L)
-  }
-
-  printout <- floor( (MCMC - burn) / thin )
-
-  temp <- .C("CombineEndorseList",
-             as.integer(response),
-             as.integer(endorse),
-             as.double(cov.mat),
-             as.integer(N),
-             as.integer(J),
-             as.integer(M),
-             as.integer(K),
-             as.integer(L),
-             as.integer(max.L),
-             as.double(x.start),
-             as.double(s.start),
-             as.double(beta.start),
-             as.double(tau.start),
-             as.double(lambda.start),
-             as.double(omega2.start),
-             as.double(theta.start),
-             as.double(phi2.start),
-             as.double(delta.start),
-             as.double(mu.beta),
-             as.double(precision.beta),
-             as.double(precision.x),
-             as.double(mu.theta),
-             as.double(precision.theta),
-             as.double(mu.delta),
-             as.double(precision.delta),
-             as.double(s0.omega2),
-             as.integer(nu0.omega2),
-             as.double(s0.phi2),
-             as.integer(nu0.phi2),
-             as.integer(MCMC),
-             as.integer(burn),
-             as.integer(thin),
-             as.integer(mda),
-             as.integer(mh),
-             as.double(prop),
-             as.integer(x.sd),
-             as.integer(tau.out),
-             betaStore = double(printout * 2 * J),
-             tauStore = if (tau.out) double(printout * (max.L - 1) * J) else double(1),
-             xStore = if (x.sd) double(printout) else double(printout * N),
-             lambdaStore = double(printout * J * M * K),
-             thetaStore = double(printout * K * M),
-             deltaStore = double(printout * M),
-             #sStore = double(printout * N * J), # temporal use
-             accept.ratio = double(J),
-             ## now list parts
-             as.integer(Y.list),
-             as.integer(J.list),
-             as.integer(treat.list),
-             as.double(psi.start), 
-             as.double(psi.mu0), 
-             as.double(psi.A0), 
-             as.double(psi.tune), 
-             as.integer(df), 
-             ##as.integer(ceiling), as.integer(floor),
-             0,0,
-             as.integer(verbose),
-             allresults = double(n.par*floor((MCMC - burn)/(thin + 1))),
-             package = "list")
-
-
-  if (tau.out) {
-                                        # covariates = TRUE, tau.out = TRUE
-    res <- list(beta = matrix(as.double(temp$betaStore), byrow = TRUE,
-                  ncol = 2*J, nrow = printout),
-                tau = matrix(as.double(temp$tauStore), byrow = TRUE,
-                  ncol = (max.L-1)*J, nrow = printout),
-                x = if (x.sd) matrix(as.double(temp$xStore), byrow = TRUE, ncol = 1,
-                  nrow = printout) else matrix(as.double(temp$xStore), byrow = TRUE, ncol = N,
-                    nrow = printout),
-                lambda = matrix(as.double(temp$lambdaStore), byrow = TRUE,
-                  ncol = J * M * K, nrow = printout),
-                theta = matrix(as.double(temp$thetaStore), byrow = TRUE,
-                  ncol = K * M, nrow = printout),
-                delta = matrix(as.double(temp$deltaStore), byrow = TRUE,
-                  ncol = M, nrow = printout),
-                #s = matrix(as.double(temp$sStore), byrow = TRUE, # tempral use
-                #  ncol = N * J, nrow = printout), # temporal use
-                accept.ratio = as.double(temp$accept.ratio))
+  if (covariates) {
+    if (length(mu.delta) == 1) {
+      mu.delta <- rep(mu.delta, times = M)
+    }
   } else {
-                                        # covariates = TRUE, tau.out = FALSE
-    res <- list(beta = matrix(as.double(temp$betaStore), byrow = TRUE,
-                  ncol = 2*J, nrow = printout ),
-                x = if (x.sd) matrix(as.double(temp$xStore), byrow = TRUE, ncol = 1,
-                  nrow = printout) else matrix(as.double(temp$xStore), byrow = TRUE, ncol = N,
-                    nrow = printout),
-                lambda = matrix(as.double(temp$lambdaStore), byrow = TRUE,
-                  ncol = J * M * K, nrow = printout),
-                theta = matrix(as.double(temp$thetaStore), byrow = TRUE,
-                  ncol = K * M, nrow = printout),
-                delta = matrix(as.double(temp$deltaStore), byrow = TRUE,
-                  ncol = M, nrow = printout),
-                accept.ratio = as.double(temp$accept.ratio))
+    if (length(mu.x) == 1) {
+      mu.delta <- rep(mu.x, times = N)
+    } else {
+      mu.delta <- mu.x
+    }
   }
 
+  if (length(precision.beta) == 1) {
+    precision.beta <- diag(precision.beta, nrow = 2, ncol = 2)
+  }
+
+  if (length(precision.delta) == 1) {
+    precision.delta <- diag(precision.delta, nrow = M, ncol = M)
+  }
+  
+  if (length(precision.lambda) == 1) {
+    precision.lambda <- diag(precision.lambda, nrow = M, ncol = M) 
+  }
+
+  if (length(prop) != J) {
+    prop <- rep(prop, times = J)
+  }
+
+  printout <- floor( (MCMC - burn) / (thin + 1) )
+
+  n.par <- M + 1
+
+  if(probit == TRUE) {
+
+    ## removed and b here
+    
+    temp <- .C("CombineEndorseListProbit",
+               as.integer(response),
+               as.integer(endorse),
+               as.double(cov.mat),
+               as.integer(N),
+               as.integer(J),
+               as.integer(M),
+               as.integer(K),
+               as.integer(L),
+               as.integer(max.L),
+               as.double(x.start),
+               as.double(s.start),
+               as.double(beta.start),
+               as.double(tau.start),
+               as.double(lambda.start),
+               as.double(omega2.start),
+               as.double(delta.start),
+               as.double(mu.beta),
+               as.double(precision.beta),
+               as.double(precision.x),
+               as.double(mu.lambda),
+               as.double(precision.lambda),
+               as.double(mu.delta),
+               as.double(precision.delta),
+               as.double(s0.omega2),
+               as.integer(nu0.omega2),
+               as.integer(MCMC),
+               as.integer(burn),
+               as.integer(thin),
+               as.integer(mda),
+               as.integer(mh),
+               as.double(prop),
+               as.integer(x.sd),
+               as.integer(tau.out),
+               as.integer(s.out),
+               as.integer(covariates),
+               betaStore = double(printout * 2 * J),
+               tauStore = if (tau.out) double(printout * (max.L - 1) * J) else double(1),
+               xStore = if (x.sd & seed.store) double(printout + N) else if (x.sd & !(seed.store)) double(printout) else double(printout * N),
+               sStore = if (s.out & seed.store) double(printout * N * J) else if (!(s.out) & seed.store) double(N * J) else double(1),
+               lambdaStore = double(printout * K * M),
+               deltaStore = if (covariates) double(printout * M) else double(1),
+               omega2Store = if (seed.store) double(K * printout) else double(1),
+               accept.ratio = double(J),
+               ## list parts
+               as.integer(Y.list),
+               as.integer(J.list),
+               as.integer(treat.list),
+               as.double(psi.start), 
+               as.double(psi.mu0), 
+               as.double(psi.A0), 
+               as.double(psi.tune), 
+               0,0, # ceiling and floor effects
+               as.integer(verbose),
+               psiStore = double((M+1) * printout),
+               package = "list")
+  }
+
+  seedStore <- .Random.seed
+
+  res <- list(beta = matrix(as.double(temp$betaStore), byrow = TRUE, ncol = 2 * J, nrow = printout),
+              tau = if (tau.out) matrix(as.double(temp$tauStore), byrow = TRUE, ncol = (max.L - 1) * J, nrow = printout) else NULL,
+              x = if (x.sd) matrix(as.double(temp$xStore), ncol = (N + 1), nrow = printout)
+              else matrix(as.double(temp$xStore), byrow = TRUE, ncol = N, nrow = printout),
+              s = if (s.out) matrix(as.double(temp$sStore), byrow = TRUE, ncol = N * J, nrow = printout) else NULL,
+              lambda = matrix(as.double(temp$lambdaStore), byrow = TRUE, ncol = M * K, nrow = printout),
+              psi = if (covariates) matrix(as.double(temp$psiStore), byrow = TRUE, ncol = M + 1, nrow = printout)[, 1:M] else NULL,
+              delta = if (covariates) matrix(as.double(temp$deltaStore), byrow = TRUE, ncol = M, nrow = printout) else NULL,
+              omega2 = matrix(as.double(temp$omega2Store), byrow = TRUE, ncol = K, nrow = printout),
+              accept.ratio = if (mh) as.double(temp$accept.ratio) else NULL,
+              seed = if (seed.store) seedStore else NULL,
+              beta.start = if (seed.store) matrix(as.double(temp$betaStore)[(2 * J * (printout - 1) + 1):(2 * J * printout)],
+                nrow = J, ncol = 2, byrow = TRUE) else NULL,
+              tau.start = if (seed.store) matrix(as.double(temp$tauStore)[(length(as.double(temp$tauStore)) - (max.L - 1) * J + 1):(length(as.double(temp$tauStore)))],
+                nrow = J, ncol = max.L - 1, byrow = TRUE) else NULL,
+              x.start = if (seed.store) as.double(temp$xStore)[(length(as.double(temp$xStore)) - N + 1):(length(as.double(temp$xStore)))] else NULL,
+              s.start = if (seed.store) matrix(as.double(temp$sStore)[(length(as.double(temp$sStore)) - (N * J) + 1):length(as.double(temp$sStore))],
+                nrow = N, ncol = J, byrow = TRUE) else NULL,
+              lambda.start = if (seed.store) matrix(as.double(temp$lambdaStore)[(K * M * (printout - 1) + 1):(K * M * printout)],
+                nrow = M, ncol = K, byrow = FALSE)  else NULL,
+              delta.start = if (seed.store & covariates) as.double(temp$deltaStore)[((printout - 1) * M + 1):(printout * M)] else NULL,
+              psi.start = if (seed.store) as.double(temp$psiStore)[((printout - 1) * (M + 1) + 1):(printout * (M + 1) - 1)] else NULL,
+              omega2.start = if (seed.store) matrix(as.double(temp$omega2Store)[(K * (printout - 1) + 1):(K * printout)],
+                byrow = TRUE, ncol = K, nrow = 1) else NULL 
+              )
+  
   colnames(res$beta) <- paste(rep(c("alpha", "beta"), times = J),
                               rep(1:J, each = 2), sep = ".")
-  res$beta <- mcmc(res$beta, start = burn + 1, end = MCMC, thin = thin)
+  res$beta <- mcmc(res$beta, start = 1, end = printout, thin = 1)
 
   if (tau.out) {
     temp.names <- paste("tau", 1:J, sep = "")
     colnames(res$tau) <- paste(rep(temp.names, each = (max.L - 1)),
                                rep(1:(max.L - 1), times = J), sep = ".")
-    res$tau <- mcmc(res$tau, start = burn + 1, end = MCMC, thin = thin)
+    res$tau <- mcmc(res$tau, start =  1, end = printout, thin = 1)
   }
 
   if (x.sd) {
     colnames(res$x) <- "sd.x"
   } else {
     colnames(res$x) <- paste("x", 1:N, sep = ".")
-    res$x <- mcmc(res$x, start = burn + 1, end = MCMC, thin = thin)
+    res$x <- mcmc(res$x, start = 1, end = printout, thin = 1)
   }
 
-  temp.names <- paste("lambda", rep(1:J, each = K), rep(1:K, times = J), sep = "")
-  colnames(res$lambda) <- paste(rep(temp.names, each = M), rep(1:M, times = (J * K)),
-                                sep = ".")
-  res$lambda <- mcmc(res$lambda, start = burn + 1, end = MCMC, thin = thin)
-  
-  temp.names <- paste("theta", 1:K, sep = "")
-  colnames(res$theta) <- paste(rep(temp.names, each = M), rep(1:M, times = K), sep = ".")
-  res$theta <- mcmc(res$theta, start = burn + 1, end = MCMC, thin = thin)
+  if (s.out) {
+    colnames(res$s) <- paste("s", rep(1:nrow(data), each = J),
+                             rep(1:J, times = nrow(data)), sep = "")
+  }
 
-  colnames(res$delta) <- paste("delta", 1:M, sep = "")
-  res$delta <- mcmc(res$delta, start = burn + 1, end = MCMC, thin = thin)
+  
+  if (identical.lambda) {
+    temp.names <- paste("lambda", 1:K, sep = "")
+    if (covariates) {
+      colnames(res$lambda) <- paste(rep(temp.names, each = M),
+                                    rep(1:M, times = K),
+                                    sep = ".")
+    } else {
+      colnames(res$lambda) <- temp.names
+    }
+  } else {
+    temp.names <- paste("lambda", rep(1:J, each = K), rep(1:K, times = J),
+                        sep = "")
+    if (covariates) {
+      colnames(res$lambda) <- paste(rep(temp.names, each = M),
+                                    rep(1:M, times = (J * K)),
+                                    sep = ".")
+    } else {
+      colnames(res$lambda) <- temp.names
+    }
+  }
+  res$lambda <- mcmc(res$lambda, start = 1, end = printout, thin = 1)
+
+
+  if (identical.lambda) {
+    colnames(res$omega2) <- paste("omega2.", 1:K, sep = "")
+  } else {
+    colnames(res$omega2) <- paste("omega2.", rep(1:J, each = K), rep(1:K,
+                                                        times = J), sep = "")
+  }
+  res$omega2 <- mcmc(res$omega2, start = 1, end = printout, thin = 1)  
+
+  if (identical.lambda == FALSE) { 
+    temp.names <- paste("theta", 1:K, sep = "")
+    if (covariates) {
+      colnames(res$theta) <- paste(rep(temp.names, each = M), rep(1:M, times = K),
+                                   sep = ".")
+    } else {
+      colnames(res$theta) <- temp.names
+    }
+    res$theta <- mcmc(res$theta, start = 1, end = printout, thin = 1)
+
+    temp.names <- paste("phi2.", 1:K, sep = "")
+    if (covariates) {
+      colnames(res$phi2) <- paste(rep(temp.names, each = M), rep(1:M, times = K),
+                                  sep = ".")
+    } else {
+      colnames(res$phi2) <- temp.names
+    }
+    res$phi2 <- mcmc(res$phi2, start = 1, end = printout, thin = 1)
+  }
+
+  if (covariates) {
+    colnames(res$delta) <- paste("delta", 1:M, sep = ".")
+    res$delta <- mcmc(res$delta, start = 1, end = printout, thin = 1)
+  }
+  
+  if (covariates) {
+    colnames(res$psi) <- paste("psi", 1:M, sep = ".")
+    res$psi <- mcmc(res$psi, start = 1, end = printout, thin = 1)
+  }
 
   names(res$accept.ratio) <- paste("Q", 1:J, sep = "")
 

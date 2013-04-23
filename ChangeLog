@@ -12,5 +12,6 @@ version      date  description
 5.0      01/03/12  Bayesian four-level hierarchical models and two-level
 	varying-intercept and varying slope models added; Bayesian ceiling
 	and floor effects added; many bug fixes
-5.1      03/23/12  Bug fixes   
-5.2      01/05/13  Bug fixes
+5.1      03/23/12  Bug fixes
+6.0      04/23/12  A major update incorporating the methods proposed by
+	Blair, Imai, and Lyall (2013)

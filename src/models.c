@@ -1754,7 +1754,7 @@ void ictregBinomMulti2Level(int *Y,             /* outcome vector */
     /* Update the village level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, *n_covV, 1, 1, delta0_village[k], A0delta_village[k], 
-		 1, s0[k], nu0[k], 0);
+		 1, s0[k], nu0[k], 0, 0);
     }
 
     /* Update the prior information */
@@ -2235,13 +2235,13 @@ void ictregBinomMulti3Level(int *Y,             /* outcome vector */
     /* Update the village level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, n_dimV, 1, 1, delta0_village[k], A0delta_village[k], 
-		 1, s0_village[k], nu0_village[k], 0);
+		 1, s0_village[k], nu0_village[k], 0, 0);
     }
 
     /* Update the district level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta_village[k], W, delta_district[k], sigma2_district[k], *n_district, *n_covW, 1, 1, delta0_district[k], 
-		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0);
+		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0, 0);
     }
 
     /* Update the prior information */
@@ -2833,19 +2833,19 @@ void ictregBinomMulti4Level(int *Y,             /* outcome vector */
     /* Update the village level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta[k], V, delta_village[k], sigma2_village[k], *n_village, n_dimV, 1, 1, delta0_village[k], A0delta_village[k], 
-		 1, s0_village[k], nu0_village[k], 0);
+		 1, s0_village[k], nu0_village[k], 0, 0);
     }
 
     /* Update the district level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta_village[k], W, delta_district[k], sigma2_district[k], *n_district, n_dimW, 1, 1, delta0_district[k], 
-		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0);
+		 A0delta_district[k], 1, s0_district[k], nu0_district[k], 0, 0);
     }
 
     /* Update the province level model */
     for (k = 0; k < n_grp; k++) {
       bNormalReg(delta_district[k], Z, delta_province[k], sigma2_province[k], *n_province, *n_covZ, 1, 1, delta0_province[k], 
-		 A0delta_province[k], 1, s0_province[k], nu0_province[k], 0);
+		 A0delta_province[k], 1, s0_province[k], nu0_province[k], 0, 0);
     }
 
     /* Update the prior information */
@@ -3223,189 +3223,6 @@ void BinomLogitMixed(int *Y,          /* outcome variable: 0, 1, ..., J */
 } /* end of mixed effects logit */
 
 
-/*** 
-     Bayesian Normal Regression: see Chap.14 of Gelman et al. (2004) 
-       both proper and improper priors (and their combinations)
-       allowed for beta and sig2. 
-***/
-void bNormalReg(double *Y,    
-		double **X,
-		double *beta,  /* coefficients */
-		double *sig2,  /* variance */
-		int n_samp,    /* sample size */
-		int n_cov,     /* # of covariates */
-		int addprior,  /* Should prior on beta be incorporated
-				  into the data matrix? */
-		int pbeta,     /* Is prior proper for beta? */
-		double *beta0, /* prior mean for normal */
-		double **A0,   /* prior precision for normal; can be
-				  set to zero to induce improper prior
-				  for beta alone
-			       */
-		int psig2,     /* 0: improper prior for sig2
-				  p(sig2|X) \propto 1/sig2
-				  1: proper prior for sig2
-				  p(sigma2|X) = InvChi2(nu0, s0)
-			       */
-		double s0,     /* prior scale for InvChi2 */
-		int nu0,       /* prior d.f. for InvChi2 */
-		int sig2fixed  /* 1: sig2 fixed, 0: sig2 sampled */ 
-		) {
-  /* model parameters */
-  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
-  double *mean = doubleArray(n_cov);            /* means for beta */
-  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
-  double **mtemp = doubleMatrix(n_cov, n_cov);
-
-  /* storage parameters and loop counters */
-  int i, j, k;  
-
-  /* D = [X Y] */
-  double **D = doubleMatrix(n_samp + n_cov, n_cov + 1);
-  for (i = 0; i < n_samp; i++) {
-    D[i][n_cov] = Y[i];
-    for (j = 0; j < n_cov; j++)
-      D[i][j] = X[i][j];
-  }
-
-  /* read the proper prior for beta as additional data points */
-  if (addprior) {
-    dcholdc(A0, n_cov, mtemp);
-    for(i = 0; i < n_cov; i++) {
-      D[n_samp+i][n_cov] = 0;
-      for(j = 0; j < n_cov; j++) {
-	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
-	D[n_samp+i][j] = mtemp[i][j];
-      }
-    }
-  } 
-  
-  /* SS matrix */
-  for(j = 0; j <= n_cov; j++)
-    for(k = 0; k <= n_cov; k++)
-      SS[j][k]=0;
-  for(i = 0;i < n_samp + n_cov; i++)
-    for(j = 0;j <= n_cov; j++)
-      for(k = 0; k <= n_cov; k++) 
-	SS[j][k] += D[i][j]*D[i][k];
-  
-  /* SWEEP SS matrix */
-  for(j = 0; j < n_cov; j++)
-    SWP(SS, j, n_cov+1);
-
-  /* draw sig2 from its marginal dist */
-  for(j = 0; j < n_cov; j++)
-    mean[j] = SS[j][n_cov];
-  if (!sig2fixed) {
-    if (psig2) {  /* proper prior for sig2 */
-      if (pbeta)   /* proper prior for beta */
-	sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
-       else        /* improper prior for beta */
-	sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
-    } else         /* improper prior for sig2 */
-      sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
-  }
-
-  /* draw beta from its conditional given sig2 */
-  for(j = 0; j < n_cov; j++)
-    for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
-  rMVN(beta, mean, V, n_cov);
-
-  /* freeing memory */
-  free(mean);
-  FreeMatrix(SS, n_cov+1);
-  FreeMatrix(V, n_cov);
-  FreeMatrix(mtemp, n_cov);
-  FreeMatrix(D, n_samp);
-}
-
-
-/*** 
-     Bayesian Normal Regression: see Chap.14 of Gelman et al. (2004) 
-       both proper and improper priors (and their combinations)
-       allowed for beta and sig2. 
-***/
-void bNormalReg2(double **D,    /* data [X Y] */
-		double *beta,  /* coefficients */
-		double *sig2,  /* variance */
-		int n_samp,    /* sample size */
-		int n_cov,     /* # of covariates */
-		int addprior,  /* Should prior on beta be incorporated
-				  into D? */
-		int pbeta,     /* Is prior proper for beta? */
-		double *beta0, /* prior mean for normal */
-		double **A0,   /* prior precision for normal; can be
-				  set to zero to induce improper prior
-				  for beta alone
-			       */
-		int psig2,     /* 0: improper prior for sig2
-				  p(sig2|X) \propto 1/sig2
-				  1: proper prior for sig2
-				  p(sigma2|X) = InvChi2(nu0, s0)
-			       */
-		double s0,     /* prior scale for InvChi2 */
-		int nu0,       /* prior d.f. for InvChi2 */
-		int sig2fixed  /* 1: sig2 fixed, 0: sig2 sampled */ 
-		) {
-  /* model parameters */
-  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
-  double *mean = doubleArray(n_cov);            /* means for beta */
-  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
-  double **mtemp = doubleMatrix(n_cov, n_cov);
-
-  /* storage parameters and loop counters */
-  int i, j, k;  
-
-  /* read the proper prior for beta as additional data points */
-  if (addprior) {
-    dcholdc(A0, n_cov, mtemp);
-    for(i = 0; i < n_cov; i++) {
-      D[n_samp+i][n_cov] = 0;
-      for(j = 0; j < n_cov; j++) {
-	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
-	D[n_samp+i][j] = mtemp[i][j];
-      }
-    }
-  } 
-  
-  /* SS matrix */
-  for(j = 0; j <= n_cov; j++)
-    for(k = 0; k <= n_cov; k++)
-      SS[j][k]=0;
-  for(i = 0;i < n_samp + n_cov; i++)
-    for(j = 0;j <= n_cov; j++)
-      for(k = 0; k <= n_cov; k++) 
-	SS[j][k] += D[i][j]*D[i][k];
-  
-  /* SWEEP SS matrix */
-  for(j = 0; j < n_cov; j++)
-    SWP(SS, j, n_cov+1);
-
-  /* draw sig2 from its marginal dist */
-  for(j = 0; j < n_cov; j++)
-    mean[j] = SS[j][n_cov];
-  if (!sig2fixed) {
-    if (psig2) {  /* proper prior for sig2 */
-      if (pbeta)   /* proper prior for beta */
-	sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
-       else        /* improper prior for beta */
-	sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
-    } else         /* improper prior for sig2 */
-      sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
-  }
-
-  /* draw beta from its conditional given sig2 */
-  for(j = 0; j < n_cov; j++)
-    for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
-  rMVN(beta, mean, V, n_cov);
-
-  /* freeing memory */
-  free(mean);
-  FreeMatrix(SS, n_cov+1);
-  FreeMatrix(V, n_cov);
-  FreeMatrix(mtemp, n_cov);
-}
-
 
 /*** 
    A Gibbs Sampler for Binary Student-t Regression by   
@@ -3501,6 +3318,484 @@ void RobitGibbs(int *Y,        /* binary outcome variable */
 }
 
 
+/*** 
+     Bayesian Normal Regression: see Chap.14 of Gelman et al. (2004) 
+       both proper and improper priors (and their combinations)
+       allowed for beta and sig2. 
+       Model: Y_i ~ N(X_i^T beta, sig2)
+       Prior: 
+         if conjugate = 1,
+           Prior for beta: p(beta | sig2) = N(beta | beta0, sig2 * A0)
+	   Prior for sig2: p(sig2) = inv-Chi2(sig2 | nu0, s0)
+	 if conjugate = 0 (semi-conjugate prior),
+	   Prior for beta: p(beta) = N(beta | beta0, A0^{-1})
+	   Prior for sig2: p(sig2) = inv-Chi2(sig2 | nu0, s0)
+       If conjugate = 1, sig2 is sampled from its marginal
+      and beta is sampled from its conditional given sig2.
+       If conjugate = 0, beta is updated using its conditional given
+      sig2 and sig2 is updated using its conditional given beta.
+      In this case, starting values for beta and sig2 must be provided.
+***/
+void bNormalReg(double *Y,   
+		double **X,
+		double *beta,  /* coefficients */
+		double *sig2,  /* variance */
+		int n_samp,    /* sample size */
+		int n_cov,     /* # of covariates */
+		int addprior,  /* Should prior on beta be incorporated
+				  into D? */
+		int pbeta,     /* Is prior proper for beta? */
+		double *beta0, /* prior mean for normal */
+		double **A0,   /* prior precision for normal; can be
+				  set to zero to induce improper prior
+				  for beta alone
+			       */
+		int psig2,     /* 0: improper prior for sig2
+				  p(sig2|X) \propto 1/sig2
+				  1: proper prior for sig2
+				  p(sigma2|X) = InvChi2(nu0, s0)
+			       */
+		double s0,     /* prior scale for InvChi2 */
+		int nu0,       /* prior d.f. for InvChi2 */
+		int sig2fixed,  /* 1: sig2 fixed, 0: sig2 sampled */
+		   int conjugate
+		) {
+  /* model parameters */
+
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+  double temp;
+
+  /* storage parameters and loop counters */
+  int i, j, k;  
+
+  double **D = doubleMatrix(n_samp + n_cov, n_cov+1);
+  for (i = 0; i < n_samp; i++) {
+    D[i][n_cov] = Y[i];
+    for (j = 0; j < n_cov; j++)
+      D[i][j] = X[i][j];
+  }
+
+  /* slice sampler */
+  double f, y;
+  double w;
+  w = .1;
+  int m;
+  m = 100;
+  
+  double L, R;
+  int J, K;
+
+  double x;
+
+  /* if semi-conjugate model, divide y and X by sig2 */
+  if (pbeta) {
+    if (!conjugate) {
+      for (i = 0; i < n_samp; i++){
+	for (j = 0; j <= n_cov; j++) {
+	  D[i][j] /= sqrt(sig2[0]);
+	}
+      }
+    }
+  }
+
+/*   PdoubleMatrix(A0, n_cov, n_cov); */
+
+  /* read the proper prior for beta as additional data points */
+  if (addprior) {
+    if (pbeta) {
+      dcholdc(A0, n_cov, mtemp);
+    } else {
+      for (i = 0; i < n_cov; i++)
+	for (j = 0; j < n_cov; j++)
+	  mtemp[i][j] = 0;
+    }
+    for(i = 0; i < n_cov; i++) {
+      D[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	D[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  } 
+
+/*   PdoubleMatrix(D, n_samp + 1, n_cov + 1); */
+  
+  /* SS matrix */
+  for(j = 0; j <= n_cov; j++) {
+    for(k = 0; k <= n_cov; k++) {
+      SS[j][k]=0;
+    }
+  }
+  for(i = 0;i < n_samp + n_cov; i++) {
+    for(j = 0;j <= n_cov; j++) {
+      for(k = 0; k <= n_cov; k++) {
+	SS[j][k] += D[i][j]*D[i][k];
+      }
+    }
+  }
+  
+  /* if semi-conjugate model, y and X are scaled back*/
+  if (pbeta) {
+    if (!conjugate) {
+      for (i = 0; i < n_samp; i++){
+	for (j = 0; j <= n_cov; j++) {
+	  D[i][j] *= sqrt(sig2[0]);
+	}
+      }
+    }
+  } 
+  
+  /* SWEEP SS matrix */
+  for(j = 0; j < n_cov; j++)
+    SWP(SS, j, n_cov+1);
+
+  if (pbeta) {
+    if (!conjugate) {/* semi-conjugate prior case.
+			prior for beta is proper */
+
+      for(j = 0; j < n_cov; j++)
+	mean[j] = SS[j][n_cov];
+
+      /* draw beta from its conditional given sig2 */
+      for(j = 0; j < n_cov; j++)
+	for(k = 0; k < n_cov; k++)
+	  V[j][k] = -SS[j][k];
+
+      rMVN(beta, mean, V, n_cov);
+
+      /* draw sig2 from its conditional given beta */
+      /** sum of squared residuals  **/
+      SS[n_cov][n_cov] = 0;
+      for (i = 0; i < n_samp; i++) {
+	temp = 0;
+	for (j = 0; j < n_cov; j++) {
+	  temp += D[i][j] * beta[j];
+	}
+	SS[n_cov][n_cov] += (D[i][n_cov] - temp) * (D[i][n_cov] - temp);
+      }
+      /* draw sig2 */
+      if (!sig2fixed) {
+	if (psig2) {
+	  sig2[0] = ( SS[n_cov][n_cov] + nu0 * s0) / rchisq((double)n_samp+nu0);
+	} else {
+	  if (n_samp > 4) { /* if the inverse Chi-squared distribution is proper,
+			       sample sig2 from the truncated inverse Chi-squared */
+	    sig2[0] = TruncInvChisq(n_samp, SS[n_cov][n_cov] / n_samp, 10, 0);
+	  } else { /* if the inverse Chi-squared distribution is improper */
+	    /* slice sampler code with prior for sig2 being sig2^{-1} with support [0, 10]  */
+	    f = pow(sig2[0], - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * sig2[0]));
+	    y = runif(0, f);
+	    /** "stepping out" procedure **/
+	    L = sig2[0] - w * runif(0, 1);
+	    if (L < 0) L = 0;
+	    R = L + w;
+	    if (R > 10) R = 10;
+	    J = floor(m * runif(0, 1));
+	    K = (m - 1) - J;
+	    f = pow(L, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * L));
+	    while (J > 0 && y < f && L > 0) {
+	      L = L - w;
+	      if (L < 0) {
+		L = 0;
+		break;
+	      }
+	      J = J - 1;
+	      f = pow(L, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * L));
+	    }
+	    f = pow(R, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * R));
+	    while (K > 0 && y < f && R < 10) {
+	      R = R + w;
+	      if (R > 10) {
+		R = 10;
+		break;
+	      }
+	      K = K - 1;
+	      f = pow(R, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * R));
+	    }
+	    /** "shrinkage" procedure **/
+	    do {
+	      x = runif(L, R);
+	      f = pow(x, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * x));
+	      if (x < sig2[0]) {
+		L = x;
+	      } else {
+		R = x;
+	      }
+	    } while (y > f);
+	    sig2[0] = x;
+	  }
+
+/* 	  sig2[0] = SS[n_cov][n_cov] / rchisq((double)n_samp); */
+/* 	  /\*  rejection sampling  *\/ */
+/* 	  while (sig2[0] > 10) { */
+/* 	    sig2[0] = SS[n_cov][n_cov] / rchisq((double)n_samp); */
+/* 	  } */
+	  
+	}
+      }
+    
+    }
+  }
+
+  if (!pbeta || conjugate) { /*  conjugate case or improper prior for beta */
+
+    /* draw sig2 from its marginal dist */
+    for(j = 0; j < n_cov; j++)
+      mean[j] = SS[j][n_cov];
+    if (!sig2fixed) {
+      if (psig2) {  /* proper prior for sig2 */
+	if (pbeta)   /* proper prior for beta */
+	  sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
+	else        /* improper prior for beta */
+	  sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
+      } else         /* improper prior for sig2 */
+	sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
+    }
+
+    /* draw beta from its conditional given sig2 */
+    for(j = 0; j < n_cov; j++)
+      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
+    rMVN(beta, mean, V, n_cov);
+
+  }
+
+  /* freeing memory */
+  free(mean);
+  FreeMatrix(D, n_samp + n_cov);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+}
+
+
+void bNormalReg1(double **D,
+		double *beta,  /* coefficients */
+		double *sig2,  /* variance */
+		int n_samp,    /* sample size */
+		int n_cov,     /* # of covariates */
+		int addprior,  /* Should prior on beta be incorporated
+				  into D? */
+		int pbeta,     /* Is prior proper for beta? */
+		double *beta0, /* prior mean for normal */
+		double **A0,   /* prior precision for normal; can be
+				  set to zero to induce improper prior
+				  for beta alone
+			       */
+		int psig2,     /* 0: improper prior for sig2
+				  p(sig2|X) \propto 1/sig2
+				  1: proper prior for sig2
+				  p(sigma2|X) = InvChi2(nu0, s0)
+			       */
+		double s0,     /* prior scale for InvChi2 */
+		int nu0,       /* prior d.f. for InvChi2 */
+		int sig2fixed,  /* 1: sig2 fixed, 0: sig2 sampled */
+		   int conjugate
+		) {
+  /* model parameters */
+
+  double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
+  double *mean = doubleArray(n_cov);            /* means for beta */
+  double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double **mtemp = doubleMatrix(n_cov, n_cov);
+  double temp;
+
+  /* storage parameters and loop counters */
+  int i, j, k;  
+
+  /* slice sampler */
+  double f, y;
+  double w;
+  w = .1;
+  int m;
+  m = 100;
+  
+  double L, R;
+  int J, K;
+
+  double x;
+
+  /* if semi-conjugate model, divide y and X by sig2 */
+  if (pbeta) {
+    if (!conjugate) {
+      for (i = 0; i < n_samp; i++){
+	for (j = 0; j <= n_cov; j++) {
+	  D[i][j] /= sqrt(sig2[0]);
+	}
+      }
+    }
+  }
+
+/*   PdoubleMatrix(A0, n_cov, n_cov); */
+
+  /* read the proper prior for beta as additional data points */
+  if (addprior) {
+    if (pbeta) {
+      dcholdc(A0, n_cov, mtemp);
+    } else {
+      for (i = 0; i < n_cov; i++)
+	for (j = 0; j < n_cov; j++)
+	  mtemp[i][j] = 0;
+    }
+    for(i = 0; i < n_cov; i++) {
+      D[n_samp+i][n_cov] = 0;
+      for(j = 0; j < n_cov; j++) {
+	D[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	D[n_samp+i][j] = mtemp[i][j];
+      }
+    }
+  } 
+
+/*   PdoubleMatrix(D, n_samp + 1, n_cov + 1); */
+  
+  /* SS matrix */
+  for(j = 0; j <= n_cov; j++) {
+    for(k = 0; k <= n_cov; k++) {
+      SS[j][k]=0;
+    }
+  }
+  for(i = 0;i < n_samp + n_cov; i++) {
+    for(j = 0;j <= n_cov; j++) {
+      for(k = 0; k <= n_cov; k++) {
+	SS[j][k] += D[i][j]*D[i][k];
+      }
+    }
+  }
+  
+ /* if semi-conjugate model, y and X are scaled back*/
+  if (pbeta) {
+    if (!conjugate) {
+      for (i = 0; i < n_samp; i++){
+	for (j = 0; j <= n_cov; j++) {
+	  D[i][j] *= sqrt(sig2[0]);
+	}
+      }
+    }
+  }
+  
+  
+  /* SWEEP SS matrix */
+  for(j = 0; j < n_cov; j++)
+    SWP(SS, j, n_cov+1);
+
+  if (pbeta) {
+    if (!conjugate) {/* semi-conjugate prior case.
+			prior for beta is proper */
+
+      for(j = 0; j < n_cov; j++)
+	mean[j] = SS[j][n_cov];
+
+      /* draw beta from its conditional given sig2 */
+      for(j = 0; j < n_cov; j++)
+	for(k = 0; k < n_cov; k++)
+	  V[j][k] = -SS[j][k];
+
+      rMVN(beta, mean, V, n_cov);
+
+      /* draw sig2 from its conditional given beta */
+      /** sum of squared residuals  **/
+      SS[n_cov][n_cov] = 0;
+      for (i = 0; i < n_samp; i++) {
+	temp = 0;
+	for (j = 0; j < n_cov; j++) {
+	  temp += D[i][j] * beta[j];
+	}
+	SS[n_cov][n_cov] += (D[i][n_cov] - temp) * (D[i][n_cov] - temp);
+      }
+      /* draw sig2 */
+      if (!sig2fixed) {
+	if (psig2) {
+	  sig2[0] = ( SS[n_cov][n_cov] + nu0 * s0) / rchisq((double)n_samp+nu0);
+	} else {
+	  if (n_samp > 4) { /* if the inverse Chi-squared distribution is proper,
+			       sample sig2 from the truncated inverse Chi-squared */
+	    sig2[0] = TruncInvChisq(n_samp, SS[n_cov][n_cov] / n_samp, 10, 0);
+	  } else { /* if the inverse Chi-squared distribution is improper */
+	    /* slice sampler code with prior for sig2 being sig2^{-1} with support [0, 10]  */
+	    f = pow(sig2[0], - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * sig2[0]));
+	    y = runif(0, f);
+	    /** "stepping out" procedure **/
+	    L = sig2[0] - w * runif(0, 1);
+	    if (L < 0) L = 0;
+	    R = L + w;
+	    if (R > 10) R = 10;
+	    J = floor(m * runif(0, 1));
+	    K = (m - 1) - J;
+	    f = pow(L, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * L));
+	    while (J > 0 && y < f && L > 0) {
+	      L = L - w;
+	      if (L < 0) {
+		L = 0;
+		break;
+	      }
+	      J = J - 1;
+	      f = pow(L, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * L));
+	    }
+	    f = pow(R, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * R));
+	    while (K > 0 && y < f && R < 10) {
+	      R = R + w;
+	      if (R > 10) {
+		R = 10;
+		break;
+	      }
+	      K = K - 1;
+	      f = pow(R, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * R));
+	    }
+	    /** "shrinkage" procedure **/
+	    do {
+	      x = runif(L, R);
+	      f = pow(x, - (double)(n_samp + 2) / 2) * exp(- SS[n_cov][n_cov] / (2 * x));
+	      if (x < sig2[0]) {
+		L = x;
+	      } else {
+		R = x;
+	      }
+	    } while (y > f);
+	    sig2[0] = x;
+	  }
+
+/* 	  sig2[0] = SS[n_cov][n_cov] / rchisq((double)n_samp); */
+/* 	  /\*  rejection sampling  *\/ */
+/* 	  while (sig2[0] > 10) { */
+/* 	    sig2[0] = SS[n_cov][n_cov] / rchisq((double)n_samp); */
+/* 	  } */
+	  
+	}
+      }
+    
+    }
+  }
+
+  if (!pbeta || conjugate) { /*  conjugate case or improper prior for beta */
+
+    /* draw sig2 from its marginal dist */
+    for(j = 0; j < n_cov; j++)
+      mean[j] = SS[j][n_cov];
+    if (!sig2fixed) {
+      if (psig2) {  /* proper prior for sig2 */
+	if (pbeta)   /* proper prior for beta */
+	  sig2[0]=(SS[n_cov][n_cov]+nu0*s0)/rchisq((double)n_samp+nu0);
+	else        /* improper prior for beta */
+	  sig2[0]=(n_samp*SS[n_cov][n_cov]/(n_samp-n_cov)+nu0*s0)/rchisq((double)n_samp+nu0);
+      } else         /* improper prior for sig2 */
+	sig2[0]=SS[n_cov][n_cov]/rchisq((double)n_samp-n_cov);
+    }
+
+    /* draw beta from its conditional given sig2 */
+    for(j = 0; j < n_cov; j++)
+      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2[0];
+    rMVN(beta, mean, V, n_cov);
+
+  }
+
+  /* freeing memory */
+  free(mean);
+  FreeMatrix(SS, n_cov+1);
+  FreeMatrix(V, n_cov);
+  FreeMatrix(mtemp, n_cov);
+}
 
 
 /***
@@ -3551,6 +3846,8 @@ void endorseoprobitMCMC(int *Y,        /* ordinal outcome variable: 0, 1,
   double sig2; sig2 = 1;
   int nu0; nu0 = 1;
   double s0; s0 = 1;
+
+/*   PdoubleMatrix(A0, n_cov, n_cov); */
 
   /* read the prior as additional data points */
   if (prior) {
@@ -3633,15 +3930,26 @@ void endorseoprobitMCMC(int *Y,        /* ordinal outcome variable: 0, 1,
     for(j = 0; j <= n_cov; j++)
       for(k = 0; k <= n_cov; k++)
 	SS[j][k]=0;
+
     for(i = 0; i < n_samp+n_cov; i++)
       for(j = 0; j <= n_cov; j++)
 	for(k = 0; k <= n_cov; k++) 
 	  SS[j][k] += X[i][j]*X[i][k];
+
+
+/*     PdoubleMatrix(X, n_samp + n_cov, n_cov); */
+/*     Rprintf("Oprobit Sweep matrix %3g \n", SS[n_cov][n_cov]); */
+
     
     /* SWEEP SS matrix */
     for(j = 0; j < n_cov; j++)
       SWP(SS, j, n_cov+1);
     
+/*     /\* check scale parameters *\/ */
+/*     Rprintf("Prior df %3g, Prior scale %3g, Sweep %3g \n", */
+/* 	    nu0, s0, SS[n_cov][n_cov]); */
+
+
     /* draw beta */    
     for(j = 0; j < n_cov; j++)
       mbeta[j] = SS[j][n_cov];
@@ -3703,26 +4011,44 @@ void endorseoprobitMCMC(int *Y,        /* ordinal outcome variable: 0, 1,
 }
 
 
-void bNormalReg1(double **X,    /* [X Y] */
-		 double *beta,  /* coefficients */
-		 int n_samp,    /* # of obs */ 
-		 int n_cov,     /* # of covariates */
-		 int prior,     /* Should prior be included in X? */
-		 double *beta0, /* prior mean */
-		 double **A0,   /* prior precision */
-		 double *tau,  /* precision for each observation */
-		 int df,        /* degrees of freedom */
-		 int n_gen      /* # of gibbs draws */
-		 ) {
+
+/*** 
+   A Gibbs Sampler for Binary Probit Regression With and Without
+   Marginal Data Augmentation
+   
+   Marginal Data Augmentation: see p.318 of Imai and van Dyk (2005)
+   Journal of Econometrics.
+      Prior mean for beta will be set to zero. 
+      Improper prior allowed (set A0 to be a matrix of zeros).
+***/ 
+
+void bprobitGibbs(int *Y,        /* binary outcome variable */
+		  double **X,    /* covariate matrix */
+		  double *beta,  /* coefficients */
+		  int n_samp,    /* # of obs */ 
+		  int n_cov,     /* # of covariates */
+		  int prior,     /* Should prior be included in X? */
+		  double *beta0, /* prior mean */
+		  double **A0,   /* prior precision */
+		  int mda,       /* Want to use marginal data augmentation? */ 
+		  int n_gen      /* # of gibbs draws */
+		  ) {
   
   /* model parameters */
   double **SS = doubleMatrix(n_cov+1, n_cov+1); /* matrix folders for SWEEP */
   double *mean = doubleArray(n_cov);            /* means for beta */
   double **V = doubleMatrix(n_cov, n_cov);      /* variances for beta */
+  double *W = doubleArray(n_samp);
   double **mtemp = doubleMatrix(n_cov, n_cov);
 
   /* storage parameters and loop counters */
   int i, j, k, main_loop;  
+  double dtemp;
+  
+  /* marginal data augmentation */
+  double sig2 = 1;
+  int nu0 = 1;
+  double s0 = 1;
   
   /* read the prior as additional data points */
   if (prior) {
@@ -3730,7 +4056,8 @@ void bNormalReg1(double **X,    /* [X Y] */
     for(i = 0; i < n_cov; i++) {
       X[n_samp+i][n_cov] = 0;
       for(j = 0; j < n_cov; j++) {
-	X[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
+	if (!mda)
+	  X[n_samp+i][n_cov] += mtemp[i][j]*beta0[j];
 	X[n_samp+i][j] = mtemp[i][j];
       }
     }
@@ -3738,6 +4065,20 @@ void bNormalReg1(double **X,    /* [X Y] */
 
   /* Gibbs Sampler! */
   for(main_loop = 1; main_loop <= n_gen; main_loop++){
+    /* marginal data augmentation */
+    if (mda) sig2 = s0/rchisq((double)nu0);
+    
+    for (i = 0; i < n_samp; i++){
+      dtemp = 0;
+      for (j = 0; j < n_cov; j++) 
+	dtemp += X[i][j]*beta[j]; 
+      if(Y[i] == 0) 
+	W[i] = TruncNorm(dtemp-1000,0,dtemp,1,0);
+      else 
+	W[i] = TruncNorm(0,dtemp+1000,dtemp,1,0);
+      X[i][n_cov] = W[i]*sqrt(sig2);
+      W[i] *= sqrt(sig2);
+    }
 
     /* SS matrix */
     for(j = 0; j <= n_cov; j++)
@@ -3746,12 +4087,12 @@ void bNormalReg1(double **X,    /* [X Y] */
     for(i = 0;i < n_samp; i++)
       for(j = 0;j <= n_cov; j++)
 	for(k = 0; k <= n_cov; k++) 
-	  SS[j][k] += X[i][j]*X[i][k]*tau[i];
+	  SS[j][k] += X[i][j]*X[i][k];
     for(i = n_samp;i < n_samp+n_cov; i++)
       for(j = 0;j <= n_cov; j++)
 	for(k = 0; k <= n_cov; k++) 
 	  SS[j][k] += X[i][j]*X[i][k];
-   
+
     /* SWEEP SS matrix */
     for(j = 0; j < n_cov; j++)
       SWP(SS, j, n_cov+1);
@@ -3759,20 +4100,23 @@ void bNormalReg1(double **X,    /* [X Y] */
     /* draw beta */    
     for(j = 0; j < n_cov; j++)
       mean[j] = SS[j][n_cov];
+    if (mda) 
+      sig2=(SS[n_cov][n_cov]+s0)/rchisq((double)n_samp+nu0);
     for(j = 0; j < n_cov; j++)
-      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k];
+      for(k = 0; k < n_cov; k++) V[j][k]=-SS[j][k]*sig2;
     rMVN(beta, mean, V, n_cov);
  
+    /* rescaling the parameters */
+    if(mda) 
+      for (j = 0; j < n_cov; j++) beta[j] /= sqrt(sig2);
     R_CheckUserInterrupt();
   } /* end of Gibbs sampler */
 
   /* freeing memory */
+  free(W);
   free(mean);
   FreeMatrix(SS, n_cov+1);
   FreeMatrix(V, n_cov);
   FreeMatrix(mtemp, n_cov);
 }
-
-
-
 

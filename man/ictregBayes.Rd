@@ -13,7 +13,8 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 	    delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, 
             delta.tune, psi.tune, gamma.tune, zeta.tune, 
 	    formula.mixed, group.mixed, 
-	    verbose = TRUE, robit = FALSE, df = 5, ...)
+	    verbose = TRUE, sensitive.model = c("logit", "robit", "probit"), 
+	    df = 5, endorse.options, ...)
 } 
 
 \arguments{ 
@@ -21,7 +22,7 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 \item{data}{A data frame containing the variables in the model}
 \item{treat}{Name of treatment indicator as a string. For single sensitive item models, this refers to a binary indicator, and for multiple sensitive item models it refers to a multi-valued variable with zero representing the control condition. This can be an integer (with 0 for the control group) or a factor (with "control" for the control group).}
 \item{J}{Number of non-sensitive (control) survey items. This will be set automatically to the maximum value of the outcome variable in the treatment group if no input is sent by the user.}
-\item{constrained.single}{A logical value indicating whether the control group parameters are constrained to be equal in the single sensitive item design.}
+\item{constrained.single}{A string indicating whether the control group parameters are constrained to be equal in the single sensitive item design, either setting all parameters to be equal (\code{full}) or only the intercept (\code{intercept}). If neither, set to \code{none}.}
 \item{constrained.multi}{A logical value indicating whether the non-sensitive item count is included as a predictor in the sensitive item fits for the multiple sensitive item design.}
 \item{fit.start}{Fit method for starting values. The options are \code{lm}, \code{glm}, \code{nls}, and \code{ml}, which use OLS, logistic regression, non-linear least squares, and maximum likelihood estimation to generate starting values, respectively. The default is \code{lm}.}
 \item{n.draws}{Number of MCMC iterations after the burnin.}
@@ -46,8 +47,9 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 \item{formula.mixed}{To specify a mixed effects model, include this formula object for the group-level fit. ~1 allows intercepts to vary, and including covariates in the formula allows the slopes to vary also.}
 \item{group.mixed}{A numerical group indicator specifying which group each individual belongs to for a mixed effects model.}
 \item{verbose}{A logical value indicating whether model diagnostics are printed out during fitting.}
-\item{robit}{A logical value indicating whether the robit model is used for the sensitive item fit or logistic regression is used (default).}
+\item{sensitive.model}{A logical value indicating which model is used for the sensitive item fit,  logistic regression (\code{logit}, default), robit regression (\code{robit}), or probit regression (\code{probit}).}
 \item{df}{Degrees of freedom for the robit model for the sensitive item fit, only used if \code{robit} is set to \code{TRUE}.}
+\item{endorse.options}{A list of inputs and options for running the combined list experiment and endorsement experiment model. Options documented more fully in \code{endorse} package.}
 \item{...}{further arguments to be passed to NLS regression commands.}
 }
 
@@ -58,6 +60,8 @@ Unlike the maximum likelihood and least squares estimators in the \code{ictreg} 
 For the single sensitive item design, the model can constrain all control parameters to be equal (\code{constrained = "full"}), or just the intercept (\code{constrained = "intercept"}) or all the control fit parameters can be allowed to vary across the potential sensitive item values (\code{constrained = "none"}).
 
 For the multiple sensitive item design, the model can include the estimated number of affirmative responses to the control items as a covariate in the sensitive item model fit (\code{constrained} set to \code{TRUE}) or exclude it (\code{FALSE}).
+
+The function also allows the user to perform combined list experiment and endorsement experiment regression. Setting \code{endorse.options} to a list with the options from the \code{endorse} package for endorsement experiment regression, the function will return the combined model in which the relationship between covariates and the sensitive item in the list experiment model is set to be identical to the relationship between covariates and support for endorsers in the endorsement experiment model. For more details on endorsement experiment regression, see the help for the \code{endorse} package.
 
 Convergence is at times difficult to achieve, so we recommend running multiple chains from overdispersed starting values by, for example, running an MLE or linear model using the ictreg() function, and then generating a set of overdispersed starting values using those estimates and their estimated variance-covariance matrix. An example is provided below for each of the possible designs. Running \code{summary()} after such a procedure will output the Gelman-Rubin convergence statistics in addition to the estimates. If the G-R statistics are all below 1.1, the model is said to have converged.
 
@@ -94,7 +98,12 @@ Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of List Experiments
 Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item
   Count Technique.''  Journal of the American Statistical Association, 
   Vol. 106, No. 494 (June), pp. 407-416. available at
-  \url{http://imai.princeton.edu/research/list.html}}
+  \url{http://imai.princeton.edu/research/list.html}
+
+Blair, Graeme, Jason Lyall and Kosuke Imai. (2013) ``Comparing and Combining
+  List and Experiments: Evidence from Afghanistan." 
+  Working paper. available at 
+  \url{http://imai.princeton.edu/research/comp.html}}
 
 \author{Graeme Blair, Princeton University,
 \email{gblair@princeton.edu} and Kosuke Imai, Princeton University,

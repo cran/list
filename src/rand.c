@@ -231,3 +231,49 @@ double rnegbin(double mu,    /* mean */
 	       ) {
   return(rnbinom(theta, theta/(mu+theta)));
 }
+
+
+/* sample from truncated inverse chi squared truncated above at "max" */
+double TruncInvChisq(int df, double scale, double max, int invcdf) {
+
+  double temp = 0, temp_pg, g_shape, g_scale;
+  double out;
+  int i;
+
+  g_shape = (double)df / 2;
+  g_scale = 2 / ((double)df * scale);
+
+  if (invcdf) {/* inverse cdf method */
+
+    temp = runif(0, 1);
+    temp_pg = pgamma(1 / max, g_shape, g_scale, 1, 0);
+
+    temp = (temp * ((double)1 - temp_pg)) + temp_pg;
+
+    out = qgamma(temp, g_shape, g_scale, 1, 0);
+
+  } else {/* rejection sampling method */
+
+    for (i = 0; i < 10000; i++) {
+      out = rgamma(g_shape, g_scale);
+
+      if (out > 1 / max ) break;
+      
+      if (temp == 9999) {
+/* 	error("Too many rejections.  Try the inverse-CDF method"); */
+
+	/* If there are too many rejections, inverse-CDF method */
+	temp = runif(0, 1);
+	temp_pg = pgamma(1 / max, g_shape, g_scale, 1, 0);
+
+	temp = (temp * ((double)1 - temp_pg)) + temp_pg;
+
+	out = qgamma(temp, g_shape, g_scale, 1, 0);
+
+      }
+    }
+  }
+
+  return (1 / out);
+}
+

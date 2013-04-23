@@ -16,11 +16,11 @@
 /* direct use of recursive formula */
 double Rpoisbinom(int k, double *p, int l) {
 
-  double dtmp, sumT;
+  double dtmp = 0.0, sumT;
   int i, j; 
 
   if (k == 0) {
-    return(1.0);
+    dtmp = 1.0;
   } else if (k > 0) {    
     dtmp = 0.0;
     for (i = 1; i <= k; i++) {
@@ -31,10 +31,10 @@ double Rpoisbinom(int k, double *p, int l) {
       dtmp += R_pow_di(-1.0, i+1) * sumT * Rpoisbinom(k-i, p, l);
     } 
     dtmp /= k;
-    return(dtmp);
   } else {
     error("Rpoisbinom: invalid input for k.\n");
   }
+  return(dtmp);
 }
 
 /* called from within R */
