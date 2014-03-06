@@ -5,7 +5,8 @@
 Function to conduct a statistical test with the null hypothesis that there is no difference between the correlation coefficients between list experiment and endorsement experiment data.
 } 
 \usage{
-comp.listEndorse(y.endorse, y.list, treat, n.draws = 10000, alpha = .05, endorse.mean = FALSE,
+comp.listEndorse(y.endorse, y.list, treat, n.draws = 10000, 
+         alpha = .05, endorse.mean = FALSE,
          method = "pearson")
 } 
 

@@ -15,3 +15,5 @@ version      date  description
 5.1      03/23/12  Bug fixes
 6.0      04/23/12  A major update incorporating the methods proposed by
 	Blair, Imai, and Lyall (2013)
+6.1      02/27/14  Weights from the E-M algorithm are included as an
+	output, representing the posterior predicted probability of answering "yes".

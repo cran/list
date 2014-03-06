@@ -6,8 +6,9 @@ ictregBayes <- function(formula, data = parent.frame(), treat = "treat", J, cons
                         ...){
 
   ictreg.call <- match.call() 
-  
-  require(magic)
+
+  ## removed to fix error in package compiling
+  ##require(magic)
   
   # set up data frame, with support for standard and modified responses
   mf <- match.call(expand.dots = FALSE)

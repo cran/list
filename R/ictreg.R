@@ -2,9 +2,7 @@
 ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "ml", overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE, ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, floor.formula = ~ 1, fit.start = "lm", fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, verbose = FALSE, ...){
 
   ictreg.call <- match.call()
-  
-  require(magic)
-  
+
   # set up data frame, with support for standard and modified responses
   mf <- match.call(expand.dots = FALSE)
   
@@ -236,7 +234,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       return(invG %*% F %*% t(invG) / n)
       
     }
-     
+    
     ## fit to the control group
     fit.glm.control <- glm(cbind(y.control, J-y.control) ~ x.control - 1,
                            family = binomial(logit))
@@ -275,7 +273,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       curr.treat <- t[t!=0] == treatment.values[m]
 
       x.treatment.curr <- x.treatment[curr.treat, , drop = F]
-    
+
       ## calculate the adjusted outcome    
       y.treatment.pred <- y.treatment[curr.treat] - logistic(x.treatment.curr
                                                              %*% fit.control.coef)*J
@@ -2229,18 +2227,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           
           if(boundary==F)
             if (overdispersed == T)
-              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, pred.post = w, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
             else
-              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+              return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, pred.post = w, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
           
           if(floor==FALSE & ceiling==TRUE)
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.ceiling = par.ceiling, se.ceiling = se.ceiling, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, coef.names.ceiling = coef.names.ceiling, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.ceiling = par.ceiling, se.ceiling = se.ceiling, vcov=vcov.mle, pred.post = w, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, coef.names.ceiling = coef.names.ceiling, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
           
           if(floor==TRUE & ceiling==FALSE)
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.floor = par.floor, se.floor = se.floor, vcov=vcov.mle, llik=llik.const, treat.labels = treatment.labels, control.label = control.label, J=J, coef.names=coef.names, coef.names.floor = coef.names.floor, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.floor = par.floor, se.floor = se.floor, vcov=vcov.mle, pred.post = w, llik=llik.const, treat.labels = treatment.labels, control.label = control.label, J=J, coef.names=coef.names, coef.names.floor = coef.names.floor, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
           
           if(floor==TRUE & ceiling==TRUE)
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.floor = par.floor, se.floor = se.floor, par.ceiling = par.ceiling, se.ceiling = se.ceiling, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, coef.names.floor = coef.names.floor, coef.names.ceiling = coef.names.ceiling, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, par.floor = par.floor, se.floor = se.floor, par.ceiling = par.ceiling, se.ceiling = se.ceiling, pred.post = w, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik.const, J=J,  coef.names=coef.names, coef.names.floor = coef.names.floor, coef.names.ceiling = coef.names.ceiling, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
           
         } else if (constrained == FALSE) { 
           
@@ -2264,9 +2262,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           names(par.treat) <- names(se.treat) <- names(par.control.psi0) <- names(se.control.psi0) <- names(par.control.psi1) <- names(se.control.psi1) <- coef.names
 
           if(overdispersed==T)
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.psi0=par.control.psi0, se.control.psi0=se.control.psi0, par.control.psi1=par.control.psi1, se.control.psi1=se.control.psi1, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.psi0=par.control.psi0, se.control.psi0=se.control.psi0, par.control.psi1=par.control.psi1, se.control.psi1=se.control.psi1, par.overdispersion=par.overdispersion, se.overdispersion=se.overdispersion, vcov=vcov.mle, pred.post = w, treat.labels = treatment.labels, control.label = control.label, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
           else
-            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.psi0=par.control.psi0, se.control.psi0=se.control.psi0, par.control.psi1=par.control.psi1, se.control.psi1=se.control.psi1, vcov=vcov.mle, treat.labels = treatment.labels, control.label = control.label, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
+            return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control.psi0=par.control.psi0, se.control.psi0=se.control.psi0, par.control.psi1=par.control.psi1, se.control.psi1=se.control.psi1, vcov=vcov.mle, pred.post = w, treat.labels = treatment.labels, control.label = control.label, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
 	
         }
 
@@ -2298,7 +2296,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         
         names(par.control) <- names(se.control) <- coef.names
         
-        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, multi.condition = multi.condition, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, pred.post = w, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, multi.condition = multi.condition, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
 
       }
       

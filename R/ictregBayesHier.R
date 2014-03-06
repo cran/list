@@ -3,8 +3,9 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
                             verbose = TRUE, ...){
 
   ictreg.call <- match.call()
-  
-  require(magic)
+
+  ## removed to fix error in package compiling
+  ##require(magic)
   
   ## set up data frame, with support for standard and modified responses
   mf <- match.call(expand.dots = FALSE)

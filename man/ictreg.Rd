@@ -67,6 +67,9 @@ The modified design and the multiple sensitive item design are automatically det
 \item{treat.labels}{a vector of the names used by the \code{treat} vector for the sensitive item or items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.} 
 \item{control.label}{a vector of the names used by the \code{treat} vector for the control items. This is the names from the \code{treat} indicator if it is a factor, or the number of the item if it is numeric.}
 
+For the maximum likelihood models, an additional output object is included:
+\item{pred.post}{posterior predicted probability of answering "yes" to the sensitive item. The weights from the E-M algorithm.}
+
 For the floor/ceiling models, several additional output objects are included:
 \item{ceiling}{call indicating whether the assumption of no ceiling liars is relaxed, and ceiling parameters are estimated}
 \item{par.ceiling}{point estimate for effect of covariate on whether respondents who answered affirmatively to all non-sensitive items and hold a true affirmative opinion toward the sensitive item lied and reported a negative response to the sensitive item }

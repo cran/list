@@ -1,15 +1,15 @@
 Package: list
-Version: 6.0
-Date: 2013-4-23
+Version: 6.1
+Date: 2014-3-6
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
 Author: Graeme Blair <gblair@Princeton.edu>, Kosuke Imai
         <kimai@Princeton.edu>
 Maintainer: Graeme Blair <gblair@Princeton.edu>
-Depends: R (>= 3.0.0), utils, VGAM (>= 0.9-0), magic (>= 1.5-4),
-        gamlss.dist (>= 4.2-0), MASS (>= 7.3-26), quadprog (>= 1.5-4),
-        arm (>= 1.6-05), corpcor (>= 1.6.5), mvtnorm (>= 0.9-9994),
-        sandwich (>= 2.2-10), coda (>= 0.16-1)
+Depends: R (>= 3.0.0), utils, sandwich (>= 2.2-10)
+Imports: VGAM (>= 0.9-0), magic (>= 1.5-4), gamlss.dist (>= 4.2-0),
+        MASS (>= 7.3-26), quadprog (>= 1.5-4), arm (>= 1.6-05), corpcor
+        (>= 1.6.5), mvtnorm (>= 0.9-9994), coda (>= 0.16-1)
 Description: list is a publicly available R package that allows
         researchers to conduct multivariate statistical analyses of
         survey data with list experiments. In addition, the package
@@ -28,7 +28,7 @@ Description: list is a publicly available R package that allows
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
-Packaged: 2013-04-23 21:48:06 UTC; gblair
+Packaged: 2014-03-06 14:21:12 UTC; gblair
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2013-04-24 08:04:09
+Date/Publication: 2014-03-06 15:56:15
