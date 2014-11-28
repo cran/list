@@ -17,3 +17,6 @@ version      date  description
 	Blair, Imai, and Lyall (2013)
 6.1      02/27/14  Weights from the E-M algorithm are included as an
 	output, representing the posterior predicted probability of answering "yes".
+7.0      8/26/14  List experiments as a predictor in outcome regressions
+	method proposed in Imai, Park, and Greene (2014) incorporated
+7.1	   11/28/14  Bug fixes

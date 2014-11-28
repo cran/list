@@ -17,7 +17,7 @@ ictreg.joint <- function(formula, data = parent.frame(), treat = "treat", J, out
     mf[[1]] <- as.name("model.frame")
     mf$na.action <- 'na.pass'
     mf <- eval.parent(mf)
-     
+    
     ## set up the data for all points 
     x.all <- model.matrix(attr(mf, "terms"), data = mf)
     y.all <- model.response(mf)
@@ -215,7 +215,7 @@ ictreg.joint <- function(formula, data = parent.frame(), treat = "treat", J, out
         else if(outcome.reg == "logistic") {
             ind10 <- ((treat == 1) & (y == 0))
             ind1J1 <- ((treat == 1) & (y == (J+1)))
-            ind1y <- ((treat == 1) & (y > 0) & (y < (J+1)) & (o == 1))
+            ind1y <- ((treat == 1) & (y > 0) & (y < (J+1)))
             nottreat <- (treat==0)
             if (sum(ind10) > 0) {
                 p10 <- sum(log(1-gX[ind10])
@@ -593,7 +593,7 @@ ictreg.joint <- function(formula, data = parent.frame(), treat = "treat", J, out
     } else {
         sigma <- NA
     }
-    ses <- score(par = par, J = 3, y = y.all, treat = t, o = o,
+    ses <- score(par = par, J = J, y = y.all, treat = t, o = o,
                  x = x.all, outcome.reg = outcome.reg, constrained = constrained)
     
     if(constrained == FALSE) {
@@ -680,17 +680,45 @@ summary.ictreg.joint <- function(object, ...) {
 }
 
 print.summary.ictreg.joint <- function(x, ...){
-    print.summary.ictreg(x) ## Use GB function for treatment and control models.
+    ##print.summary.ictreg(x) ## Use GB function for treatment and control models.
                             ## Only works for constrained models. Need some changes for unconstrained.
+
+    tb.sensitive <- matrix(NA, ncol = 2, nrow = length(x$par.treat))
+    colnames(tb.sensitive) <- c("Est.", "S.E.")
+    rownames(tb.sensitive) <- c(x$coef.names)
+    tb.sensitive[,1] <- x$par.treat
+    tb.sensitive[,2] <- x$se.treat
+
+    tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
+    colnames(tb.control) <- c("Est.", "S.E.")
+    if(x$constrained == TRUE)
+        rownames(tb.control) <- c(x$coef.names)
+    else
+        rownames(tb.control) <- c(x$coef.names, "Sensitive item")
+    tb.control[,1] <- x$par.control
+    tb.control[,2] <- x$se.control
     
     tb.outcome <- matrix(NA, ncol = 2, nrow = length(x$par.outcome))
     colnames(tb.outcome) <- c("Est.", "S.E.")
-    rownames(tb.outcome) <- c(x$coef.names, "Sensitive item")
+    if(x$constrained == TRUE)
+        rownames(tb.outcome) <- c(x$coef.names, "Sensitive item")
+    else
+        rownames(tb.outcome) <- c(x$coef.names, "y", "Sensitive item")
     tb.outcome[,1] <- x$par.outcome
     tb.outcome[,2] <- x$se.outcome
+
+    cat("\nJoint List Experiment Outcome Regression\n\n")
     
-    cat("Outcome item \n")
+     cat("Sensitive item \n")
+    print(as.matrix(round(tb.sensitive, 5)))
+    
+    cat("\n\nControl items \n")
+    print(as.matrix(round(tb.control, 5)))
+   
+    cat("\n\nOutcome \n")
     print(as.matrix(round(tb.outcome, 5)))
+
+    cat("\n")
     
     invisible(x)
 }
@@ -760,7 +788,7 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
     if(missing(interval)) interval <- "none"
     nx <- ncol(object$x)
     logistic <- function(object) exp(object)/(1+exp(object))
-
+    
     ## Get vcov and coefficients from outcome model    
     var.matrix <- object$vcov
     if(object$constrained == FALSE) { #UNconstrained
@@ -769,7 +797,7 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
         var.matrix <- var.matrix[(nx*2 + 1):(nx*3 +1),(nx*2 + 1):(nx*3 +1)]
     }
     coef.matrix <- object$par.outcome
-
+    
     ## Get (new) dataframe
     if (missing(newdata)) {  
         xvar <- object$x # if no new data specified, use original 
@@ -783,6 +811,8 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
         data.list <- list(xvar,
                           model.matrix(as.formula(paste("~", c(object$call$formula[[3]]))),
                                        newdata.diff)) # has two elements, newdata and newdata.diff
+    } else if (missing(newdata.diff)) {
+        data.list <- list(xvar)
     }
     ## If user wants predictions for z = 1 and z = 0, or they need the average 
     ## difference in predictions between those two, then data.list should have
@@ -790,12 +820,10 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
     if (sensitive.value == "both"){
         data.list <- list(xvar, xvar)
     }
-    else {
-        data.list <- list(xvar)
-    }
+    
     
     return.object <- c()
-
+    
     ## Before adding z and/or y to data.list, generate predictions from
     ## sensitive item model.
     if (predict.sensitive == TRUE) {
@@ -813,36 +841,46 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
             ci.lower.sens[i] <- quantile(draws.mean.sens[[i]], probs = .025)
             ci.upper.sens[i] <- quantile(draws.mean.sens[[i]], probs = .975)
         }
-        fit.matrix.sens <- as.data.frame(rbind(c(mean.sens[1], ci.lower.sens[1], ci.upper.sens[1])))
-        names(fit.matrix.sens) <- c("fit", "lwr", "upr")
+        if (missing(newdata.diff)){
+            fit.matrix.sens <- as.data.frame(rbind(c(mean.sens[1], ci.lower.sens[1], ci.upper.sens[1])))
+            names(fit.matrix.sens) <- c("fit", "lwr", "upr")
+        }
+        if (!missing(newdata.diff)) {
+            fit.matrix.sens <- as.data.frame(rbind(c(mean.sens[1], ci.lower.sens[1], ci.upper.sens[1]),
+                                                   c(mean.sens[2], ci.lower.sens[2], ci.upper.sens[2])))
+            names(fit.matrix.sens) <- c("fit", "lwr", "upr")
+            rownames(fit.matrix.sens) <- c("newdata", "newdata.diff")
+        }
         return.object$fitsens <- fit.matrix.sens
-        ## Right now this works when there are no newdata or newdata.diff dataframes,
-        ## but the return object will have to change when there are.
-        if(return.draws == TRUE){
+
+        if(return.draws == TRUE & missing(newdata.diff)){
             return.object$draws.predict.sens <- draws.predict.sens[[1]]
             return.object$draws.mean.sens <- draws.mean.sens[[1]]
-        ## Right now this works when there are no newdata or newdata.diff dataframes,
-        ## but the return object will have to change when there are.
+
+        }
+        if (return.draws == TRUE & !missing(newdata.diff)) {
+            return.object$draws.predict.sens <- list(draws.predict.sens[[1]], draws.predict.sens[[2]])
+            return.object$draws.mean.sens <- list(draws.mean.sens[[1]], draws.mean.sens[[2]])
         }
     }
-
+    
     ## If user wants predictions for z = 1 AND z = 0, or they need the average 
     ## difference in predictions between those two, or they provide newdata 
     ## and newdata.diff, need to add z and y to all those dataframes
     
     k <- 1   
     multi.return.object <- list()
-
+    
     for (i in 1:length(data.list)){
         ## Add Y0 (unconstrained only) and z to x dataframe(s)
         if(object$constrained == FALSE){ #UNconstrained
             if(sensitive.value == "0"){
                 data.list[[i]] <- cbind(data.list[[i]], object$y, 0)
             } else if (sensitive.value == "1") { # z = 1
-                data.list[[i]] <- cbind(data.list[[i]], object$y - object$treat, 1) ##PROBLEM IS HERE when given newdata:
+                data.list[[i]] <- cbind(data.list[[i]], object$y - object$treat, 1) ##PROBLEM IS HERE
+                                        # when given newdata with NAs:
                                         # object$y - object$treat drops some obs, xvar doesn't
                                         # because user gives full vector of observations.
-                                        # Also need to get rid of observations with NAs that user provides.
             }
         } else { #constrained
             if(sensitive.value == "0") {
@@ -863,15 +901,18 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
         data.list[[1]] <- cbind(data.list[[1]], 0)
         data.list[[2]] <- cbind(data.list[[2]], 1)
     } ## Done with getting x matrix
-
+    
     ## Get predictions with confidence intervals
-    draws.predict <- draws.mean <- list()
+    draws.predict <- draws.mean <- mean.obs <- lower.obs <- upper.obs <- list()
     mean <- ci.lower <- ci.upper <- sd <- c()
     if(object$outcome.reg == "logistic") {
         for(i in 1:length(data.list)){
             draws <- mvrnorm(n = 10000, coef.matrix, var.matrix)
             draws.predict[[i]] <- logistic(as.matrix(data.list[[i]]) %*% t(draws)) ##obs are rows, draws are columns
-            draws.mean[[i]] <- apply(draws.predict[[i]], 2, mean) ## averaged over all observations
+            draws.mean[[i]] <- apply(draws.predict[[i]], 2, mean) ## averaged over all observations -- 10,000 draws
+            mean.obs[[i]] <- apply(draws.predict[[i]], 1, mean) ## averaged over all draws -- n observations
+            lower.obs[[i]] <- apply(draws.predict[[i]], 1, quantile, probs = 0.025) ## averaged over all draws -- n observations
+            upper.obs[[i]] <- apply(draws.predict[[i]], 1, quantile, probs = 0.975) ## averaged over all draws -- n observations
             mean[i] <- mean(draws.mean[[i]]) ## averaged over all draws
             sd[i] <- sd(draws.mean[[i]])
             ci.lower[i] <- quantile(draws.mean[[i]], probs = 0.025)
@@ -881,7 +922,10 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
         for(i in 1:length(data.list)){
             draws <- mvrnorm(n = 10000, coef.matrix, var.matrix)
             draws.predict[[i]] <- as.matrix(data.list[[i]]) %*% t(draws) ##obs are rows, draws are columns
-            draws.mean[[i]] <- apply(draws.predict[[i]], 2, mean) ## averaged over all observations
+            draws.mean[[i]] <- apply(draws.predict[[i]], 2, mean) ## averaged over all observations -- 10,000 draws
+            mean.obs[[i]] <- apply(draws.predict[[i]], 1, mean) ## averaged over all draws -- n observations
+            lower.obs[[i]] <- apply(draws.predict[[i]], 1, quantile, probs = 0.025) ## averaged over all draws -- n observations
+            upper.obs[[i]] <- apply(draws.predict[[i]], 1, quantile, probs = 0.975) ## averaged over all draws -- n observations
             mean[i] <- mean(draws.mean[[i]]) ## averaged over all draws
             sd[i] <- sd(draws.mean[[i]])
             ci.lower[i] <- quantile(draws.mean[[i]], probs = 0.025)
@@ -889,15 +933,63 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
         }
     }
 
-    if (sensitive.diff == FALSE) { ## Return predictions for z = 1 and z = 0
+    ## Up until here, all works with newdata and newdata.diff -- each return object has two elements,
+    ## the first is for newdata and the second is for newdata.diff. Now it's about the reporting...
+
+    ## When there is NO newdata:
+    if (sensitive.diff == FALSE & avg == TRUE & missing(newdata.diff) & missing(newdata) & sensitive.value == "both") {#Return predictions for z = 1 & z = 0
         fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1]),
-                                    c(mean[2], ci.lower[2], ci.upper[2])))
+                                          c(mean[2], ci.lower[2], ci.upper[2])))
         names(fit.matrix) <- c("fit", "lwr", "upr")
         rownames(fit.matrix) <- c("Sensitive Item = 0", "Sensitive Item = 1")
     }
+    if (sensitive.diff == FALSE & avg == TRUE & missing(newdata.diff) & missing(newdata) & sensitive.value == "1") {#Return predictions for z = 1
+        fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1])))
+        names(fit.matrix) <- c("fit", "lwr", "upr")
+        rownames(fit.matrix) <- c("Sensitive Item = 1")
+    }
+    if (sensitive.diff == FALSE & avg == TRUE & missing(newdata.diff) & missing(newdata) & sensitive.value == "0") {#Return predictions for z = 0
+        fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1])))
+        names(fit.matrix) <- c("fit", "lwr", "upr")
+        rownames(fit.matrix) <- c("Sensitive Item = 0")
+    }
+    
+    ## When there IS newdata:
+    if (sensitive.diff == FALSE & avg == TRUE & !missing(newdata) & missing(newdata.diff)) { ## Return predictions for newdata
+        if (sensitive.value == "both") {
+            fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1]),
+                                              c(mean[2], ci.lower[2], ci.upper[2])))
+            names(fit.matrix) <- c("fit", "lwr", "upr")
+            rownames(fit.matrix) <- c("Sensitive Item = 0", "Sensitive Item = 1")
+        } else if (sensitive.value == "1") {
+            fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1])))
+            names(fit.matrix) <- c("fit", "lwr", "upr")
+            rownames(fit.matrix) <- c("Sensitive Item = 1")
+        } else if (sensitive.value == "0") {
+            fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1])))
+            names(fit.matrix) <- c("fit", "lwr", "upr")
+            rownames(fit.matrix) <- c("Sensitive Item = 0")   
+        }
+    }
 
-    if (sensitive.diff == TRUE) { ## Return predictions for z = 1, z = 0, and difference
-
+    ## When there is newdata.diff:
+    if (sensitive.diff == FALSE & avg == TRUE & !missing(newdata.diff)) {## Return predictions for newdata, newdata.diff, & diff
+        ## Get difference
+        diff <- draws.mean[[1]] - draws.mean[[2]] # newdata minus newdata.diff
+        diff.mean <- mean(diff)
+        diff.lower <- quantile(diff, probs = 0.025)
+        diff.upper <- quantile(diff, probs = 0.975)
+        diff.sd <- sd(diff)
+        
+        fit.matrix <- as.data.frame(rbind(c(mean[1], ci.lower[1], ci.upper[1]),
+                                          c(mean[2], ci.lower[2], ci.upper[2]),
+                                          c(diff.mean, diff.lower, diff.upper)))
+        names(fit.matrix) <- c("fit", "lwr", "upr")
+        rownames(fit.matrix) <- c("newdata", "newdata.diff", "newdata-newdata.diff")
+    }
+    
+    if (sensitive.diff == TRUE & avg == TRUE) { ## Return predictions for z = 1, z = 0, and difference
+        
         ## Get difference
         sens.diff <- draws.mean[[2]] - draws.mean[[1]] # z=1 minus z=0
         sens.diff.mean <- mean(sens.diff)
@@ -909,9 +1001,29 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
                                           c(mean[2], ci.lower[2], ci.upper[2]),
                                           c(sens.diff.mean, sens.diff.lower, sens.diff.upper)))
         names(fit.matrix) <- c("fit", "lwr", "upr")
-        rownames(fit.matrix) <- c("Sensitive Item = 0", "Sensitive Item = 1", "Difference") 
+        rownames(fit.matrix) <- c("Sensitive Item = 0", "Sensitive Item = 1", "Difference (Sensitive1 - Sensitive0)") 
     }
-
+    
+    if (sensitive.diff == FALSE & avg == FALSE) { ## Return all predictions for z = 1 and z = 0
+        fit.matrix <- list(cbind(mean.obs[[1]], lower.obs[[1]], upper.obs[[1]]), ## z = 0
+                           cbind(mean.obs[[2]], lower.obs[[2]], upper.obs[[2]])) ## z = 1
+        names(fit.matrix) <- c("Z0", "Z1")
+        colnames(fit.matrix[[1]]) <- colnames(fit.matrix[[2]]) <- c("fit", "lwr", "upr")
+    }
+    if (sensitive.diff == TRUE & avg == FALSE) { ## Return all predictions for z = 1 and z = 0 and the difference
+        
+        ## Get difference
+        diff <- draws.predict[[2]] - draws.predict[[1]] ## obs are rows, draws are columns
+        mean.diff <- apply(diff, 1, mean) ## averaged over all draws -- n observations
+        lower.diff <- apply(diff, 1, quantile, probs = 0.025) ## averaged over all draws -- n observations
+        upper.diff <- apply(diff, 1, quantile, probs = 0.975) ## averaged over all draws -- n observations
+        sens.diff.sd <- apply(diff, 1, sd)
+        
+        fit.matrix <- list(cbind(mean.obs[[1]], lower.obs[[1]], upper.obs[[1]]), ## z = 0
+                           cbind(mean.obs[[2]], lower.obs[[2]], upper.obs[[2]]), ## z = 1
+                           cbind(mean.diff, lower.diff, upper.diff)) ## diff
+    }
+    
     return.object$fit <- fit.matrix
     if (se.fit == TRUE & sensitive.diff == FALSE) {
         return.object$se.fit <- c(sd[1], sd[2])
@@ -920,24 +1032,20 @@ predict.ictreg.joint <- function(object, newdata, newdata.diff, se.fit = FALSE,
     }
     if (return.draws == TRUE) {
         return.object$draws.predict <- draws.predict ## obs are rows, draws are columns
-                                        # (can be list of 2 if sensitive.value = both)
+                                        # (can be list of 2 if sensitive.value = both) -- will be a list of 2 if
+                                        # there is newdata.diff too...
         return.object$draws.mean <- draws.mean  ## averaged over all observations: vector of 10,000 draws
                                         # (can be list of 2 if sensitive.value = both)
-        return.object$sens.diff <- sens.diff ## z=1 minus z=0 averaged over all obs: vector of 10,000 draws
+        if (sensitive.diff == TRUE) {
+            return.object$sens.diff <- sens.diff ## z=1 minus z=0 averaged over all obs: vector of 10,000 draws
+        }
     }
-
+    
     attr(return.object, "concat") <- TRUE
     
     class(return.object) <- "predict.ictreg.joint"
     return(return.object)
-
+    
 }
-
-print.predict.ictreg.joint <- function(x, ...){
-    print.predict.ictreg(x)
-    ## Will need other functionality here eventually
-    invisible(x)
-}
-
 
 

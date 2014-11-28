@@ -41,7 +41,6 @@ S3method(print, summary.ictreg.joint)
 S3method(coef, ictreg.joint)
 S3method(vcov, ictreg.joint)
 S3method(predict, ictreg.joint)
-S3method(print, predict.ictreg.joint)
 
 S3method(coef, ictregBayes)
 S3method(vcov, ictregBayes)

@@ -1,10 +1,10 @@
-606a4621390efa362103b04c944f9968 *ChangeLog
-70039d8ccf180e6171667bffe7694a7f *DESCRIPTION
-59e1b1e5f8ae47afe55767f84c2bd137 *NAMESPACE
+5eff882904ab666ed7b88e477c08c3a7 *ChangeLog
+737ef480227e7b618c61382a5eca2dc5 *DESCRIPTION
+a6deac3aaa4ef5ff1dd8db95c444c4ee *NAMESPACE
 7329d7ed40f6e0a474602a12cee6e9d7 *R/comp.listEndorse.R
 80c93eb81c832d2749629078d325d7e6 *R/ict.test.R
 647e6a20e45f110309e785520e48be4a *R/ictreg.R
-7ea51acaf9c61e12c370c3aea60c5976 *R/ictreg.joint.R
+65fbb0adc2b41b1f41c028efd164912f *R/ictreg.joint.R
 afe33ad93d81929133b3233a9cbe2b84 *R/ictregBayes.R
 1ca4f6bdd73600152ecc73ca0484271a *R/ictregBayesHier.R
 ec4443e184561e51fe47df7c5fac42eb *R/onAttach.R
@@ -26,7 +26,7 @@ db7a2482370a941186b0286f202db537 *man/ictreg.joint.Rd
 201576cbdf1916a9bf03af374c7bcd83 *man/multi.Rd
 448ac4e2d2857ee49c881346beab6242 *man/plot.predict.ictreg.Rd
 709d1e7c403d0e17d98fd2e198a47bd9 *man/predict.ictreg.Rd
-360d0c54cb85cbc01a3c757e819aab74 *man/predict.ictreg.joint.Rd
+f2b744c7773d6c8fa8f63776f1b953e7 *man/predict.ictreg.joint.Rd
 6cd107c3bf6d157fcb2db9ac07449273 *man/predict.ictregBayes.Rd
 d24e90c4914733f51e1b80e325527ee4 *man/predict.ictregBayesHier.Rd
 828cdbd595b1033d442f512d09e4f423 *man/race.Rd

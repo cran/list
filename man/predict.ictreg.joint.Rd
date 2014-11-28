@@ -14,7 +14,7 @@ Function to calculate predictions and uncertainties of predictions from estimate
 } 
 
 \arguments{ 
-\item{object}{Object of class inheriting from "ictreg"}
+\item{object}{Object of class inheriting from "ictreg.joint"}
 \item{newdata}{An optional data frame containing data that will be used to make predictions from. If omitted, the data used to fit the regression are used.}
 \item{newdata.diff}{An optional data frame used to compare predictions with predictions from the data in the provided newdata data frame.}
 \item{se.fit}{A switch indicating if standard errors are required.}
@@ -35,32 +35,38 @@ one, depending on the prediction that the user requires.
 
 Two additional types of mean prediction are also available. The first, if a newdata.diff data frame
 is provided by the user, calculates the mean predicted values across two datasets, as well as the
-mean difference in predicted value. Standard errors and confidence intervals can also be added.
+mean difference in predicted value. Standard errors and confidence intervals are also added. For 
+newdata.diff predictions, sensitive.value must be set to 1 or 0, not "both" (and sensitive.diff
+must also be set to FALSE). 
 Users may also set the logical sensitive.diff to TRUE and sensitive.value to "both", which will output 
 the mean predicted values across all observations for z = 0 as well as z = 1, in addition to the mean 
-difference in predicted value. Standard errors and confidence intervals can also be added. For
-difference predictions (sensitive.diff and avg.diff), the option avg must be set to TRUE.
+difference in predicted value. Standard errors and confidence intervals are also added. For
+difference predictions (sensitive.diff and newdata.diff), the option avg must be set to TRUE.
 
 Users can also use the predict.sensitive = TRUE option to generate predictions of responses
-to the sensitive item. 
+to the sensitive item, with standard errors and confidence intervals.
+
+NOTE: In order to generate predictions from user-provided data frames (newdata and newdata.diff),
+users MUST run models using \code{ictreg.joint} on data that does not contain any missingness. 
+Further, the data frames provided to \code{predict.ictreg.joint} must also not contain any missingness.
 }
 
-\value{\code{predict.ictreg.joint} produces a vector of predictions or a matrix of predictions and bounds with column names fit, lwr, and upr if interval is set. If se.fit is TRUE, a list with the following components is returned:
+\value{\code{predict.ictreg.joint} produces a vector of predictions or a matrix of predictions and bounds with column names fit, lwr, and upr if interval is set. If sensitive.value = "both", \code{predict.ictreg.joint} will produce a list, where the first element corresponds to when the sensitive item = 0 and the second element corresponds to when the sensitive item = 1. If sensitive.diff = TRUE, the third element in the list corresponds to the difference (sensitive = 0 subtracted from sensitive = 1). If se.fit is TRUE, a list with the following components is returned:
 
-\item{fit}{vector or matrix as above}
-\item{se.fit}{standard error of prediction}
+\item{fit}{vector or matrix as above.}
+\item{se.fit}{standard error of prediction(s)}
 
 If return.draws is TRUE, the list includes
 
-\item{draws.predict}{A matrix of draws from a multivariate normal distribution with mean equal to the vector of estimated coefficients from the outcome regression model, and sigma equal to the variance-covariance matrix of the outcome regression model. Rows are observations; colums are 10,000 draws. If sensitive.value = both, will be a list of two elements where each element is a matrix as described; the first matrix will be for when the sensitive item = 0, the second matrix will be for when the sensitive item = 1.}
-\item{draws.mean}{The \code{draws.predict} matrix averaged over all observations; a vector of 10,000 draws. If sensitive.value = both, will be a list of two elements where each element is a vector as described; the first matrix will be for when the sensitive item = 0, the second matrix will be for when the sensitive item = 1.}
+\item{draws.predict}{A matrix of draws from a multivariate normal distribution with mean equal to the vector of estimated coefficients from the outcome regression model, and sigma equal to the variance-covariance matrix of the outcome regression model. Rows are observations; colums are 10,000 draws. If sensitive.value = both, will be a list of two elements where each element is a matrix as described; the first matrix will be for when the sensitive item = 0, the second matrix will be for when the sensitive item = 1. If newdata.diff is provided, \code{draws.predict} will be a list of two elements where each element is a matrix as described; the first matrix will correspond to the newdata data frame; the second matrix will correspond to the newdata.diff data frame.}
+\item{draws.mean}{The \code{draws.predict} matrix averaged over all observations; a vector of 10,000 draws. If sensitive.value = both, will be a list of two elements where each element is a vector as described; the first matrix will be for when the sensitive item = 0, the second matrix will be for when the sensitive item = 1. If newdata.diff is provided, \code{draws.mean} will be a list of two elements where each element is a matrix as described; the first matrix will correspond to the newdata data frame; the second matrix will correspond to the newdata.diff data frame.}
 \item{sens.diff}{If sensitive.diff = TRUE, a vector of 10,000 draws generated from subtracting the first item in \code{draws.mean} from the second item. A vector of 10,000 draws.}
 
 If predict.sensitive = TRUE, the list also includes
 
 \item{fitsens}{a vector of predictions and bounds with column names fit, lwr, and upr if interval is set, generated from the sensitive item model.}
-\item{draws.predict.sens}{A matrix of draws from a multivariate normal distribution with mean equal to the vector of estimated coefficients from the sensitive item model, and sigma equal to the variance-covariance matrix of the sensitive item model. Rows are observations; colums are 10,000 draws (if return.draws is TRUE).}
-\item{draws.mean.sens}{The \code{draws.predict.sens} matrix averaged over all observations; a vector of 10,000 draws (if return.draws is TRUE).}
+\item{draws.predict.sens}{A matrix of draws from a multivariate normal distribution with mean equal to the vector of estimated coefficients from the sensitive item model, and sigma equal to the variance-covariance matrix of the sensitive item model. Rows are observations; colums are 10,000 draws (only returned if return.draws is TRUE). If newdata.diff is provided, this will be a list of two matrices as described. The first will correspond to newdata, and the second to newdata.diff.}
+\item{draws.mean.sens}{The \code{draws.predict.sens} matrix averaged over all observations; a vector of 10,000 draws (only returned if return.draws is TRUE). If newdata.diff is provided, this will be a list of two matrices as described. The first will correspond to newdata, and the second to newdata.diff.}
 }
 
 \references{
