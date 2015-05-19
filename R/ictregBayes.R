@@ -1,7 +1,9 @@
 
-ictregBayes <- function(formula, data = parent.frame(), treat = "treat", J, constrained.single = c("full","none","intercept"), constrained.multi = TRUE, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, delta.start, psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, psi.tune, gamma.tune, zeta.tune, formula.mixed, group.mixed,
-                        ##ceiling = FALSE, floor = FALSE,
-                        verbose = TRUE, sensitive.model = c("logit", "robit", "probit"), df = 5,
+ictregBayes <- function(formula, data = parent.frame(), treat = "treat", J, constrained.single = "full", 
+                        constrained.multi = TRUE, fit.start = "lm", n.draws = 10000, burnin = 5000, thin = 0, 
+                        delta.start, psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, 
+                        Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, psi.tune, gamma.tune, zeta.tune, formula.mixed, group.mixed,
+                        verbose = TRUE, sensitive.model = "logit", df = 5,
                         endorse.options,
                         ...){
 
@@ -241,8 +243,6 @@ ictregBayes <- function(formula, data = parent.frame(), treat = "treat", J, cons
                                            robit = (sensitive.model == "robit"),
                                            probit = (sensitive.model == "probit"), df = df,
                                            ...)
-
-        save(ictregBayes.fit, file = "~/desktop/res.RData")
         
         if (constrained.single == "full" | constrained.single == "intercept")
           M <- 1
@@ -789,8 +789,12 @@ print.summary.ictregBayes.list <- function(x, ...) {
     if(x$sensitive.model == "logit")
       cat("\nMetropolis acceptance ratio:", round(x$delta.accept[[k]], 3), "\n")
     cat("\nGelman-Rubin statistics:\n")
-    
-    gelmanrubin <- round(gelman.diag(x$delta[[k]])$psrf[,1],4)
+        
+    if(x$multi == TRUE){
+      gelmanrubin <- round(gelman.diag(x$delta[[k]])$psrf[,1],4)
+    } else {
+      gelmanrubin <- round(gelman.diag(x$delta)$psrf[,1],4)
+    }
     names(gelmanrubin) <- x$coef.names
     
     print(gelmanrubin) 
@@ -1042,7 +1046,7 @@ ictregBayes.fit <- function(Y, treat, X, J, constrained,
   } else if (constrained == 2) {
     n.par <- n.par + 1
   }
-
+  
   if (probit) {
     
     ## no need for deltaCounter
@@ -1106,7 +1110,7 @@ ictregBayes.fit <- function(Y, treat, X, J, constrained,
 }
 
 ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
-                                 ceiling, floor,
+                                 ##ceiling, floor,
                                  n.draws, burnin, thin, verbose,
                                  delta.start, psi.start, delta.mu0, psi.mu0, delta.A0, psi.A0,
                                  delta.tune, psi.tune, robit = FALSE, df = 5) {
@@ -1184,7 +1188,7 @@ ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
               as.double(psi.mu0), as.double(delta.A0.all),
               as.double(psi.A0), 
               as.double(psi.tune), as.integer(df),
-              as.integer(ceiling), as.integer(floor),
+              0, 0,
               as.integer(burnin), as.integer(keep), as.integer(verbose),
               allresults = double(n.par*floor((n.draws - burnin)/keep)),
               PACKAGE = "list")$allresults
@@ -1196,7 +1200,7 @@ ictregBayesMulti.fit <- function(Y, treat, X, J, constrained,
               as.double(psi.mu0), as.double(delta.A0.all),
               as.double(psi.A0), as.double(delta.tune.all),
               as.double(psi.tune), as.integer(!constrained),
-              as.integer(ceiling), as.integer(floor),
+              ##as.integer(ceiling), as.integer(floor),
               0,0,
               as.integer(burnin), as.integer(keep), as.integer(verbose),
               allresults = double(n.par*floor((n.draws - burnin)/keep)),
@@ -1283,12 +1287,6 @@ ictregBayesMultiMixed.fit <- function(Y, treat, X, Z, J, grp, constrained,
                                       Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, 
                                       Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, 
                                       psi.tune, gamma.tune, zeta.tune) {
-
-  ##save(Y, treat, X, Z, J, grp, constrained, ceiling, floor, n.draws, burnin,
-  ##                                    thin, verbose, delta.start, psi.start, Sigma.start, 
- ##                                     Phi.start, delta.mu0, psi.mu0, delta.A0, psi.A0, 
-  ##                                    Sigma.df, Sigma.scale, Phi.df, Phi.scale, delta.tune, 
-  ##                                    psi.tune, gamma.tune, zeta.tune, file = "/home/gblair/call.rdata")
 
   n <- length(Y)
   k <- ncol(X)

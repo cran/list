@@ -6,14 +6,14 @@ Function to conduct multivariate regression analyses of survey data with the ite
 } 
 \usage{
 ictregBayes(formula, data = parent.frame(), treat = "treat", J, 
-            constrained.single = c("full","none","intercept"), 
+            constrained.single = "full", 
 	    constrained.multi = TRUE, fit.start = "lm", 
 	    n.draws = 10000, burnin = 5000, thin = 0, delta.start, 
 	    psi.start, Sigma.start, Phi.start, delta.mu0, psi.mu0, 
 	    delta.A0, psi.A0, Sigma.df, Sigma.scale, Phi.df, Phi.scale, 
             delta.tune, psi.tune, gamma.tune, zeta.tune, 
 	    formula.mixed, group.mixed, 
-	    verbose = TRUE, sensitive.model = c("logit", "robit", "probit"), 
+	    verbose = TRUE, sensitive.model = "logit", 
 	    df = 5, endorse.options, ...)
 } 
 
@@ -30,16 +30,16 @@ ictregBayes(formula, data = parent.frame(), treat = "treat", J,
 \item{thin}{The interval of thinning, in which every other (\code{thin} = 1) or more iterations are discarded in the output object}
 \item{delta.start}{Optional starting values for the sensitive item fit. This should be a vector with the length of the number of covariates for the single sensitive item design, and either a vector or a list with a vector of starting values for each of the sensitive items. The default runs an \code{ictreg} fit with the method set by the \code{fit.start} option.}
 \item{psi.start}{Optional starting values for the control items fit. This should be a vector of length the number of covariates for the constrained models. The default runs an \code{ictreg} fit with the method set by the \code{fit.start} option.}
-\item{Sigma.start}{Optional starting values for Sigma parameter for mixed effects models.}
-\item{Phi.start}{Optional starting values for the Phi parameter for mixed effects models.}
+\item{Sigma.start}{Optional starting values for Sigma parameter for mixed effects models for sensitive item.}
+\item{Phi.start}{Optional starting values for the Phi parameter for mixed effects models for control item.}
 \item{delta.mu0}{Optional vector of prior means for the sensitive item fit parameters, a vector of length the number of covariates.}
 \item{psi.mu0}{Optional vector of prior means for the control item fit parameters, a vector of length the number of covariates.}
 \item{delta.A0}{Optional matrix of prior precisions for the sensitive item fit parameters, a matrix of dimension the number of covariates.}
 \item{psi.A0}{Optional matrix of prior precisions for the control items fit parameters, a matrix of dimension the number of covariates.}
-\item{Sigma.df}{Optional prior degrees of freedom parameter for mixed effects models.}
-\item{Sigma.scale}{Optional prior scale parameter for mixed effects models.}
-\item{Phi.df}{Optional prior degress of freedom parameter for mixed effects models.}
-\item{Phi.scale}{Optional prior scale parameter for mixed effects models.}
+\item{Sigma.df}{Optional prior degrees of freedom parameter for mixed effects models for sensitive item.}
+\item{Sigma.scale}{Optional prior scale parameter for mixed effects models for sensitive item.}
+\item{Phi.df}{Optional prior degress of freedom parameter for mixed effects models for control item.}
+\item{Phi.scale}{Optional prior scale parameter for mixed effects models for control item.}
 \item{delta.tune}{A required vector of tuning parameters for the Metropolis algorithm for the sensitive item fit. This must be set and refined by the user until the acceptance ratios are approximately .4 (reported in the output).}
 \item{psi.tune}{A required vector of tuning parameters for the Metropolis algorithm for the control item fit. This must be set and refined by the user until the acceptance ratios are approximately .4 (reported in the output).}
 \item{gamma.tune}{An optional vector of tuning parameters for the Metropolis algorithm for the control item fit for the random effects. This can be set and refined by the user until the acceptance ratios are approximately .4 (reported in the output).}

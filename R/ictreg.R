@@ -1,5 +1,8 @@
 
-ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "ml", overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE, ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, floor.formula = ~ 1, fit.start = "lm", fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, verbose = FALSE, ...){
+ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = "ml", weights, 
+                   overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE, 
+                   ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, floor.formula = ~ 1, 
+                   fit.start = "lm", fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, verbose = FALSE, ...){
 
   ictreg.call <- match.call()
 
@@ -7,7 +10,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   mf <- match.call(expand.dots = FALSE)
   
   # make all other call elements null in mf <- NULL in next line
-  mf$method <- mf$maxIter <- mf$verbose <- mf$fit.start <- mf$J <- mf$design <- mf$treat <- mf$constrained <- mf$overdispersed <- mf$floor <- mf$ceiling <- mf$ceiling.fit <- mf$fit.nonsensitive <- mf$floor.fit <- mf$multi.condition <- mf$floor.formula <- mf$ceiling.formula <- NULL
+  mf$method <- mf$maxIter <- mf$verbose <- mf$fit.start <- mf$J <- mf$design <- 
+    mf$treat <- mf$weights <- mf$constrained <- mf$overdispersed <- mf$floor <- 
+    mf$ceiling <- mf$ceiling.fit <- mf$fit.nonsensitive <- mf$floor.fit <- 
+    mf$multi.condition <- mf$floor.formula <- mf$ceiling.formula <- NULL
   mf[[1]] <- as.name("model.frame")
   mf$na.action <- 'na.pass'
   mf <- eval.parent(mf)
@@ -21,11 +27,19 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   # define design, response data frames
   x.all <- model.matrix.default(attr(mf, "terms"), mf)
   y.all <- model.response(mf)
-
+  
   if(class(y.all)=="matrix") {
     design <- "modified"
   } else {
     design <- "standard"
+  }
+  
+  if(missing("weights") == FALSE) {
+      weighted <- TRUE
+      w.all <- data[, paste(weights)]
+  } else {
+      weighted <- FALSE
+      w.all <- rep(1, length(y.all))
   }
 
   if (method == "nls") fit.start <- "nls"
@@ -46,11 +60,11 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     na.y <- apply(is.na(y.all[,1:J]), 1, sum)
     na.y[is.na(y.all[,J+1]) == FALSE] <- 0
   }
+  na.w <- is.na(w.all)
 
   ## treatment indicator for subsetting the dataframe
-  if(design=="standard") t <- data[na.x==0 & na.y==0, paste(treat)]
-  ## if(design=="modified") t <- ifelse(y.all[na.x==0 & na.y==0, J+1]!=-777, 1, 0)
-  if(design=="modified") t <- as.numeric(is.na(y.all[na.x == 0 & na.y == 0, J+1]) == FALSE)
+  if(design=="standard") t <- data[na.x==0 & na.y==0 & na.w==0, paste(treat)]
+  if(design=="modified") t <- as.numeric(is.na(y.all[na.x == 0 & na.y == 0 & na.w==0, J+1]) == FALSE)
 
   if(class(t) == "factor") {
 
@@ -78,15 +92,21 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   }
   
   # list wise delete
-  if(design=="standard") y.all <- y.all[na.x==0 & na.y==0]
-  if(design=="modified") y.all <- y.all[na.x==0 & na.y==0,]
+  if(design=="standard") y.all <- y.all[na.x==0 & na.y==0 & na.w==0]
+  if(design=="modified") y.all <- y.all[na.x==0 & na.y==0 & na.w==0,]
   x.all <- x.all[na.x==0 & na.y==0, , drop = FALSE]
+  w.all <- w.all[na.x==0 & na.y==0 & na.w==0]
+
+  ## so that the output data has the same dimension as x.all and y.all
+  data <- data[na.x==0 & na.y==0 & na.w==0, , drop = FALSE]
   
   # set up data objects for y and x for each group from user input
   x.treatment <- x.all[t != 0, , drop = FALSE]
   y.treatment <- subset(y.all, t != 0)
+  w.treatment <- subset(w.all, t != 0)
   x.control <- x.all[t == 0 , , drop = FALSE]
   y.control <- subset(y.all, t==0)
+  w.control <- subset(w.all, t==0)
 
   if(design=="standard" & missing("J")) {
     J <- max(y.treatment) - 1
@@ -101,7 +121,16 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
   } else {
     multi <- FALSE
   }
-  
+
+  if(weighted == TRUE) {
+    if(design == "modified")
+      stop("Weighted list experiment regression is not supported (yet) for the modified design.")
+    if(boundary == TRUE)
+      stop("Weighted list experiment regression is not supported (yet) for the ceiling/floor design.")
+    if(multi == TRUE)
+      stop("Weighted list experiment regression is not supported (yet) for the multi-item design.")
+  }
+
   n <- nrow(x.treatment) + nrow(x.control)
 
   coef.names <- colnames(x.all)
@@ -133,10 +162,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       x.all.lm <- cbind(x.all.lm, x.all * treat[, m])
 
     if (intercept.only == TRUE) {
-      fit.lm <- lm(y.all ~ treat)
+      fit.lm <- lm(y.all ~ treat, weights = w.all)
     } else {
       ## fit.lm <- lm(y.all ~ x.all.noint * treat)
-      fit.lm <- lm(y.all ~ x.all.lm - 1)
+      fit.lm <- lm(y.all ~ x.all.lm - 1, weights = w.all)
     }
     
     vcov <- vcovHC(fit.lm)
@@ -155,13 +184,6 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         names(par.treat[[m]]) <- names(se.treat[[m]]) <- "(Intercept)"
       } else {
         
-        ##par.treat[[m]] <- coef(fit.lm)[c((nPar + m),
-        ##                                 ((nPar + length(treatment.values)) + (m-1) * (nPar - 1) + 1) :
-        ##                                 ((nPar + length(treatment.values)) + m * (nPar - 1)))]
-        ##se.treat[[m]] <- sqrt(diag(vcov))[c((nPar + m),
-        ##                                    ((nPar + length(treatment.values)) + (m-1) * (nPar - 1) + 1) :
-        ##                                    ((nPar + length(treatment.values)) + m * (nPar - 1)))]
-
         par.treat[[m]] <- coef(fit.lm)[(nPar + (m-1) * nPar + 1) : (nPar + m * nPar)]
         se.treat[[m]] <- sqrt(diag(vcov))[(nPar + (m-1) * nPar + 1) : (nPar + m * nPar)]
         
@@ -188,6 +210,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                             resid.se = resid.se, resid.df = resid.df,  design = design, method = method,
                             multi = multi, boundary = boundary, call = match.call(),
                             data = data, x = x.all, y = y.all, treat = t)
+      if(weighted == TRUE)
+          return.object$weights <- w.all
     } else {
       return.object <- list(par.treat=par.treat, se.treat=se.treat,
                             par.control=par.control, se.control=se.control,
@@ -195,6 +219,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                             resid.df = resid.df,  design = design, method = method,
                             multi = multi, boundary = boundary, call = match.call(),
                             data = data, x = x.all, y = y.all, treat = t)
+      if(weighted == TRUE)
+          return.object$weights <- w.all
     }
     
   } else if (design=="standard" & method != "lm") {
@@ -237,7 +263,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     
     ## fit to the control group
     fit.glm.control <- glm(cbind(y.control, J-y.control) ~ x.control - 1,
-                           family = binomial(logit))
+                           family = binomial(logit), weights = w.control)
     
     coef.glm.control <- coef(fit.glm.control)
     names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = "")
@@ -247,12 +273,13 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
                                              paste(paste("beta", 1:length(coef.glm.control),
                                                          sep=""), collapse= ","), "))")) ,
-                           start = coef.glm.control, control =
+                           start = coef.glm.control, weights = w.control, control =
                            nls.control(maxiter=maxIter, warnOnly=TRUE), ... = ...)
       } else {
         fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
                                              paste(paste("beta", 1:length(coef.glm.control),
                                                          sep=""), collapse= ","), "))")) ,
+                           weights = w.control,
                            start = coef.glm.control, ... = ...)
       }
       
@@ -262,7 +289,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       fit.control <- fit.glm.control
       fit.control.coef <- coef(fit.glm.control)
     } else if (fit.start == "lm") {
-      fit.control <- lm(y.control ~ x.control - 1)
+      fit.control <- lm(y.control ~ x.control - 1, weights = w.control)
       fit.control.coef <- coef(fit.glm.control)
     }
     
@@ -273,6 +300,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       curr.treat <- t[t!=0] == treatment.values[m]
 
       x.treatment.curr <- x.treatment[curr.treat, , drop = F]
+      w.treatment.curr <- w.treatment[curr.treat]
 
       ## calculate the adjusted outcome    
       y.treatment.pred <- y.treatment[curr.treat] - logistic(x.treatment.curr
@@ -287,8 +315,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       y.treatment.start <- ifelse(y.treatment.pred.temp >
                                   quantile(y.treatment.pred.temp, alpha), 1, 0)
       
-      try(fit.glm.treat <- glm(y.treatment.start ~ x.treatment.curr - 1,
-                               family = binomial(logit)), silent = F)
+      try(fit.glm.treat <- glm(cbind(y.treatment.start, 1 - y.treatment.start) ~ x.treatment.curr - 1,
+                               family = binomial(logit), weights = w.treatment.curr), silent = F)
       try(coef.glm.treat <- coef(fit.glm.treat), silent = T)
       try(names(coef.glm.treat) <- paste("beta", 1:length(coef.glm.treat), sep = ""), silent = T)
 
@@ -298,25 +326,27 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
                                                     paste(paste("beta", 1:length(coef.glm.treat),
                                                                 sep=""), collapse= ","), "))")) ,
-                                  start = coef.glm.treat, control =
+                                  start = coef.glm.treat, weights = w.treatment.curr, control =
                                   nls.control(maxiter = maxIter, warnOnly = TRUE), ... = ...)
           } else {
             fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
                                                     paste(paste("beta", 1:length(coef.glm.treat),
                                                                 sep=""), collapse= ","), "))")) ,
-                                  start = coef.glm.treat, ... = ...)
+                                  start = coef.glm.treat, weights = w.treatment.curr, ... = ...)
           }
         } else {
           if (is.null(ictreg.call$control)) {
             fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
                                                     paste(paste("beta", 1:length(coef.glm.treat),
                                                                 sep=""), collapse= ","), "))")),
+                                  weights = w.treatment.curr,
                                   control = nls.control(maxiter = maxIter, warnOnly = TRUE),
                                   ... = ...)
           } else {
             fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
                                                     paste(paste("beta", 1:length(coef.glm.treat),
                                                                 sep=""), collapse= ","), "))")) ,
+                                  weights = w.treatment.curr,
                                   ... = ...)
           }
         }
@@ -324,7 +354,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       } else if (fit.start == "glm") {
         fit.treat[[m]] <- fit.glm.treat
       } else if (fit.start == "lm") {
-        fit.treat[[m]] <- lm(y.treatment.pred ~ x.treatment.curr - 1)
+        fit.treat[[m]] <- lm(y.treatment.pred ~ x.treatment.curr - 1, weights = w.treatment.curr)
       }
 
       sample.curr <- t==0 | t==treatment.values[m]
@@ -351,7 +381,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       if(boundary == FALSE) {
       
         if (multi == FALSE) {
-        
+
           coef.control.start <- par.control.nls.std
           coef.treat.start <- par.treat.nls.std
           
@@ -361,7 +391,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           ##
           ## observed-data log-likelihood for beta binomial
           ##
-          obs.llik.std <- function(par, J, y, treat, x, const = FALSE) {
+          obs.llik.std <- function(par, J, y, treat, x, wt, const = FALSE) {
             
             k <- ncol(x)
             if (const) {
@@ -385,33 +415,33 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             ind1y <- ((treat == 1) & (y > 0) & (y < (J+1)))
             
             if (sum(ind10) > 0) {
-              p10 <- sum(log(1-gX[ind10]) + dBB(x = 0, bd = J, mu = h0X[ind10],
-                                                sigma = rho.h0/(1-rho.h0), log = TRUE))
+              p10 <- sum(wt[ind10] * (log(1-gX[ind10]) + dBB(x = 0, bd = J, mu = h0X[ind10],
+                                                sigma = rho.h0/(1-rho.h0), log = TRUE)))
             } else {
               p10 <- 0
             }
             
             if (sum(ind1J1) > 0) {
-              p1J1 <- sum(log(gX[ind1J1]) + dBB(J, bd = J, mu = h1X[ind1J1],
-                                                sigma = rho.h1/(1-rho.h1), log = TRUE))
+              p1J1 <- sum(wt[ind1J1] * (log(gX[ind1J1]) + dBB(J, bd = J, mu = h1X[ind1J1],
+                                                sigma = rho.h1/(1-rho.h1), log = TRUE)))
             } else {
               p1J1 <- 0
             }
             
             if (sum(ind1y) > 0) {
-              p1y <- sum(log(gX[ind1y]*dBB(y[ind1y]-1, bd = J, mu = h1X[ind1y], sigma =
+              p1y <- sum(wt[ind1y] * (log(gX[ind1y]*dBB(y[ind1y]-1, bd = J, mu = h1X[ind1y], sigma =
                                            rho.h1/(1-rho.h1), log = FALSE) + (1-gX[ind1y])*
                              dBB(y[ind1y], bd = J, mu = h0X[ind1y],
-                                 sigma = rho.h0/(1-rho.h0), log = FALSE)))
+                                 sigma = rho.h0/(1-rho.h0), log = FALSE))))
             } else {
               p1y <- 0
             }
             
             if (sum(treat == 0) > 0) {
-              p0y <- sum(log(gX[!treat]*dBB(y[!treat], bd = J, mu = h1X[!treat],
+              p0y <- sum(wt[!treat] * (log(gX[!treat]*dBB(y[!treat], bd = J, mu = h1X[!treat],
                                             sigma = rho.h1/(1-rho.h1), log = FALSE) +
                              (1-gX[!treat])*dBB(y[!treat], bd = J, mu = h0X[!treat],
-                                                sigma = rho.h0/(1-rho.h0), log = FALSE)))
+                                                sigma = rho.h0/(1-rho.h0), log = FALSE))))
             } else {
               p0y <- 0
             }
@@ -423,7 +453,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           ##
           ##  Observed data log-likelihood for binomial
           ##
-          obs.llik.binom.std <- function(par, J, y, treat, x, const = FALSE) {
+          obs.llik.binom.std <- function(par, J, y, treat, x, wt, const = FALSE) {
             
             k <- ncol(x)
             if (const) {
@@ -444,26 +474,26 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             ind1y <- ((treat == 1) & (y > 0) & (y < (J+1)))
             
             if (sum(ind10) > 0) {
-              p10 <- sum(log(1-gX[ind10]) + dbinom(x = 0, size = J, prob = h0X[ind10], log = TRUE))
+              p10 <- sum(wt[ind10] * (log(1-gX[ind10]) + dbinom(x = 0, size = J, prob = h0X[ind10], log = TRUE)))
             } else {
               p10 <- 0
             }
             if (sum(ind1J1) > 0) {
-              p1J1 <- sum(log(gX[ind1J1]) + dbinom(J, size = J, prob = h1X[ind1J1], log = TRUE))
+              p1J1 <- sum(wt[ind1J1] * (log(gX[ind1J1]) + dbinom(J, size = J, prob = h1X[ind1J1], log = TRUE)))
             } else {
               p1J1 <- 0
             }
             if (sum(ind1y) > 0) {
-              p1y <- sum(log(gX[ind1y]*dbinom(y[ind1y]-1, size = J, prob = h1X[ind1y],
+              p1y <- sum(wt[ind1y] * (log(gX[ind1y]*dbinom(y[ind1y]-1, size = J, prob = h1X[ind1y],
                                               log = FALSE) + (1-gX[ind1y])*
-                             dbinom(y[ind1y], size = J, prob = h0X[ind1y], log = FALSE)))
+                             dbinom(y[ind1y], size = J, prob = h0X[ind1y], log = FALSE))))
             } else {
               p1y <- 0
             }
             
             if (sum(treat == 0) > 0) {
-              p0y <- sum(log(gX[!treat]*dbinom(y[!treat], size = J, prob = h1X[!treat], log = FALSE) +
-                             (1-gX[!treat])*dbinom(y[!treat], size = J, prob = h0X[!treat], log = FALSE)))
+              p0y <- sum(wt[!treat] * (log(gX[!treat]*dbinom(y[!treat], size = J, prob = h1X[!treat], log = FALSE) +
+                             (1-gX[!treat])*dbinom(y[!treat], size = J, prob = h0X[!treat], log = FALSE))))
             } else {
               p0y <- 0
             }
@@ -537,12 +567,14 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           }
           
           ## Mstep 1: weighted MLE for logistic regression
-          wlogit.fit.std <- function(y, treat, x, w, par = NULL) {
-            
+          wlogit.fit.std <- function(y, treat, x, w, par = NULL, wt) {
+              ## wt is survey weights
+              
             yrep <- rep(c(1,0), each = length(y))
             xrep <- rbind(x, x)
             wrep <- c(w, 1-w)
-            return(glm(cbind(yrep, 1-yrep) ~ xrep - 1, weights = wrep, family = binomial(logit), start = par))
+            wtrep <- c(wt, wt)
+            return(glm(cbind(yrep, 1-yrep) ~ xrep - 1, weights = wrep * wtrep, family = binomial(logit), start = par))
             
           }
           
@@ -604,9 +636,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             pllik <- -Inf
             
             if (overdispersed==T) {
-              llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all)
+              llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
             } else {
-              llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all)
+              llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
             }
             
             Not0 <- (t & (y.all == (J+1)))
@@ -619,7 +651,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                 
                 w <- Estep.std(par, J, y.all, t, x.all)
                 
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+3):length(par)])
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+3):length(par)], wt = w.all)
               
                 y1 <- y.all
                 
@@ -627,18 +659,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
 
                 if (intercept.only == TRUE) {
                   fit0 <- vglm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ 1,
-                               betabinomial, weights = 1-w[!Not0], coefstart = par[1:2])
+                               betabinomial, weights = (1-w[!Not0]) * w.all[!Not0], coefstart = par[1:2])
                   fit1 <- vglm(cbind(y1[!Not1], J-y1[!Not1]) ~ 1,
-                               betabinomial, weights = w[!Not1],
+                               betabinomial, weights = w[!Not1] * w.all[!Not1],
                                coefstart = par[3:4])
                   par <- c(coef(fit0), coef(fit1), coef(lfit))
                   
                 } else {
                   fit0 <- vglm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ x.all[!Not0, -1, drop = FALSE],
-                               betabinomial, weights = 1-w[!Not0],
+                               betabinomial, weights = (1-w[!Not0]) * w.all[!Not0],
                                coefstart = par[c(1,(nPar+1),2:(nPar))])
                   fit1 <- vglm(cbind(y1[!Not1], J-y1[!Not1]) ~ x.all[!Not1, -1, drop = FALSE] ,
-                               betabinomial, weights = w[!Not1],
+                               betabinomial, weights = w[!Not1] * w.all[!Not1],
                                coefstart = par[c((nPar+2),(2*nPar+2),(nPar+3):(2*nPar+1))])
                   par <- c(coef(fit0)[c(1,3:(nPar+1),2)], coef(fit1)[c(1,3:(nPar+1),2)], coef(lfit))
                 }
@@ -646,18 +678,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
               } else {
                 
                 w <- Estep.binom.std(par, J, y.all, t, x.all)
-                
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+1):length(par)])
+
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+1):length(par)], wt = w.all)
                 
                 fit0 <- glm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ x.all[!Not0,] - 1,
-                            family = binomial(logit), weights = 1-w[!Not0], start = par[1:(nPar)])
+                            family = binomial(logit), weights = (1-w[!Not0]) * w.all[!Not0], start = par[1:(nPar)])
                 
                 y1 <- y.all
                 
                 y1[t==1] <- y1[t==1]-1
                 
                 fit1 <- glm(cbind(y1[!Not1], J-y1[!Not1]) ~ x.all[!Not1,] - 1,
-                            family = binomial(logit), weights = w[!Not1],
+                            family = binomial(logit), weights = w[!Not1] * w.all[!Not1],
                             start = par[(nPar+1):(2*nPar)])
                 
                 par <- c(coef(fit0), coef(fit1), coef(lfit))
@@ -667,18 +699,19 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
               pllik <- llik
               
               if(verbose==T)
-                cat(paste(counter, round(llik, 4), "\n"))			
+                cat(paste(counter, round(llik, 4), "\n"))
               
               if (overdispersed==T) {
-                llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all)
+                llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
               } else {
-                llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all)
+                llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
               }
               
               counter <- counter + 1
               
               if (llik < pllik) 
-                stop("log-likelihood is not monotonically increasing.")
+                warning("log-likelihood is not monotonically increasing.")
+              ## NOTE CHANGED FROM STOP()
               
               if(counter == (maxIter-1))
                 warning("number of iterations exceeded maximum in ML.")
@@ -689,12 +722,12 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             
             if (overdispersed==T) {
               MLEfit <- optim(par, obs.llik.std, method = "BFGS", J = J, y = y.all,
-                              treat = t, x = x.all, hessian = TRUE, control = list(maxit = 0))
+                              treat = t, x = x.all, wt = w.all, hessian = TRUE, control = list(maxit = 0))
               vcov.mle <- solve(-MLEfit$hessian)
               se.mle <- sqrt(diag(vcov.mle))
             } else {
               MLEfit <- optim(par, obs.llik.binom.std, method = "BFGS", J = J, y = y.all,
-                              treat = t, x = x.all, hessian = TRUE, control = list(maxit = 0))
+                              treat = t, x = x.all, wt = w.all, hessian = TRUE, control = list(maxit = 0))
               vcov.mle <- solve(-MLEfit$hessian)
               se.mle <- sqrt(diag(vcov.mle))
             }
@@ -702,7 +735,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           } else { # end of unconstrained model
             
             ## constrained model
-            
+
             if (overdispersed==T) {
               par <- c(coef.control.start, 0.5, coef.treat.start)
             } else {
@@ -713,10 +746,10 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             
             if (overdispersed==T) {
               llik.const <- obs.llik.std(par, J = J, y = y.all, treat = t,
-                                         x = x.all, const = TRUE)
+                                         x = x.all, wt = w.all, const = TRUE)
             } else {
               llik.const <- obs.llik.binom.std(par, J = J, y = y.all, treat = t,
-                                               x = x.all, const = TRUE)
+                                               x = x.all, wt = w.all, const = TRUE)
             }
             
             counter <- 0
@@ -725,12 +758,12 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
               if (overdispersed==T) {
                 
                 w <- Estep.std(par, J, y.all, t, x.all, const = TRUE)
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+2):(nPar*2+1)])
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+2):(nPar*2+1)], wt = w.all)
                 
               } else {
                 
                 w <- Estep.binom.std(par, J, y.all, t, x.all, const = TRUE)
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+1):(nPar*2)])
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+1):(nPar*2)], wt = w.all)
                 
               }
               
@@ -739,7 +772,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
               data.all <- as.data.frame(cbind(y.all, x.all))
               names(data.all)[1] <- y.var
               
-              dtmp <- rbind(cbind(data.all, w, t), cbind(data.all, w, t)[t==1, ])
+              dtmp <- rbind(cbind(data.all, w, t, w.all), cbind(data.all, w, t, w.all)[t==1, ])
               
               dtmp[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n)), paste(y.var)] <-
                 dtmp[((dtmp$t == 1) & ((1:nrow(dtmp)) <= n)), paste(y.var)] - 1
@@ -748,6 +781,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                 1 - dtmp$w[((dtmp$t == 1) & ((1:nrow(dtmp)) > n))]
               
               dtmp$w[dtmp$t == 0] <- 1
+
+              dtmp$w <- dtmp$w * dtmp$w.all
               
               dtmp <- dtmp[dtmp$w > 0, ]
               
@@ -774,6 +809,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                   
               } else {
 
+                ## GB: This is where the error comes in for survey weights.
+
                 fit <- glm(as.formula(paste("cbind(", y.var, ", J-", y.var, ") ~ ",
                                             paste(x.vars, collapse=" + "))),
                            family = binomial(logit), weights = dtmp$w,
@@ -790,15 +827,16 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
               
               if (overdispersed==T) {
                 llik.const <- obs.llik.std(par, J = J, y = y.all, treat = t,
-                                           x = x.all, const = TRUE)
+                                           x = x.all, wt = w.all, const = TRUE)
               } else {
                 llik.const <- obs.llik.binom.std(par, J = J, y = y.all, treat = t,
-                                                 x = x.all, const = TRUE)
+                                                 x = x.all, wt = w.all, const = TRUE)
               }
               
               counter <- counter + 1
               if (llik.const < pllik.const)
-                stop("log-likelihood is not monotonically increasing.")
+                warning("log-likelihood is not monotonically increasing.")
+              ## NOTE CHANGED FROM STOP()
               
               if(counter == (maxIter-1))
                 warning("number of iterations exceeded maximum in ML")
@@ -808,7 +846,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             if (overdispersed==T) {
               
               MLEfit <- optim(par, obs.llik.std, method = "BFGS", J = J,
-                              y = y.all, treat = t, x = x.all, const = TRUE,
+                              y = y.all, treat = t, x = x.all, wt = w.all, const = TRUE,
                               hessian = TRUE, control = list(maxit = 0))
               
               vcov.mle <- solve(-MLEfit$hessian)
@@ -817,7 +855,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             } else {
               
               MLEfit <- optim(par, obs.llik.binom.std, method = "BFGS", J = J,
-                              y = y.all, treat = t,  x = x.all, const = TRUE,
+                              y = y.all, treat = t,  x = x.all, wt = w.all, const = TRUE,
                               hessian = TRUE, control = list(maxit = 0))
               
               vcov.mle <- solve(-MLEfit$hessian)
@@ -1120,7 +1158,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
             
             counter <- counter + 1
             if (llik < pllik)
-              stop("log-likelihood is not monotonically increasing.")
+              warning("log-likelihood is not monotonically increasing.")
+            ## NOTE CHANGED FROM STOP()
             
             if(counter == (maxIter-1))
               warning("number of iterations exceeded maximum in ML")
@@ -1614,22 +1653,20 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                            start = coef.qufit.start, data = dtmpC,
                            control = glm.control(maxit = maxIter))
             } else if(ceiling.fit=="bayesglm") {
-              ##qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
-              ##                                   paste(x.vars.ceiling, collapse=" + "))),
-              ##                  weights = dtmpC$w, family = binomial(logit),
-              ##                  start = coef.qufit.start,
-              ##                  data = dtmpC, control = glm.control(maxit = maxIter), scaled = F)
+              
               if (intercept.only.ceiling == F) {
-                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                qufit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
                                                    paste(x.vars.ceiling, collapse=" + "))),
                                   weights = dtmpC$w, family = binomial(logit),
                                   start = coef.qufit.start, data = dtmpC,
                                   control = glm.control(maxit = maxIter), scaled = F)
+                
               } else {
-                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                qufit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
                                   weights = dtmpC$w, family = binomial(logit),
                                   start = coef.qufit.start, data = dtmpC,
                                   control = glm.control(maxit = maxIter), scaled = F)
+                
               }
             }
           }
@@ -1649,13 +1686,13 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                            control = glm.control(maxit = maxIter))
             } else if(floor.fit=="bayesglm") {
               if (intercept.only.floor == F) {
-                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                qlfit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
                                                    paste(x.vars.floor, collapse=" + "))),
                                   weights = dtmpF$w, family = binomial(logit),
                                   start = coef.qlfit.start, data = dtmpF,
                                   control = glm.control(maxit = maxIter), scaled = F)
               } else {
-                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                qlfit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
                                   weights = dtmpF$w, family = binomial(logit),
                                   start = coef.qlfit.start, data = dtmpF,
                                   control = glm.control(maxit = maxIter), scaled = F)
@@ -1684,7 +1721,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           			  
           counter <- counter + 1
           if (llik < pllik)
-            stop("log-likelihood is not monotonically increasing.")
+            warning("log-likelihood is not monotonically increasing.")
+          ## NOTE CHANGED FROM STOP()
           
           if(counter == (maxIter-1))
             warning("number of iterations exceeded maximum in ML")
@@ -1741,7 +1779,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     
     for (j in 1:J) {
       
-      fit.glm.control <- glm(y.control[,j] ~ x.control - 1, family = binomial(logit))
+      fit.glm.control <- glm(y.control[,j] ~ x.control - 1, family = binomial(logit), weights = w.control)
       coef.glm.control <- coef(fit.glm.control)
       names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = "")
       
@@ -1754,8 +1792,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         fit.control[[j]] <- nls( as.formula(paste("tmpY ~ logistic( x.control %*% c(",
                                                   paste(paste("beta", 1:length(coef.glm.control),
                                                               sep=""), collapse= ","), "))")) ,
-                                start = coef.glm.control, control =
-                                nls.control(maxiter=maxIter, warnOnly=TRUE))
+                                start = coef.glm.control,
+                                weights = w.control,
+                                control = nls.control(maxiter=maxIter, warnOnly=TRUE))
       }
       
       par.control.list[[j]] <- coef(fit.control[[j]])
@@ -1774,7 +1813,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
     y.treatment.start <- ifelse(y.treatment.pred.temp >=
                                 quantile(y.treatment.pred.temp, alpha), 1, 0)
     
-    try(fit.glm.control <- glm(y.treatment.start ~ x.treatment - 1, family = binomial(logit)))
+    try(fit.glm.control <- glm(cbind(y.treatment.start, 1 - y.treatment.start) ~ x.treatment - 1, family = binomial(logit),
+                               weights = w.treatment))
     try(coef.glm.control <- coef(fit.glm.control), silent = T)
     try(names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = ""), silent = T)
     
@@ -1782,16 +1822,18 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       try(fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
                                              paste(paste("beta", 1:length(coef.glm.control),sep=""),
                                                    collapse= ","), "))")) , start = coef.glm.control,
+                           weights = w.treatment,
                            control = nls.control(maxiter=maxIter, warnOnly=TRUE)), silent = T)
     } else {
       try(fit.treat <- nls( as.formula(paste("y.treatment.pred ~ logistic( x.treatment %*% c(",
                                              paste(paste("beta", 1:length(coef.glm.control),sep=""),
                                                    collapse= ","), "))")) ,
+                           weights = w.treatment,
                            control = nls.control(maxiter=maxIter, warnOnly=TRUE)), silent = T)
     }
 
     if(!exists("fit.treat"))
-      fit.treat <- lm(y.treatment.pred ~ x.treatment - 1)
+      fit.treat <- lm(y.treatment.pred ~ x.treatment - 1, weights = w.treatment)
       
     vcov.twostep.modified <- function(coef.treat, coef.control, J,
                                       x1, y1, x0, y0, fit.nonsensitive = "nls") {
@@ -1969,7 +2011,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         
       }
       
-      obs.llik.modified <- function(par, y, X, treat) {
+      obs.llik.modified <- function(par, y, X, treat, wt) {
         
         J <- ncol(y) - 1
         
@@ -1984,15 +2026,15 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         for(j in 1:(J+1))
           pi[j,] <- logistic(X %*% par[((j-1)*nPar+1):(j*nPar)])
         
-        llik.treat <- sum(log(dpoisbinomM(y.treat[,J+1], pi[,t==1])))
+        llik.treat <- sum(wt[t==1] * log(dpoisbinomM(y.treat[,J+1], pi[,t==1])))
         
         x.control <- X[treat==0,]
         y.control <- y[treat==0,]
         
         llik.control <- 0
         for(j in 1:J)
-          llik.control <- llik.control + sum(y.control[,j]*log(pi[j,t==0]) +
-                                             (1-y.control[,j])*log(1-pi[j,t==0]))
+          llik.control <- llik.control + sum(wt[t==0] * (y.control[,j]*log(pi[j,t==0]) +
+                                             (1-y.control[,j])*log(1-pi[j,t==0])))
         
         llik <- llik.treat + llik.control
         
@@ -2043,7 +2085,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       
       pllik <- -Inf
       
-      llik <- obs.llik.modified(par, y.all, x.all, t)
+      llik <- obs.llik.modified(par, y.all, x.all, t, wt = w.all)
       
       counter <- 0
       while (((llik - pllik) > 10^(-8)) & (counter < maxIter)) {
@@ -2060,12 +2102,17 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
                                       cbind(y.control[,j], x.control, 1, 0),
                                       cbind(0, x.treatment, 1-w[,j], 1)))
 
+          dtmp.weights <- c(w.treatment, w.control, w.treatment)
+
           if (intercept.only == TRUE)
             names(dtmp) <- c("y","(Intercept)","w","treat")
           else
             names(dtmp) <- c("y","(Intercept)",x.vars,"w","treat")
           
-          if(j==(J+1)) dtmp <- dtmp[dtmp$treat==1,]
+          if(j==(J+1)) {
+              dtmp <- dtmp[dtmp$treat==1,]
+              dtmp.weights <- dtmp.weights[dtmp$treat==1]
+          }
           
           if (j<(J+1)) {
             trials <- 1
@@ -2074,7 +2121,7 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
           }
           
           fit <- glm(as.formula(paste("cbind(y, 1-y) ~ ", paste(x.vars, collapse=" + "))),
-                     family = binomial(logit), weights = dtmp$w,
+                     family = binomial(logit), weights = dtmp$w * dtmp.weights,
                      start = par[((j-1)*nPar+1):(j*nPar)], data = dtmp)
           
           coef.list[[j]] <- coef(fit)
@@ -2093,7 +2140,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         counter <- counter + 1
         
         if (llik < pllik)
-          stop("log-likelihood is not monotonically increasing.")
+          warning("log-likelihood is not monotonically increasing.")
+        ## NOTE CHANGED FROM STOP()
         
         if(counter == (maxIter-1))
           warning("number of iterations exceeded maximum in ML.")
@@ -2143,8 +2191,14 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       
       if(design=="standard") {
         return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names,  J=J, design = design, method = method, fit.start = fit.start, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
+        if(weighted == TRUE)
+            return.object$weights <- w.all
+
       } else if (design=="modified") {
         return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.twostep, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names, J=J, design = design, method = method, fit.nonsensitive = fit.nonsensitive, data = data, x = x.all, y = y.all, treat = t, boundary = FALSE, multi = FALSE, call = match.call())
+        if(weighted == TRUE)
+            return.object$weights <- w.all
+        
       }
       
     } else if (multi == TRUE) {
@@ -2174,7 +2228,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       }
       
       return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, resid.se=resid.se, resid.df=resid.df, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
-     
+      if(weighted == TRUE)
+          return.object$weights <- w.all
+
     }
   }
   
@@ -2268,6 +2324,9 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
 	
         }
 
+        if(weighted == TRUE)
+            return.object$weights <- w.all
+
       } else if (multi == TRUE) {
 
         par.control <- MLEfit$par[1:(nPar)]
@@ -2297,6 +2356,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
         names(par.control) <- names(se.control) <- coef.names
         
         return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, pred.post = w, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, multi.condition = multi.condition, llik=llik, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
+        if(weighted == TRUE)
+            return.object$weights <- w.all
 
       }
       
@@ -2313,7 +2374,8 @@ ictreg <- function(formula, data = parent.frame(), treat="treat", J, method = "m
       names(par.control) <- names(se.control) <- rep(coef.names, J)
       
       return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.mle, llik=llik, treat.labels = treatment.labels, control.label = control.label, coef.names=coef.names,  J=J, design = design, method = method, boundary = FALSE, multi = FALSE, call = match.call(), data=data, x = x.all, y = y.all, treat = t)
-      
+      if(weighted == TRUE)
+          return.object$weights <- w.all
     }
   }
   

@@ -67,7 +67,6 @@ draws <- mvrnorm(n = 3, mu = coef(mle.estimates.multi),
 
 bayes.fit <- ictregBayesHier(y ~ male + college,
                         formula.level.2 = ~ 1, 
-                        ceiling = rep(FALSE, 2), floor = rep(FALSE, 2),
                         delta.start.level.1 = list(draws[1, 8:9], draws[1, 2:3], draws[1, 5:6]),
                         data = multi, treat = "treat",
                         delta.tune = list(rep(0.005, 2), rep(0.05, 2), rep(0.05, 2)),

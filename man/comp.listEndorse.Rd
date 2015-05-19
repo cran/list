@@ -26,9 +26,9 @@ comp.listEndorse(y.endorse, y.list, treat, n.draws = 10000,
 \value{\code{comp.listEndorse} returns a list with four elements: the correlation statistic (rho or tau) for the treatment group as \code{cor.treat}, the correlation statistic for the control group as \code{cor.control}, the p.value for the statistical test comparing the two correlation statistics as \code{p.value}, and the bootstrapped confidence interval of the difference as \code{ci}.}
 
 \references{
-Blair, Graeme, Jason Lyall and Kosuke Imai. (2013) ``Comparing and Combining
+Blair, Graeme, Jason Lyall and Kosuke Imai. (2014) ``Comparing and Combining
   List and Experiments: Evidence from Afghanistan." 
-  Working paper. available at 
+  American Journal of Political Science. available at 
   \url{http://imai.princeton.edu/research/comp.html}
 }
 

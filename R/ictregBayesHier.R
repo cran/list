@@ -48,8 +48,6 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
   ## x v w z
   v.all <- model.matrix(formula.level.2, data)
   
-  save(v.all, w.all, z.all, formula.level.2, formula.level.3, formula.level.4, levels, x.all, formula, data, file = paste("~/desktop/myfist",levels,".RData"))
-
   if(sum(v.all[,1]==1) == nrow(v.all) & ncol(v.all) > 1 & levels != 2)
     v.all <- v.all[, -1, drop = FALSE]
   if(sum(w.all[,1]==1) == nrow(w.all) & ncol(w.all) > 1 & levels != 3) 
@@ -111,9 +109,7 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
   v.all <- na.omit(aggregate(v.all, by = list(grp2), FUN = mean))[,-1,drop=F]
   if (levels >= 3) w.all <- na.omit(aggregate(w.all, by = list(grp3), FUN = mean))[,-1,drop=F]
   if (levels == 4) z.all <- na.omit(aggregate(z.all, by = list(grp4), FUN = mean))[,-1,drop=F]
-  
-  ##save(v.all, w.all, x.all, z.all, na.x, na.y, na.v, na.w, na.z, grp2, grp3, file = "~/desktop/graeme.RData")
-  
+    
   ## set up data objects for y and x for each group from user input
   x.treatment <- x.all[t != 0, , drop = FALSE]
   y.treatment <- subset(y.all, t != 0)
@@ -153,8 +149,6 @@ ictregBayesHier <- function(formula, data = parent.frame(), group.level.2, group
   nPar.level.2 <- ncol(v.all)
   nPar.level.3 <- ncol(w.all)
   nPar.level.4 <- ncol(z.all)
-
-  ##save(grp3,grp4,grp2, file = "~/desktop/grps.rdata")
 
   ## now switch the group indicators to be of the shorter length - of length the # of groups in the level below
   if (levels >= 3) {
@@ -353,9 +347,7 @@ if (missing("delta.mu0.level.4"))
                                       sigma.grp3.df = sigma.df.level.4, sigma.grp3.scale = sigma.scale.level.4,
                                       delta.tune = delta.tune, alpha.tune = alpha.tune, ...)
    }
-  
-  ##save(fit, file = "TEST.rdata")
-  
+    
   rownames(fit$delta) <- rownames(fit$alpha) <- rownames(fit$delta.grp) <- rownames(fit$sigma)
       seq(from = n.draws - burnin + 1 + thin + 1,
           to = n.draws - burnin + thin + 1 + floor((n.draws - burnin)/(thin + 1)) * (thin + 1), by = thin + 1)                   
@@ -1037,7 +1029,6 @@ ictregBayesMulti2Level.fit <- function(Y, treat, X, V, J, grp,
 
   res <- matrix(res, byrow = TRUE, ncol = n.par)
 
-  ##save(res, file = "/home/gblair/res.rdata")
   return(list(delta = res[, 1:(k*tmax), drop = FALSE],
               alpha = res[, (k*tmax + 1):((k + n.grp) * tmax), drop = FALSE],
               delta.grp = res[, ((k + n.grp) * tmax + 1):((k + n.grp + n.covV) * tmax), drop = FALSE],
