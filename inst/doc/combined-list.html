@@ -1,300 +1,146 @@
 <!DOCTYPE html>
-<html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Setup</title>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
 
-<script type="text/javascript">
-window.onload = function() {
-  var imgs = document.getElementsByTagName('img'), i, img;
-  for (i = 0; i < imgs.length; i++) {
-    img = imgs[i];
-    // center an image if it is the only element of its parent
-    if (img.parentElement.childElementCount === 1)
-      img.parentElement.style.textAlign = 'center';
-  }
-};
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Styles for R syntax highlighter -->
+<meta name="author" content="Alexander Coppock" />
+
+<meta name="date" content="2016-07-26" />
+
+<title>Combining List Experiments with Direct Questions using combinedListDirect()</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
-   pre .operator,
-   pre .paren {
-     color: rgb(104, 118, 135)
-   }
-
-   pre .literal {
-     color: #990073
-   }
-
-   pre .number {
-     color: #099;
-   }
-
-   pre .comment {
-     color: #998;
-     font-style: italic
-   }
-
-   pre .keyword {
-     color: #900;
-     font-weight: bold
-   }
-
-   pre .identifier {
-     color: rgb(0, 0, 0);
-   }
-
-   pre .string {
-     color: #d14;
-   }
-</style>
-
-<!-- R syntax highlighter -->
-<script type="text/javascript">
-var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
-hljs.initHighlightingOnLoad();
-</script>
-
-
-
-<style type="text/css">
-body, td {
-   font-family: sans-serif;
-   background-color: white;
-   font-size: 13px;
-}
-
-body {
-  max-width: 800px;
-  margin: auto;
-  padding: 1em;
-  line-height: 20px;
-}
-
-tt, code, pre {
-   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
-}
-
-h1 {
-   font-size:2.2em;
-}
-
-h2 {
-   font-size:1.8em;
-}
-
-h3 {
-   font-size:1.4em;
-}
-
-h4 {
-   font-size:1.0em;
-}
-
-h5 {
-   font-size:0.9em;
-}
-
-h6 {
-   font-size:0.8em;
-}
-
-a:visited {
-   color: rgb(50%, 0%, 50%);
-}
-
-pre, img {
-  max-width: 100%;
-}
-pre {
-  overflow-x: auto;
-}
-pre code {
-   display: block; padding: 0.5em;
-}
-
-code {
-  font-size: 92%;
-  border: 1px solid #ccc;
-}
-
-code[class] {
-  background-color: #F8F8F8;
-}
-
-table, td, th {
-  border: none;
-}
-
-blockquote {
-   color:#666666;
-   margin:0;
-   padding-left: 1em;
-   border-left: 0.5em #EEE solid;
-}
-
-hr {
-   height: 0px;
-   border-bottom: none;
-   border-top-width: thin;
-   border-top-style: dotted;
-   border-top-color: #999999;
-}
-
-@media print {
-   * {
-      background: transparent !important;
-      color: black !important;
-      filter:none !important;
-      -ms-filter: none !important;
-   }
-
-   body {
-      font-size:12pt;
-      max-width:100%;
-   }
-
-   a, a:visited {
-      text-decoration: underline;
-   }
-
-   hr {
-      visibility: hidden;
-      page-break-before: always;
-   }
-
-   pre, blockquote {
-      padding-right: 1em;
-      page-break-inside: avoid;
-   }
-
-   tr, img {
-      page-break-inside: avoid;
-   }
-
-   img {
-      max-width: 100% !important;
-   }
-
-   @page :left {
-      margin: 15mm 20mm 15mm 10mm;
-   }
-
-   @page :right {
-      margin: 15mm 10mm 15mm 20mm;
-   }
-
-   p, h2, h3 {
-      orphans: 3; widows: 3;
-   }
-
-   h2, h3 {
-      page-break-after: avoid;
-   }
-}
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
 </style>
 
 
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
 
 </head>
 
 <body>
+
+
+
+
+<h1 class="title toc-ignore">Combining List Experiments with Direct Questions using <code>combinedListDirect()</code></h1>
+<h4 class="author"><em>Alexander Coppock</em></h4>
+<h4 class="date"><em>2016-07-26</em></h4>
+
+
+
 <p>This vignette will provide a brief introduction to the combined list estimator described in Aronow, Coppock, Crawford, and Green (2015): Combining List Experiment and Direct Question Estimates of Sensitive Behavior Prevalence. In addition to the mechanics of the <code>combinedListDirect()</code> function, you will learn how to interpret the results of the two placebo tests that can serve as checks on the validity of the list experimental assumptions.</p>
-
 <p>If you want to use the combined estimator, you must tweak your standard list experimental design. All subjects must be asked the direct question in addition to being randomly assigned to either treatment or control lists. It is recommended that the order in which subjects are asked the two questions (direct and list) be randomized.</p>
-
+<div id="setup" class="section level1">
 <h1>Setup</h1>
-
 <p>List experiments are designed to estimate the prevalence of some sensitive attitude or behavior. Typically, direct questioning would lead to an underestimate of prevalence because some subjects who do hold the attitude or engage in the behavior would withhold.</p>
-
 <p>For example, suppose we have 1500 subjects, 1000 of whom engage, but 500 of whom would withhold if asked directly.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set a seed for reproducibility</span>
+<span class="kw">set.seed</span>(<span class="dv">123</span>) 
 
-<pre><code class="r"># Set a seed for reproducibility
-set.seed(123) 
+<span class="co"># Define subject types.</span>
 
-# Define subject types.
+<span class="co"># Truthfully respond &quot;Yes&quot; to direct question</span>
+N.trueadmitter &lt;-<span class="st"> </span><span class="dv">500</span>
 
-# Truthfully respond &quot;Yes&quot; to direct question
-N.trueadmitter &lt;- 500
+<span class="co"># Falsely respond &quot;No&quot; to direct question</span>
+N.withholder &lt;-<span class="st"> </span><span class="dv">500</span>
 
-# Falsely respond &quot;No&quot; to direct question
-N.withholder &lt;- 500
+<span class="co"># Truthfully respond &quot;No&quot; to direct question</span>
+N.innocent &lt;-<span class="st"> </span><span class="dv">500</span>
 
-# Truthfully respond &quot;No&quot; to direct question
-N.innocent &lt;- 500
-
-type &lt;- rep(c(&quot;TA&quot;, &quot;WH&quot;, &quot;IN&quot;), times=c(N.trueadmitter, N.withholder, N.innocent))
-</code></pre>
-
+type &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="dt">times=</span><span class="kw">c</span>(N.trueadmitter, N.withholder, N.innocent))</code></pre></div>
+</div>
+<div id="direct-question" class="section level1">
 <h1>Direct Question</h1>
-
-<p>Now suppose we were to ask the direct question, &ldquo;Do you engage?&rdquo;</p>
-
-<pre><code class="r">D &lt;- ifelse(type==&quot;TA&quot;, 1, 0)
-direct.est &lt;- mean(D)
-direct.est
-</code></pre>
-
-<pre><code>## [1] 0.3333333
-</code></pre>
-
-<p>The true proportion of engagers is 1000/1500 = 0.67.  However, the direct question is badly biased by social desirability: our direct question prevalence estimate is 0.33.</p>
-
+<p>Now suppose we were to ask the direct question, “Do you engage?”</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">D &lt;-<span class="st"> </span><span class="kw">ifelse</span>(type==<span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)
+direct.est &lt;-<span class="st"> </span><span class="kw">mean</span>(D)
+direct.est</code></pre></div>
+<pre><code>## [1] 0.3333333</code></pre>
+<p>The true proportion of engagers is 1000/1500 = 0.67. However, the direct question is badly biased by social desirability: our direct question prevalence estimate is 0.33.</p>
+</div>
+<div id="conventional-list-experiment" class="section level1">
 <h1>Conventional List Experiment</h1>
+<p>A conventional list experiment addresses social desirability by asking a control group how many of <code>J</code> (non-sensitive) behaviors they engage in and a treatment group how many of <code>J + 1</code> behaviors they engage in, where the additional behavior is the sensitive one. The (possibly covariate-adjusted) difference-in-means renders a prevalence estimate that is free from social desiriability bias. This estimate relies on two additional assumptions: No Liars and No Design Effects. No Liars requires that treatment subjects respond truthfully to the list question and No Design Effects requires that the presence of the sensitive item does not change treated subjects’ responses to the non-sensitive items.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">N &lt;-<span class="st"> </span><span class="kw">length</span>(type)
+<span class="co"># Generate list response potential outcomes</span>
 
-<p>A conventional list experiment addresses social desirability by asking a control group how many of <code>J</code> (non-sensitive) behaviors they engage in and a treatment group how many of <code>J + 1</code> behaviors they engage in, where the additional behavior is the sensitive one.  The (possibly covariate-adjusted) difference-in-means renders a prevalence estimate that is free from social desiriability bias. This estimate relies on two additional assumptions: No Liars and No Design Effects.  No Liars requires that treatment subjects respond truthfully to the list question and No Design Effects requires that the presence of the sensitive item does not change treated subjects&#39; responses to the non-sensitive items.</p>
+<span class="co"># Control potential outcome</span>
+Y0 &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span>:<span class="dv">4</span>, N, <span class="dt">replace=</span><span class="ot">TRUE</span>)
 
-<pre><code class="r">N &lt;- length(type)
-# Generate list response potential outcomes
+<span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span>
+Y1 &lt;-<span class="st"> </span>Y0 +<span class="st"> </span><span class="kw">ifelse</span>(type %in%<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-# Control potential outcome
-Y0 &lt;- sample(1:4, N, replace=TRUE)
+<span class="co"># Conduct random assignment</span>
+Z &lt;-<span class="st"> </span><span class="kw">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)
 
-# Treated potential outcome is 1 higher for true admitters and withholders
-Y1 &lt;- Y0 + ifelse(type %in% c(&quot;TA&quot;, &quot;WH&quot;), 1, 0)
+<span class="co"># Reveal list responses</span>
+Y &lt;-<span class="st"> </span>Z*Y1 +<span class="st"> </span>(<span class="dv">1</span>-Z)*Y0
 
-# Conduct random assignment
-Z &lt;- rbinom(N, 1, 0.5)
-
-# Reveal list responses
-Y &lt;- Z*Y1 + (1-Z)*Y0
-
-list.est &lt;- mean(Y[Z==1]) - mean(Y[Z==0])
-list.se &lt;- sqrt((var(Y[Z==1])/sum(Z) + var(Y[Z==0])/sum(1-Z)))
-list.est
-</code></pre>
-
-<pre><code>## [1] 0.6334232
-</code></pre>
-
-<pre><code class="r">list.se
-</code></pre>
-
-<pre><code>## [1] 0.05996451
-</code></pre>
-
+list.est &lt;-<span class="st"> </span><span class="kw">mean</span>(Y[Z==<span class="dv">1</span>]) -<span class="st"> </span><span class="kw">mean</span>(Y[Z==<span class="dv">0</span>])
+list.se &lt;-<span class="st"> </span><span class="kw">sqrt</span>((<span class="kw">var</span>(Y[Z==<span class="dv">1</span>])/<span class="kw">sum</span>(Z) +<span class="st"> </span><span class="kw">var</span>(Y[Z==<span class="dv">0</span>])/<span class="kw">sum</span>(<span class="dv">1</span>-Z)))
+list.est</code></pre></div>
+<pre><code>## [1] 0.6334232</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">list.se</code></pre></div>
+<pre><code>## [1] 0.05996451</code></pre>
 <p>The list experiment comes closer to the truth: our estimate is now 0.63. The standard error is somewhat large, at 0.06. A principal difficulty with using list experiments is that estimates can be quite imprecise.</p>
-
+</div>
+<div id="combined-list-experiment" class="section level1">
 <h1>Combined List Experiment</h1>
-
-<p>The purpose of the combined estimator is to increase precision by combining direct questioning with list experimentation. The combined estimate is a weighted average of the direct question estimate and the list experiment estimate among those who answer &ldquo;No&rdquo; to the direct question. Under two additional assumptions (Treatment Independence and Monotonicity), the combined estimator yields more precise estimates than the conventional estimator.  Treatment independence requires that the treatment not have any effect on the direct question response. Monotonicity requires that no subjects &ldquo;falsely confess&rdquo; to the direct question.</p>
-
+<p>The purpose of the combined estimator is to increase precision by combining direct questioning with list experimentation. The combined estimate is a weighted average of the direct question estimate and the list experiment estimate among those who answer “No” to the direct question. Under two additional assumptions (Treatment Independence and Monotonicity), the combined estimator yields more precise estimates than the conventional estimator. Treatment independence requires that the treatment not have any effect on the direct question response. Monotonicity requires that no subjects “falsely confess” to the direct question.</p>
 <p>Estimation is straightforward:</p>
-
-<pre><code class="r">library(list)
-</code></pre>
-
-<pre><code>## Loading required package: sandwich
-</code></pre>
-
-<pre><code class="r"># Wrap up all data in a dataframe
-df &lt;- data.frame(Y, Z, D)
-out.1 &lt;- combinedListDirect(formula = Y ~ Z, data = df, treat = &quot;Z&quot;, direct = &quot;D&quot;)
-out.1
-</code></pre>
-
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(list)</code></pre></div>
+<pre><code>## Loading required package: sandwich</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Wrap up all data in a dataframe</span>
+df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(Y, Z, D)
+out<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">combinedListDirect</span>(<span class="dt">formula =</span> Y ~<span class="st"> </span>Z, <span class="dt">data =</span> df, <span class="dt">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="dt">direct =</span> <span class="st">&quot;D&quot;</span>)
+out<span class="fl">.1</span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -303,28 +149,21 @@ out.1
 ##  Prevalence estimate
 ##                Prevalence
 ## Estimate       0.65863351
-## Standard Error 0.04987643
-</code></pre>
-
-<p>If we compare the standard errors of the two methods, we can see that the combined estimator is more precise than the conventional estimator.  </p>
-
+## Standard Error 0.04987643</code></pre>
+<p>If we compare the standard errors of the two methods, we can see that the combined estimator is more precise than the conventional estimator.</p>
+</div>
+<div id="placebo-tests" class="section level1">
 <h1>Placebo Tests</h1>
-
 <p>The <code>combinedListDirect()</code> function automatically conducts two placebo tests that can check the assumptions underlying the list experimental design.</p>
-
+<div id="placebo-test-i" class="section level2">
 <h2>Placebo Test I</h2>
-
-<p>This test checks to see if the list experiment estimate among those who answer &ldquo;Yes&rdquo; to the direct question is significantly different from 1. Rejecting the hypothesis that this estimate is equal to one, indicates that one or more of four list experiment assumptions might be wrong: No Liars, No Design Effects, Treatment Ignorability, or Monotonicity.  </p>
-
+<p>This test checks to see if the list experiment estimate among those who answer “Yes” to the direct question is significantly different from 1. Rejecting the hypothesis that this estimate is equal to one, indicates that one or more of four list experiment assumptions might be wrong: No Liars, No Design Effects, Treatment Ignorability, or Monotonicity.</p>
+</div>
+<div id="placebo-test-ii" class="section level2">
 <h2>Placebo Test II</h2>
-
 <p>This test checks to see if the direct question is affected by the treatment. If Treatment Independnce is satisfied, the (possibly covariate-adjusted) difference-in-means should not be significantly different from 0.</p>
-
-<p>It&#39;s easy to see the results of both tests using <code>summary.comblist()</code>. Because we generated the data above respecting the list experiment assumptions, we know that we should pass both tests.</p>
-
-<pre><code class="r">summary(out.1)
-</code></pre>
-
+<p>It’s easy to see the results of both tests using <code>summary.comblist()</code>. Because we generated the data above respecting the list experiment assumptions, we know that we should pass both tests.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(out<span class="fl">.1</span>)</code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -336,7 +175,7 @@ out.1
 ## Standard Error 0.04987643 0.01217567   0.05996451
 ## 
 ##  Placebo Test I
-##        Beta is the conventional list experiment estimate among those who answer &#39;Yes&#39; to the direct question.
+##        Beta is the conventional list experiment estimate among those who answer 'Yes' to the direct question.
 ##        Ho: beta = 1
 ##        Ha: beta != 1
 ##       
@@ -349,130 +188,114 @@ out.1
 ##        Ha: delta != 0
 ##       
 ##          Estimate         SE         p    n
-## delta 0.00177798 0.02436116 0.9418187 1500
-</code></pre>
-
+## delta 0.00177798 0.02436116 0.9418187 1500</code></pre>
 <p>The high p-values for both tests suggest that we cannot reject either null hypothesis. The assumptions underlying both the conventional and combined list experiment estimators have not been demonstrated to be false.</p>
-
+</div>
+<div id="violations-of-assumptions" class="section level2">
 <h2>Violations of assumptions</h2>
+<p>Let’s show cases where the tests indicate that there are problems. First, let’s consider the case where some subjects are “design affected”, i.e., they lower their response to the non-sensitive items when the sensitive item is also on the list.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define three subject types as before plus one new type</span>
 
-<p>Let&#39;s show cases where the tests indicate that there are problems.  First, let&#39;s consider the case where some subjects are &ldquo;design affected&rdquo;, i.e., they lower their response to the non-sensitive items when the sensitive item is also on the list.</p>
+N.trueadmitter &lt;-<span class="st"> </span><span class="dv">400</span>
+N.withholder &lt;-<span class="st"> </span><span class="dv">500</span>
+N.innocent &lt;-<span class="st"> </span><span class="dv">500</span>
 
-<pre><code class="r"># Define three subject types as before plus one new type
+<span class="co"># Truthfully responds &quot;Yes&quot; to direct question</span>
+<span class="co"># but decreases response to the non-sensitive items </span>
+<span class="co"># in the presence of the sensitive item</span>
+N.designaffected &lt;-<span class="st"> </span><span class="dv">100</span>
 
-N.trueadmitter &lt;- 400
-N.withholder &lt;- 500
-N.innocent &lt;- 500
+type &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;DA&quot;</span>), 
+            <span class="dt">times=</span><span class="kw">c</span>(N.trueadmitter, N.withholder, N.innocent, N.designaffected))
+N &lt;-<span class="st"> </span><span class="kw">length</span>(type)
 
-# Truthfully responds &quot;Yes&quot; to direct question
-# but decreases response to the non-sensitive items 
-# in the presence of the sensitive item
-N.designaffected &lt;- 100
+D &lt;-<span class="st"> </span><span class="kw">ifelse</span>(type%in%<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;DA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-type &lt;- rep(c(&quot;TA&quot;, &quot;WH&quot;, &quot;IN&quot;, &quot;DA&quot;), 
-            times=c(N.trueadmitter, N.withholder, N.innocent, N.designaffected))
-N &lt;- length(type)
+<span class="co"># Control potential outcome</span>
+Y0 &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span>:<span class="dv">4</span>, N, <span class="dt">replace=</span><span class="ot">TRUE</span>)
 
-D &lt;- ifelse(type%in%c(&quot;TA&quot;,&quot;DA&quot;), 1, 0)
+<span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span>
+<span class="co"># Note that it is NOT higher for those who are &quot;design affected&quot;</span>
+Y1 &lt;-<span class="st"> </span>Y0 +<span class="st"> </span><span class="kw">ifelse</span>(type %in%<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-# Control potential outcome
-Y0 &lt;- sample(1:4, N, replace=TRUE)
+Z &lt;-<span class="st"> </span><span class="kw">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)
+Y &lt;-<span class="st"> </span>Z*Y1 +<span class="st"> </span>(<span class="dv">1</span>-Z)*Y0
+df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(Y, Z, D)
 
-# Treated potential outcome is 1 higher for true admitters and withholders
-# Note that it is NOT higher for those who are &quot;design affected&quot;
-Y1 &lt;- Y0 + ifelse(type %in% c(&quot;TA&quot;, &quot;WH&quot;), 1, 0)
+out<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">combinedListDirect</span>(<span class="dt">formula =</span> Y ~<span class="st"> </span>Z, <span class="dt">data =</span> df, <span class="dt">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="dt">direct =</span> <span class="st">&quot;D&quot;</span>)
 
-Z &lt;- rbinom(N, 1, 0.5)
-Y &lt;- Z*Y1 + (1-Z)*Y0
-df &lt;- data.frame(Y, Z, D)
-
-out.2 &lt;- combinedListDirect(formula = Y ~ Z, data = df, treat = &quot;Z&quot;, direct = &quot;D&quot;)
-
-# Extract Placebo Test I results 
-unlist(out.2$placebo.I)
-</code></pre>
-
+<span class="co"># Extract Placebo Test I results </span>
+<span class="kw">unlist</span>(out<span class="fl">.2</span>$placebo.I)</code></pre></div>
 <pre><code>##     estimate           se            p            n 
-##   0.75924415   0.10355750   0.02007988 500.00000000
-</code></pre>
+##   0.75924415   0.10355750   0.02007988 500.00000000</code></pre>
+<p>The low p-value suggests that we should reject the hypothesis that the list experimental estimate is equal to one among those who answer “Yes” to the direct question. We could reject this hypothesis if any of the four assumptions above were violated in some way. If the null is rejected, the list experiment estimates - both conventional and combined - are possibly biased.</p>
+<hr />
+<p>Next let’s consider a case where the treatment does affect the direct question response, violating the Treatment Ignorability assumption.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define three subject types as before plus one new type</span>
 
-<p>The low p-value suggests that we should reject the hypothesis that the list experimental estimate is equal to one among those who answer &ldquo;Yes&rdquo; to the direct question. We could reject this hypothesis if any of the four assumptions above were violated in some way.  If the null is rejected, the list experiment estimates - both conventional and combined - are possibly biased.</p>
+N.trueadmitter &lt;-<span class="st"> </span><span class="dv">400</span>
+N.withholder &lt;-<span class="st"> </span><span class="dv">500</span>
+N.innocent &lt;-<span class="st"> </span><span class="dv">500</span>
 
-<hr/>
+<span class="co"># Truthfully answers &quot;Yes&quot; when in control</span>
+<span class="co"># But falsely answers &quot;No&quot; when in treatment</span>
+N.affectedbytreatment &lt;-<span class="st"> </span><span class="dv">100</span>
 
-<p>Next let&#39;s consider a case where the treatment does affect the direct question response, violating the Treatment Ignorability assumption.</p>
+type &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;ABT&quot;</span>), 
+            <span class="dt">times=</span><span class="kw">c</span>(N.trueadmitter, N.withholder, N.innocent, N.affectedbytreatment))
+N &lt;-<span class="st"> </span><span class="kw">length</span>(type)
 
-<pre><code class="r"># Define three subject types as before plus one new type
+<span class="co"># Direct Question Potential outcomes</span>
+D0 &lt;-<span class="st"> </span><span class="kw">ifelse</span>(type%in%<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;ABT&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
+D1 &lt;-<span class="st"> </span><span class="kw">ifelse</span>(type%in%<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-N.trueadmitter &lt;- 400
-N.withholder &lt;- 500
-N.innocent &lt;- 500
+<span class="co"># List Experiment potential outcomes</span>
+Y0 &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span>:<span class="dv">4</span>, N, <span class="dt">replace=</span><span class="ot">TRUE</span>)
+Y1 &lt;-<span class="st"> </span>Y0 +<span class="st"> </span><span class="kw">ifelse</span>(type %in%<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-# Truthfully answers &quot;Yes&quot; when in control
-# But falsely answers &quot;No&quot; when in treatment
-N.affectedbytreatment &lt;- 100
+<span class="co"># Reveal outcomes according to random assignment</span>
+Z &lt;-<span class="st"> </span><span class="kw">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)
+Y &lt;-<span class="st"> </span>Z*Y1 +<span class="st"> </span>(<span class="dv">1</span>-Z)*Y0
+D &lt;-<span class="st"> </span>Z*D1 +<span class="st"> </span>(<span class="dv">1</span>-Z)*D0
 
-type &lt;- rep(c(&quot;TA&quot;, &quot;WH&quot;, &quot;IN&quot;, &quot;ABT&quot;), 
-            times=c(N.trueadmitter, N.withholder, N.innocent, N.affectedbytreatment))
-N &lt;- length(type)
+df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(Y, Z, D)
 
-# Direct Question Potential outcomes
-D0 &lt;- ifelse(type%in%c(&quot;TA&quot;,&quot;ABT&quot;), 1, 0)
-D1 &lt;- ifelse(type%in%c(&quot;TA&quot;), 1, 0)
+out<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">combinedListDirect</span>(<span class="dt">formula =</span> Y ~<span class="st"> </span>Z, <span class="dt">data =</span> df, <span class="dt">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="dt">direct =</span> <span class="st">&quot;D&quot;</span>)
 
-# List Experiment potential outcomes
-Y0 &lt;- sample(1:4, N, replace=TRUE)
-Y1 &lt;- Y0 + ifelse(type %in% c(&quot;TA&quot;, &quot;WH&quot;), 1, 0)
-
-# Reveal outcomes according to random assignment
-Z &lt;- rbinom(N, 1, 0.5)
-Y &lt;- Z*Y1 + (1-Z)*Y0
-D &lt;- Z*D1 + (1-Z)*D0
-
-df &lt;- data.frame(Y, Z, D)
-
-out.3 &lt;- combinedListDirect(formula = Y ~ Z, data = df, treat = &quot;Z&quot;, direct = &quot;D&quot;)
-
-# Extract Placebo Test II results 
-unlist(out.3$placebo.II)
-</code></pre>
-
+<span class="co"># Extract Placebo Test II results </span>
+<span class="kw">unlist</span>(out<span class="fl">.3</span>$placebo.II)</code></pre></div>
 <pre><code>##      estimate            se             p             n 
-##   -0.05092491    0.02364766    0.03128051 1500.00000000
-</code></pre>
-
+##   -0.05092491    0.02364766    0.03128051 1500.00000000</code></pre>
 <p>Again, the low p-value suggests that the null hypothesis that the average effect of the treatment on the direct response is zero is false. When this null is rejected, the combined estimator may yield biased results.</p>
-
+</div>
+</div>
+<div id="covariate-adjustment" class="section level1">
 <h1>Covariate Adjustment</h1>
+<p>Another way to increase the precision of list experiments is to include pre-treatment covariates that are predictive of the list experiment outcome. The combined estimator can accomodate the inclusion of pre-treatment covariates quite easily.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define subject types.</span>
+N.trueadmitter &lt;-<span class="st"> </span><span class="dv">500</span>
+N.withholder &lt;-<span class="st"> </span><span class="dv">500</span>
+N.innocent &lt;-<span class="st"> </span><span class="dv">500</span>
 
-<p>Another way to increase the precision of list experiments is to include pre-treatment covariates that are predictive of the list experiment outcome.  The combined estimator can accomodate the inclusion of pre-treatment covariates quite easily.</p>
+type &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="dt">times=</span><span class="kw">c</span>(N.trueadmitter, N.withholder, N.innocent))
+N &lt;-<span class="st"> </span><span class="kw">length</span>(type)
 
-<pre><code class="r"># Define subject types.
-N.trueadmitter &lt;- 500
-N.withholder &lt;- 500
-N.innocent &lt;- 500
+<span class="co"># Generate a predictive pre-treatment covariate &quot;X&quot;)</span>
+X &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dt">sd =</span> <span class="dv">2</span>)
 
-type &lt;- rep(c(&quot;TA&quot;, &quot;WH&quot;, &quot;IN&quot;), times=c(N.trueadmitter, N.withholder, N.innocent))
-N &lt;- length(type)
+<span class="co"># Control potential outcome is related to &quot;X&quot;</span>
+Y0 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">cut</span>(X +<span class="st"> </span><span class="kw">runif</span>(N), <span class="dt">breaks =</span> <span class="dv">4</span>))
+Y1 &lt;-<span class="st"> </span>Y0 +<span class="st"> </span><span class="kw">ifelse</span>(type %in%<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)
 
-# Generate a predictive pre-treatment covariate &quot;X&quot;)
-X &lt;- rnorm(N, sd = 2)
+Z &lt;-<span class="st"> </span><span class="kw">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)
+D &lt;-<span class="st"> </span><span class="kw">ifelse</span>(type==<span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)
+Y &lt;-<span class="st"> </span>Z*Y1 +<span class="st"> </span>(<span class="dv">1</span>-Z)*Y0
 
-# Control potential outcome is related to &quot;X&quot;
-Y0 &lt;- as.numeric(cut(X + runif(N), breaks = 4))
-Y1 &lt;- Y0 + ifelse(type %in% c(&quot;TA&quot;, &quot;WH&quot;), 1, 0)
+df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(Y, Z, D, X)
 
-Z &lt;- rbinom(N, 1, 0.5)
-D &lt;- ifelse(type==&quot;TA&quot;, 1, 0)
-Y &lt;- Z*Y1 + (1-Z)*Y0
-
-df &lt;- data.frame(Y, Z, D, X)
-
-# Conduct estimation without covariate adjustment
-out.4 &lt;- combinedListDirect(formula = Y ~ Z, data = df, treat = &quot;Z&quot;, direct = &quot;D&quot;)
-out.4
-</code></pre>
-
+<span class="co"># Conduct estimation without covariate adjustment</span>
+out<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">combinedListDirect</span>(<span class="dt">formula =</span> Y ~<span class="st"> </span>Z, <span class="dt">data =</span> df, <span class="dt">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="dt">direct =</span> <span class="st">&quot;D&quot;</span>)
+out<span class="fl">.4</span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -481,15 +304,11 @@ out.4
 ##  Prevalence estimate
 ##                Prevalence
 ## Estimate       0.68373531
-## Standard Error 0.03165778
-</code></pre>
-
-<pre><code class="r"># Conduct estimation with covariate adjustment
-# Just add the covariate on the right-hand side of the formula
-out.5 &lt;- combinedListDirect(formula = Y ~ Z + X, data = df, treat = &quot;Z&quot;, direct = &quot;D&quot;)
-out.5
-</code></pre>
-
+## Standard Error 0.03165778</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Conduct estimation with covariate adjustment</span>
+<span class="co"># Just add the covariate on the right-hand side of the formula</span>
+out<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">combinedListDirect</span>(<span class="dt">formula =</span> Y ~<span class="st"> </span>Z +<span class="st"> </span>X, <span class="dt">data =</span> df, <span class="dt">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="dt">direct =</span> <span class="st">&quot;D&quot;</span>)
+out<span class="fl">.5</span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -499,11 +318,21 @@ out.5
 ##  Prevalence estimate
 ##                Prevalence
 ## Estimate       0.67850607
-## Standard Error 0.02051244
-</code></pre>
+## Standard Error 0.02051244</code></pre>
+<p>A comparison of the standard errors with and without covariate adjustment confirms that the covariate-adjusted estimator is more precise. When you include covariates, the placebo tests become more powerful as well.</p>
+</div>
 
-<p>A comparison of the standard errors with and without covariate adjustment confirms that the covariate-adjusted estimator is more precise.  When you include covariates, the placebo tests become more powerful as well.</p>
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 </body>
-
 </html>
