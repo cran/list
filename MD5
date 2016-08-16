@@ -1,5 +1,5 @@
-ef885ac570b7a9cacfc3af28adf724e0 *ChangeLog
-713c0a8e1b62624830d27feb7f4453f1 *DESCRIPTION
+4d55f3c0bf3f42b33eddff7144beb3f6 *ChangeLog
+99d6342c82330a8c5e103d8fba34a920 *DESCRIPTION
 95f6cf28357acb40a2808f7683096bcc *NAMESPACE
 16f3a53f945da5735a749391fc483cae *R/bayesglm.R
 b0c4c8546d5255b644cead09a808dba1 *R/combinedListDirect.R
@@ -10,7 +10,7 @@ a9f97fda58bf83d4c026c762e168792a *R/ict.test.R
 d90020e15ccfef215486cfb2fb4f6469 *R/ictregBayes.R
 acb61c92ba52545ac79594019dd34505 *R/ictregBayesHier.R
 ee043489298f73ecd9b319115dff449f *README.md
-ee9b5a238dc506c41126929d02c9c2ef *build/vignette.rds
+5077b9b0a4c9689f161eaf799599f973 *build/vignette.rds
 c850e0b5d106a8801db3079ff289355c *data/affirm.tab.gz
 31aebb7a141538dcd01e6a5433e140ff *data/combinedListExps.rdata
 d13fa73c2e6bac428c71130daf837690 *data/mexico.tab.gz
@@ -20,7 +20,7 @@ ce8fd733e5d0bba2bef1701abdacbd00 *data/race.tab.gz
 3aa4bb43360487b812a42723da5c17f4 *inst/CITATION
 ab4a3fe538bd68ef0b67629ab93e1809 *inst/doc/combined-list.R
 52acecd68b9c3dee18bda56f41eb0fd4 *inst/doc/combined-list.Rmd
-c656a52f4c66182f93e5228e31ee754f *inst/doc/combined-list.html
+8373c290cc17d00b09e54f8385c6d794 *inst/doc/combined-list.html
 d382035f2354e193ccccc50a91bab29c *man/affirm.Rd
 71aba673cbc4ef1546b20663f27f0611 *man/combinedListDirect.Rd
 373e79bd045262c1e9682e34e9af8c02 *man/combinedListExps.Rd

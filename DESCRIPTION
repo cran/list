@@ -1,10 +1,10 @@
 Package: list
-Version: 8.1
+Version: 8.2
 Date: 2016-7-26
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
 Author: Graeme Blair [aut, cre], Kosuke Imai [aut, cre], Bethany Park [ctb],
-    Alexander Coppock [ctb]
+    Alexander Coppock [ctb], Winston Chou [ctb]
 Maintainer: Graeme Blair <graeme.blair@ucla.edu>
 Depends: R (>= 3.2.0), utils, sandwich (>= 2.3-3)
 Imports: VGAM (>= 0.9-8), magic (>= 1.5-6), gamlss.dist (>= 4.3-4),
@@ -37,6 +37,6 @@ LazyData: yes
 License: GPL (>= 2)
 RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2016-07-27 04:02:07 UTC; gblair
+Packaged: 2016-08-16 01:36:01 UTC; gblair
 Repository: CRAN
-Date/Publication: 2016-07-27 07:58:58
+Date/Publication: 2016-08-16 09:55:37
