@@ -1,10 +1,351 @@
-
+#' Item Count Technique
+#' 
+#' Function to conduct multivariate regression analyses of survey data with the
+#' item count technique, also known as the list experiment and the unmatched
+#' count technique.
+#' 
+#' This function allows the user to perform regression analysis on data from
+#' the item count technique, also known as the list experiment and the
+#' unmatched count technique.
+#' 
+#' Three list experiment designs are accepted by this function: the standard
+#' design; the multiple sensitive item standard design; and the modified design
+#' proposed by Corstange (2009).
+#' 
+#' For the standard design, three methods are implemented in this function: the
+#' linear model; the Maximum Likelihood (ML) estimation for the
+#' Expectation-Maximization (EM) algorithm; the nonlinear least squares (NLS)
+#' estimation with the two-step procedure both proposed in Imai (2010); and the
+#' Maximum Likelihood (ML) estimator in the presence of two types of dishonest
+#' responses, "ceiling" and "floor" liars. The ceiling model, floor model, or
+#' both, as described in Blair and Imai (2010) can be activated by using the
+#' \code{ceiling} and \code{floor} options. The constrained and unconstrained
+#' ML models presented in Imai (2010) are available through the
+#' \code{constrained} option, and the user can specify if overdispersion is
+#' present in the data for the no liars models using the \code{overdispersed}
+#' option to control whether a beta-binomial or binomial model is used in the
+#' EM algorithm to model the item counts.
+#' 
+#' The modified design and the multiple sensitive item design are automatically
+#' detected by the function, and only the binomial model without overdispersion
+#' is available.
+#' 
+#' @aliases ictreg ict list
+#' @param formula An object of class "formula": a symbolic description of the
+#' model to be fitted.
+#' @param data A data frame containing the variables in the model
+#' @param treat Name of treatment indicator as a string. For single sensitive
+#' item models, this refers to a binary indicator, and for multiple sensitive
+#' item models it refers to a multi-valued variable with zero representing the
+#' control condition. This can be an integer (with 0 for the control group) or
+#' a factor (with "control" for the control group).
+#' @param J Number of non-sensitive (control) survey items.
+#' @param method Method for regression, either \code{ml} for the Maximum
+#' Likelihood (ML) estimation with the Expectation-Maximization algorithm;
+#' \code{lm} for linear model estimation; or \code{nls} for the Non-linear
+#' Least Squares (NLS) estimation with the two-step procedure.
+#' @param weights Name of the weights variable as a string, if weighted
+#' regression is desired. Not implemented for the ceiling/floor models,
+#' multiple sensitive item design, or for the modified design.
+#' @param h Auxiliary data functionality. Optional named numeric vector with
+#' length equal to number of groups. Names correspond to group labels and
+#' values correspond to auxiliary moments.
+#' @param group Auxiliary data functionality. Optional character vector of
+#' group labels with length equal to number of observations.
+#' @param matrixMethod Auxiliary data functionality. Procedure for estimating
+#' optimal weighting matrix for generalized method of moments. One of
+#' "efficient" for two-step feasible and "cue" for continuously updating.
+#' Default is "efficient". Only relevant if \code{h} and \code{group} are
+#' specified.
+#' @param robust Robust NLS and ML models that ensure that the estimated 
+#' proportion of the sensitive trait is close to difference-in-means estimate.
+#' @param error ML models that model response error processes proposed in
+#' Blair, Chou, and Imai (2018). Select either \code{none} (standard ML), the
+#' default; \code{topcode}, which models an error process in which a random 
+#' subset of respondents chooses the maximal (ceiling) response value, 
+#' regardless of their truthful response; and \code{uniform}, which models an 
+#' error process in which a subset of respondents chooses their responses at 
+#' random.
+#' @param overdispersed Indicator for the presence of overdispersion. If
+#' \code{TRUE}, the beta-binomial model is used in the EM algorithm, if
+#' \code{FALSE} the binomial model is used. Not relevant for the \code{NLS} or
+#' \code{lm} methods.
+#' @param constrained A logical value indicating whether the control group
+#' parameters are constrained to be equal.  Not relevant for the \code{NLS} or
+#' \code{lm} methods
+#' @param floor A logical value indicating whether the floor liar model should
+#' be used to adjust for the possible presence of respondents dishonestly
+#' reporting a negative preference for the sensitive item among those who hold
+#' negative views of all the non-sensitive items.
+#' @param ceiling A logical value indicating whether the ceiling liar model
+#' should be used to adjust for the possible presence of respondents
+#' dishonestly reporting a negative preference for the sensitive item among
+#' those who hold affirmative views of all the non-sensitive items.
+#' @param ceiling.fit Fit method for the M step in the EM algorithm used to fit
+#' the ceiling liar model. \code{glm} uses standard logistic regression, while
+#' \code{bayesglm} uses logistic regression with a weakly informative prior
+#' over the parameters.
+#' @param floor.fit Fit method for the M step in the EM algorithm used to fit
+#' the floor liar model. \code{glm} uses standard logistic regression, while
+#' \code{bayesglm} uses logistic regression with a weakly informative prior
+#' over the parameters.
+#' @param ceiling.formula Covariates to include in ceiling liar model. These
+#' must be a subset of the covariates used in \code{formula}.
+#' @param floor.formula Covariates to include in floor liar model. These must
+#' be a subset of the covariates used in \code{formula}.
+#' @param fit.start Fit method for starting values for standard design
+#' \code{ml} model. The options are \code{lm}, \code{glm}, and \code{nls},
+#' which use OLS, logistic regression, and non-linear least squares to generate
+#' starting values, respectively. The default is \code{nls}.
+#' @param fit.sensitive Fit method for the sensitive item fit for maximum likelihood
+#' models. \code{glm} uses standard logistic regression, while
+#' \code{bayesglm} uses logistic regression with a weakly informative prior
+#' over the parameters.
+#' @param fit.nonsensitive Fit method for the non-sensitive item fit for the
+#' \code{nls} method and the starting values for the \code{ml} method for the
+#' \code{modified} design. Options are \code{glm} and \code{nls}, and the
+#' default is \code{nls}.
+#' @param multi.condition For the multiple sensitive item design, covariates
+#' representing the estimated count of affirmative responses for each
+#' respondent can be included directly as a level variable by choosing
+#' \code{level}, or as indicator variables for each value but one by choosing
+#' \code{indicators}. The default is \code{none}.
+#' @param maxIter Maximum number of iterations for the Expectation-Maximization
+#' algorithm of the ML estimation.  The default is 5000.
+#' @param verbose a logical value indicating whether model diagnostics are
+#' printed out during fitting.
+#' @param ... further arguments to be passed to NLS regression commands.
+#' @return \code{ictreg} returns an object of class "ictreg".  The function
+#' \code{summary} is used to obtain a table of the results.  The object
+#' \code{ictreg} is a list that contains the following components.  Some of
+#' these elements are not available depending on which method is used
+#' (\code{lm}, \code{nls} or \code{ml}), which design is used (\code{standard},
+#' \code{modified}), whether multiple sensitive items are include
+#' (\code{multi}), and whether the constrained model is used (\code{constrained
+#' = TRUE}).
+#' 
+#' \item{par.treat}{point estimate for effect of covariate on item count fitted
+#' on treatment group} \item{se.treat}{standard error for estimate of effect of
+#' covariate on item count fitted on treatment group} \item{par.control}{point
+#' estimate for effect of covariate on item count fitted on control group}
+#' \item{se.control}{standard error for estimate of effect of covariate on item
+#' count fitted on control group} \item{coef.names}{variable names as defined
+#' in the data frame} \item{design}{call indicating whether the \code{standard}
+#' design as proposed in Imai (2010) or thee \code{modified} design as proposed
+#' in Corstange (2009) is used} \item{method}{call of the method used}
+#' \item{overdispersed}{call indicating whether data is overdispersed}
+#' \item{constrained}{call indicating whether the constrained model is used}
+#' \item{boundary}{call indicating whether the floor/ceiling boundary models
+#' are used} \item{multi}{indicator for whether multiple sensitive items were
+#' included in the data frame} \item{call}{the matched call} \item{data}{the
+#' \code{data} argument} \item{x}{the design matrix} \item{y}{the response
+#' vector} \item{treat}{the vector indicating treatment status} \item{J}{Number
+#' of non-sensitive (control) survey items set by the user or detected.}
+#' \item{treat.labels}{a vector of the names used by the \code{treat} vector
+#' for the sensitive item or items. This is the names from the \code{treat}
+#' indicator if it is a factor, or the number of the item if it is numeric.}
+#' \item{control.label}{a vector of the names used by the \code{treat} vector
+#' for the control items. This is the names from the \code{treat} indicator if
+#' it is a factor, or the number of the item if it is numeric.}
+#' 
+#' For the maximum likelihood models, an additional output object is included:
+#' \item{pred.post}{posterior predicted probability of answering "yes" to the
+#' sensitive item. The weights from the E-M algorithm.}
+#' 
+#' For the floor/ceiling models, several additional output objects are
+#' included: \item{ceiling}{call indicating whether the assumption of no
+#' ceiling liars is relaxed, and ceiling parameters are estimated}
+#' \item{par.ceiling}{point estimate for effect of covariate on whether
+#' respondents who answered affirmatively to all non-sensitive items and hold a
+#' true affirmative opinion toward the sensitive item lied and reported a
+#' negative response to the sensitive item } \item{se.ceiling}{standard error
+#' for estimate for effect of covariate on whether respondents who answered
+#' affirmatively to all non-sensitive items and hold a true affirmative opinion
+#' toward the sensitive item lied and reported a negative response to the
+#' sensitive item} \item{floor}{call indicating whether the assumption of no
+#' floor liars is relaxed, and floor parameters are estimated}
+#' \item{par.ceiling}{point estimate for effect of covariate on whether
+#' respondents who answered negatively to all non-sensitive items and hold a
+#' true affirmative opinion toward the sensitive item lied and reported a
+#' negative response to the sensitive item } \item{se.ceiling}{standard error
+#' for estimate for effect of covariate on whether respondents who answered
+#' negatively to all non-sensitive items and hold a true affirmative opinion
+#' toward the sensitive item lied and reported a negative response to the
+#' sensitive item} \item{coef.names.ceiling}{variable names from the ceiling
+#' liar model fit, if applicable} \item{coef.names.floor}{variable names from
+#' the floor liar model fit, if applicable}
+#' 
+#' For the multiple sensitive item design, the \code{par.treat} and
+#' \code{se.treat} vectors are returned as lists of vectors, one for each
+#' sensitive item.
+#' 
+#' For the unconstrained model, the \code{par.control} and \code{se.control}
+#' output is replaced by: \item{par.control.phi0}{point estimate for effect of
+#' covariate on item count fitted on treatment group}
+#' \item{se.control.phi0}{standard error for estimate of effect of covariate on
+#' item count fitted on treatment group} \item{par.control.phi1}{point estimate
+#' for effect of covariate on item count fitted on treatment group}
+#' \item{se.control.phi1}{standard error for estimate of effect of covariate on
+#' item count fitted on treatment group}
+#' 
+#' Depending upon the estimator requested by the user, model fit statistics are
+#' also included: \item{llik}{the log likelihood of the model, if \code{ml} is
+#' used} \item{resid.se}{the residual standard error, if \code{nls} or
+#' \code{lm} are used. This will be a scalar if the standard design was used,
+#' and a vector if the multiple sensitive item design was used}
+#' \item{resid.df}{the residual degrees of freedom, if \code{nls} or \code{lm}
+#' are used. This will be a scalar if the standard design was used, and a
+#' vector if the multiple sensitive item design was used}
+#' 
+#' When using the auxiliary data functionality, the following objects are
+#' included: \item{aux}{logical value indicating whether estimation
+#' incorporates auxiliary moments} \item{nh}{integer count of the number of
+#' auxiliary moments} \item{wm}{procedure used to estimate the optimal weight
+#' matrix} \item{J.stat}{numeric value of the Sargan Hansen overidentifying
+#' restriction test statistic} \item{overid.p}{corresponding p-value for the
+#' Sargan Hansen test}
+#' @author Graeme Blair, UCLA, \email{graeme.blair@ucla.edu}
+#' and Kosuke Imai, Princeton University, \email{kimai@princeton.edu}
+#' @seealso \code{\link{predict.ictreg}} for fitted values
+#' @references Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of
+#' List Experiments."  Political Analysis. Forthcoming. available at
+#' \url{http://imai.princeton.edu/research/listP.html}
+#' 
+#' Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item Count
+#' Technique.'' Journal of the American Statistical Association, Vol. 106, No.
+#' 494 (June), pp. 407-416. available at
+#' \url{http://imai.princeton.edu/research/list.html}
+#' @keywords models regression
+#' @examples
+#' 
+#' 
+#' data(race)
+#' 
+#' set.seed(1)
+#' 
+#' # Calculate list experiment difference in means
+#' 
+#' diff.in.means.results <- ictreg(y ~ 1, data = race, 
+#' 	       	      treat = "treat", J=3, method = "lm")
+#' 
+#' summary(diff.in.means.results)
+#' 
+#' # Fit linear regression
+#' # Replicates Table 1 Columns 1-2 Imai (2011); note that age is divided by 10
+#' 
+#' lm.results <- ictreg(y ~ south + age + male + college, data = race, 
+#' 	       	      treat = "treat", J=3, method = "lm")
+#' 
+#' summary(lm.results)
+#' 
+#' # Fit two-step non-linear least squares regression
+#' # Replicates Table 1 Columns 3-4 Imai (2011); note that age is divided by 10
+#' 
+#' nls.results <- ictreg(y ~ south + age + male + college, data = race, 
+#' 	       	      treat = "treat", J=3, method = "nls")
+#' 
+#' summary(nls.results)
+#' 
+#' \dontrun{
+#' 
+#' # Fit EM algorithm ML model with constraint
+#' # Replicates Table 1 Columns 5-6, Imai (2011); note that age is divided by 10
+#' 
+#' ml.constrained.results <- ictreg(y ~ south + age + male + college, data = race, 
+#' 		       	  	 treat = "treat", J=3, method = "ml", 
+#' 				 overdispersed = FALSE, constrained = TRUE)
+#' 
+#' summary(ml.constrained.results)
+#' 
+#' # Fit EM algorithm ML model with no constraint
+#' # Replicates Table 1 Columns 7-10, Imai (2011); note that age is divided by 10
+#' 
+#' ml.unconstrained.results <- ictreg(y ~ south + age + male + college, data = race, 
+#' 			    	   treat = "treat", J=3, method = "ml", 
+#' 				   overdispersed = FALSE, constrained = FALSE)
+#' 
+#' summary(ml.unconstrained.results)
+#' 
+#' # Fit EM algorithm ML model for multiple sensitive items
+#' # Replicates Table 3 in Blair and Imai (2010)
+#' 
+#' multi.results <- ictreg(y ~ male + college + age + south + south:age, treat = "treat", 
+#' 	      	 	J = 3, data = multi, method = "ml", 
+#' 			multi.condition = "level")
+#' 
+#' summary(multi.results)
+#' 
+#' # Fit standard design ML model
+#' # Replicates Table 7 Columns 1-2 in Blair and Imai (2010)
+#' 
+#' noboundary.results <- ictreg(y ~ age + college + male + south, treat = "treat",
+#' 		      	     J = 3, data = affirm, method = "ml", 
+#' 			     overdispersed = FALSE)
+#' 
+#' summary(noboundary.results)
+#' 
+#' # Fit standard design ML model with ceiling effects alone
+#' # Replicates Table 7 Columns 3-4 in Blair and Imai (2010)
+#' 
+#' ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+#' 		   	  J = 3, data = affirm, method = "ml", fit.start = "nls",
+#' 			  ceiling = TRUE, ceiling.fit = "bayesglm",
+#' 			  ceiling.formula = ~ age + college + male + south)
+#' 
+#' summary(ceiling.results)
+#' 
+#' # Fit standard design ML model with floor effects alone
+#' # Replicates Table 7 Columns 5-6 in Blair and Imai (2010)
+#' 
+#' floor.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+#' 	      	 	J = 3, data = affirm, method = "ml", fit.start = "glm", 
+#' 			floor = TRUE, floor.fit = "bayesglm",
+#' 			floor.formula = ~ age + college + male + south)
+#' 
+#' summary(floor.results)
+#' 
+#' # Fit standard design ML model with floor and ceiling effects
+#' # Replicates Table 7 Columns 7-8 in Blair and Imai (2010)
+#' 
+#' both.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+#' 	     	       J = 3, data = affirm, method = "ml", 
+#' 		       floor = TRUE, ceiling = TRUE, 
+#' 		       floor.fit = "bayesglm", ceiling.fit = "bayesglm",
+#' 		       floor.formula = ~ age + college + male + south,
+#' 		       ceiling.formula = ~ age + college + male + south)
+#' 
+#' summary(both.results)
+#' 
+#' # Response error models (Blair, Imai, and Chou 2018)
+#' 
+#' top.coded.error <- ictreg(
+#'    y ~ age + college + male + south, treat = "treat",
+#'    J = 3, data = race, method = "ml", error = "topcoded")
+#'    
+#' uniform.error <- ictreg(
+#'    y ~ age + college + male + south, treat = "treat",
+#'    J = 3, data = race, method = "ml", error = "topcoded")
+#'    
+#' # Robust models, which constrain sensitive item proportion
+#' #   to difference-in-means estimate
+#' 
+#' robust.ml <- ictreg(
+#'    y ~ age + college + male + south, treat = "treat",
+#'    J = 3, data = affirm, method = "ml", robust = TRUE)
+#'
+#' robust.nls <- ictreg(
+#'    y ~ age + college + male + south, treat = "treat",
+#'    J = 3, data = affirm, method = "nls", robust = TRUE)
+#'    
+#' }
+#' 
 ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = "ml", weights, 
-                   h = NULL, group = NULL, matrixMethod = "efficient", 
+                   h = NULL, group = NULL, matrixMethod = "efficient", robust = FALSE, error = "none", 
                    overdispersed = FALSE, constrained = TRUE, floor = FALSE, ceiling = FALSE, 
                    ceiling.fit = "glm", floor.fit = "glm", ceiling.formula = ~ 1, floor.formula = ~ 1, 
-                   fit.start = "lm", fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, verbose = FALSE, ...){
-
+                   fit.start = "lm", fit.sensitive = "glm", 
+                   fit.nonsensitive = "nls", multi.condition = "none", maxIter = 5000, verbose = FALSE, ...){
+  
   ictreg.call <- match.call()
 
   # set up data frame, with support for standard and modified responses
@@ -12,10 +353,10 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
   
   # make all other call elements null in mf <- NULL in next line
   mf$method <- mf$maxIter <- mf$verbose <- mf$fit.start <- mf$J <- mf$design <- 
-    mf$treat <- mf$weights <- mf$constrained <- mf$overdispersed <- mf$floor <- 
+    mf$treat <- mf$weights <- mf$constrained <- mf$fit.sensitive <- mf$overdispersed <- mf$floor <- 
     mf$ceiling <- mf$ceiling.fit <- mf$fit.nonsensitive <- mf$floor.fit <- 
     mf$multi.condition <- mf$floor.formula <- mf$ceiling.formula <- mf$h <-
-    mf$group <- mf$matrixMethod <- NULL
+    mf$group <- mf$matrixMethod <- mf$robust <- mf$error <- NULL
   mf[[1]] <- as.name("model.frame")
   mf$na.action <- 'na.pass'
   mf <- eval.parent(mf)
@@ -44,6 +385,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
       w.all <- rep(1, length(y.all))
   }
 
+  if (method == "oneway") fit.start <- "lm"
   if (method == "nls") fit.start <- "nls"
   
   # extract number of non-sensitive items from the response matrix
@@ -133,6 +475,14 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
       stop("Weighted list experiment regression is not supported (yet) for the multi-item design.")
   }
 
+  # robust functionality -- check conditions
+  if (robust) {
+    if (multi.condition != "none") 
+      stop("The robust ML functionality is not yet supported for multiple sensitive item designs.")
+    if (!(method == "ml" | method == "nls"))
+      stop("You must specify method as 'ml' or 'nls' to use the robust functionality.")
+  }
+
   # auxiliary data functionality -- check conditions
   aux.check <- !(is.null(h) & is.null(group))
 
@@ -141,6 +491,8 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
       stop("The auxiliary data functionality is not yet supported for multiple sensitive item designs.")
     if (method != "nls")
       stop("The auxiliary data functionality is currently supported only for the nonlinear least squares method.")
+    if (robust)
+      stop("The auxiliary data functionality is not yet compatible with the robust functionality.")
   }
 
   n <- nrow(x.treatment) + nrow(x.control)
@@ -237,158 +589,258 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
     
   } else if (design=="standard" & method != "lm") {
     
-    ##
-    # Run two-step estimator
-    
-    vcov.twostep.std <- function(treat.fit, control.fit, J, y, treat, x) {
-	
-      n <- length(y)
-      y1 <- y[treat == 1]
-      y0 <- y[treat == 0]
-      x1 <- x[treat == 1, , drop = FALSE]
-      x0 <- x[treat == 0, , drop = FALSE]
-      delta <- coef(treat.fit)
-      gamma <- coef(control.fit)
+    if (!(method == "nls" & error != "none")) {
       
-      m1 <- c((y1 - J*logistic(x1 %*% gamma) - logistic(x1 %*% delta)) *
-              logistic(x1 %*% delta)/(1+exp(x1 %*% delta))) * x1
-      m0 <- c((y0 - J*logistic(x0 %*% gamma)) * J *
-              logistic(x0 %*% gamma)/(1+exp(x0 %*% gamma))) * x0
-      Em1 <- t(m1) %*% m1 / n
-      Em0 <- t(m0) %*% m0 / n
-      F <- adiag(Em1, Em0)
-      Gtmp <- c(logistic(x1 %*% delta)/(1 + exp(x1 %*% delta))) * x1
-      G1 <- -t(Gtmp) %*% Gtmp / n  
-      Gtmp <- c(sqrt(J*logistic(x1 %*% delta)*logistic(x1 %*% gamma)/
-                     ((1 + exp(x1 %*% delta))*(1 + exp(x1 %*% gamma))))) * x1
-      G2 <- -t(Gtmp) %*% Gtmp / n
-      Gtmp <- c(J*logistic(x0 %*% gamma)/(1 + exp(x0 %*% gamma))) * x0
-      G3 <- -t(Gtmp) %*% Gtmp / n
-      invG1 <- solve(G1)
-      invG3 <- solve(G3)
-      invG <- rbind(cbind(invG1, - invG1 %*% G2 %*% invG3),
-                    cbind(matrix(0, ncol = ncol(G1), nrow = nrow(G3)), invG3))
+      ##
+      # Run two-step estimator
       
-      return(invG %*% F %*% t(invG) / n)
-      
-    }
-    
-    ## fit to the control group
-    fit.glm.control <- glm(cbind(y.control, J-y.control) ~ x.control - 1,
-                           family = binomial(logit), weights = w.control)
-    
-    coef.glm.control <- coef(fit.glm.control)
-    names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = "")
-
-    if(fit.start == "nls") {
-      if(is.null(ictreg.call$control)){
-        fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
-                                             paste(paste("beta", 1:length(coef.glm.control),
-                                                         sep=""), collapse= ","), "))")) ,
-                           start = coef.glm.control, weights = w.control, control =
-                           nls.control(maxiter=maxIter, warnOnly=TRUE), ... = ...)
-      } else {
-        fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
-                                             paste(paste("beta", 1:length(coef.glm.control),
-                                                         sep=""), collapse= ","), "))")) ,
-                           weights = w.control,
-                           start = coef.glm.control, ... = ...)
+      vcov.twostep.std <- function(treat.fit, control.fit, J, y, treat, x) {
+        
+        n <- length(y)
+        y1 <- y[treat == 1]
+        y0 <- y[treat == 0]
+        x1 <- x[treat == 1, , drop = FALSE]
+        x0 <- x[treat == 0, , drop = FALSE]
+        delta <- coef(treat.fit)
+        gamma <- coef(control.fit)
+        
+        m1 <- c((y1 - J*logistic(x1 %*% gamma) - logistic(x1 %*% delta)) *
+                  logistic(x1 %*% delta)/(1+exp(x1 %*% delta))) * x1
+        m0 <- c((y0 - J*logistic(x0 %*% gamma)) * J *
+                  logistic(x0 %*% gamma)/(1+exp(x0 %*% gamma))) * x0
+        Em1 <- t(m1) %*% m1 / n
+        Em0 <- t(m0) %*% m0 / n
+        F <- adiag(Em1, Em0)
+        Gtmp <- c(logistic(x1 %*% delta)/(1 + exp(x1 %*% delta))) * x1
+        G1 <- -t(Gtmp) %*% Gtmp / n  
+        Gtmp <- c(sqrt(J*logistic(x1 %*% delta)*logistic(x1 %*% gamma)/
+                         ((1 + exp(x1 %*% delta))*(1 + exp(x1 %*% gamma))))) * x1
+        G2 <- -t(Gtmp) %*% Gtmp / n
+        Gtmp <- c(J*logistic(x0 %*% gamma)/(1 + exp(x0 %*% gamma))) * x0
+        G3 <- -t(Gtmp) %*% Gtmp / n
+        invG1 <- solve(G1, tol = 1e-20)
+        invG3 <- solve(G3, tol = 1e-20)
+        invG <- rbind(cbind(invG1, - invG1 %*% G2 %*% invG3),
+                      cbind(matrix(0, ncol = ncol(G1), nrow = nrow(G3)), invG3))
+        
+        return(invG %*% F %*% t(invG) / n)
+        
       }
       
-      fit.control.coef <- summary(fit.control)$parameters[,1]
+      ## fit to the control group
+      fit.glm.control <- glm(cbind(y.control, J-y.control) ~ x.control - 1,
+                             family = binomial(logit), weights = w.control)
       
-    } else if (fit.start == "glm") {
-      fit.control <- fit.glm.control
-      fit.control.coef <- coef(fit.glm.control)
-    } else if (fit.start == "lm") {
-      fit.control <- lm(y.control ~ x.control - 1, weights = w.control)
-      fit.control.coef <- coef(fit.glm.control)
-    }
-    
-    fit.treat <- vcov.nls <- se.twostep <- par.treat.nls.std <- list()
-
-    for(m in 1:length(treatment.values)){
-
-      curr.treat <- t[t!=0] == treatment.values[m]
-
-      x.treatment.curr <- x.treatment[curr.treat, , drop = F]
-      w.treatment.curr <- w.treatment[curr.treat]
-
-      ## calculate the adjusted outcome    
-      y.treatment.pred <- y.treatment[curr.treat] - logistic(x.treatment.curr
-                                                             %*% fit.control.coef)*J
+      coef.glm.control <- coef(fit.glm.control)
+      names(coef.glm.control) <- paste("beta", 1:length(coef.glm.control), sep = "")
       
-      ## fit to the treated		
-      y.treatment.pred.temp <- ifelse(y.treatment.pred>1, 1, y.treatment.pred)
-      y.treatment.pred.temp <- ifelse(y.treatment.pred.temp<0, 0, y.treatment.pred.temp)
-      
-      alpha <- mean(y.treatment.pred.temp)
-      
-      y.treatment.start <- ifelse(y.treatment.pred.temp >
-                                  quantile(y.treatment.pred.temp, alpha), 1, 0)
-      
-      try(fit.glm.treat <- glm(cbind(y.treatment.start, 1 - y.treatment.start) ~ x.treatment.curr - 1,
-                               family = binomial(logit), weights = w.treatment.curr), silent = F)
-      try(coef.glm.treat <- coef(fit.glm.treat), silent = T)
-      try(names(coef.glm.treat) <- paste("beta", 1:length(coef.glm.treat), sep = ""), silent = T)
-
       if(fit.start == "nls") {
-        if(exists("coef.glm.treat")) {
-          if (is.null(ictreg.call$control)) {
-            fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
-                                                    paste(paste("beta", 1:length(coef.glm.treat),
-                                                                sep=""), collapse= ","), "))")) ,
-                                  start = coef.glm.treat, weights = w.treatment.curr, control =
-                                  nls.control(maxiter = maxIter, warnOnly = TRUE), ... = ...)
-          } else {
-            fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
-                                                    paste(paste("beta", 1:length(coef.glm.treat),
-                                                                sep=""), collapse= ","), "))")) ,
-                                  start = coef.glm.treat, weights = w.treatment.curr, ... = ...)
-          }
+        if(is.null(ictreg.call$control)){
+          fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
+                                               paste(paste("beta", 1:length(coef.glm.control),
+                                                           sep=""), collapse= ","), "))")) ,
+                              start = coef.glm.control, weights = w.control, control =
+                                nls.control(maxiter=maxIter, warnOnly=TRUE), ... = ...)
         } else {
-          if (is.null(ictreg.call$control)) {
-            fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
-                                                    paste(paste("beta", 1:length(coef.glm.treat),
-                                                                sep=""), collapse= ","), "))")),
-                                  weights = w.treatment.curr,
-                                  control = nls.control(maxiter = maxIter, warnOnly = TRUE),
-                                  ... = ...)
-          } else {
-            fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
-                                                    paste(paste("beta", 1:length(coef.glm.treat),
-                                                                sep=""), collapse= ","), "))")) ,
-                                  weights = w.treatment.curr,
-                                  ... = ...)
-          }
+          fit.control <- nls( as.formula(paste("I(y.control/J) ~ logistic(x.control %*% c(",
+                                               paste(paste("beta", 1:length(coef.glm.control),
+                                                           sep=""), collapse= ","), "))")) ,
+                              weights = w.control,
+                              start = coef.glm.control, ... = ...)
         }
         
+        fit.control.coef <- summary(fit.control)$parameters[,1]
+        
       } else if (fit.start == "glm") {
-        fit.treat[[m]] <- fit.glm.treat
+        fit.control <- fit.glm.control
+        fit.control.coef <- coef(fit.glm.control)
       } else if (fit.start == "lm") {
-        fit.treat[[m]] <- lm(y.treatment.pred ~ x.treatment.curr - 1, weights = w.treatment.curr)
+        fit.control <- lm(y.control ~ x.control - 1, weights = w.control)
+        fit.control.coef <- coef(fit.control)
       }
-
-      sample.curr <- t==0 | t==treatment.values[m]
       
-      vcov.nls[[m]] <- vcov.twostep.std(fit.treat[[m]], fit.control, J,
-                               y.all[sample.curr], t[sample.curr]>0, x.all[sample.curr, , drop = FALSE])
+      fit.treat <- vcov.nls <- se.twostep <- par.treat.nls.std <- list()
+      
+      for(m in 1:length(treatment.values)){
+        
+        curr.treat <- t[t!=0] == treatment.values[m]
+        
+        x.treatment.curr <- x.treatment[curr.treat, , drop = F]
+        w.treatment.curr <- w.treatment[curr.treat]
+        
+        ## calculate the adjusted outcome    
+        y.treatment.pred <- y.treatment[curr.treat] - logistic(x.treatment.curr
+                                                               %*% fit.control.coef)*J
+        
+        ## fit to the treated		
+        y.treatment.pred.temp <- ifelse(y.treatment.pred>1, 1, y.treatment.pred)
+        y.treatment.pred.temp <- ifelse(y.treatment.pred.temp<0, 0, y.treatment.pred.temp)
+        
+        alpha <- mean(y.treatment.pred.temp)
+        
+        y.treatment.start <- ifelse(y.treatment.pred.temp >
+                                      quantile(y.treatment.pred.temp, alpha), 1, 0)
+        
+        try(fit.glm.treat <- glm(cbind(y.treatment.start, 1 - y.treatment.start) ~ x.treatment.curr - 1,
+                                 family = binomial(logit), weights = w.treatment.curr), silent = F)
+        try(coef.glm.treat <- coef(fit.glm.treat), silent = T)
+        try(names(coef.glm.treat) <- paste("beta", 1:length(coef.glm.treat), sep = ""), silent = T)
+        
+        if(fit.start == "nls") {
+          if(exists("coef.glm.treat")) {
+            if (is.null(ictreg.call$control)) {
+              fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
+                                                      paste(paste("beta", 1:length(coef.glm.treat),
+                                                                  sep=""), collapse= ","), "))")) ,
+                                     start = coef.glm.treat, weights = w.treatment.curr, control =
+                                       nls.control(maxiter = maxIter, warnOnly = TRUE), ... = ...)
+            } else {
+              fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
+                                                      paste(paste("beta", 1:length(coef.glm.treat),
+                                                                  sep=""), collapse= ","), "))")) ,
+                                     start = coef.glm.treat, weights = w.treatment.curr, ... = ...)
+            }
+          } else {
+            if (is.null(ictreg.call$control)) {
+              fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
+                                                      paste(paste("beta", 1:length(coef.glm.treat),
+                                                                  sep=""), collapse= ","), "))")),
+                                     weights = w.treatment.curr,
+                                     control = nls.control(maxiter = maxIter, warnOnly = TRUE),
+                                     ... = ...)
+            } else {
+              fit.treat[[m]] <- nls( as.formula(paste("y.treatment.pred ~ logistic(x.treatment.curr %*% c(",
+                                                      paste(paste("beta", 1:length(coef.glm.treat),
+                                                                  sep=""), collapse= ","), "))")) ,
+                                     weights = w.treatment.curr,
+                                     ... = ...)
+            }
+          }
+          
+        } else if (fit.start == "glm") {
+          fit.treat[[m]] <- fit.glm.treat
+        } else if (fit.start == "lm") {
+          fit.treat[[m]] <- lm(y.treatment.pred ~ x.treatment.curr - 1, weights = w.treatment.curr)
+        }
+        
+        sample.curr <- t==0 | t==treatment.values[m]
+        
+        vcov.nls[[m]] <- vcov.twostep.std(fit.treat[[m]], fit.control, J,
+                                          y.all[sample.curr], t[sample.curr]>0, x.all[sample.curr, , drop = FALSE])
+        
+        se.twostep[[m]] <- sqrt(diag(vcov.nls[[m]]))
+        par.treat.nls.std[[m]] <- coef(fit.treat[[m]])
+        
+      }
+      
+      if(multi == FALSE) {
+        fit.treat <- fit.treat[[1]]
+        vcov.nls <- vcov.nls[[1]]
+        se.twostep <- se.twostep[[1]]
+        par.treat.nls.std <- par.treat.nls.std[[m]]
+      }
+      
+      par.control.nls.std <- coef(fit.control)
+      
+    } else if (error == "topcode" & method == "nls") {
+      
+      ## NLS top-coded error model
+      
+      #\l[Y_i - pJ - T_i\{ p + (1-p) \E(Z_i \mid X_i) \}- (1-p) \E(Y_i^\ast \mid X_i) \r]^2
+      
+      sse_nls_topcoded <- function(par, J, y, treat, x){
+        pstar <- par[1]
+        p <- exp(pstar) / (1 + exp(pstar))
+        
+        k <- ncol(x)
+        coef.h <- par[2:(k + 1)]
+        coef.g <- par[(k + 2):(2 * k + 1)]
+        gX <- logistic(x %*% coef.g)
+        hX <- logistic(x %*% coef.h)
 
-      se.twostep[[m]] <- sqrt(diag(vcov.nls[[m]]))
-      par.treat.nls.std[[m]] <- coef(fit.treat[[m]])
+        sse <- sum((y - (p * J + treat * (p + (1 - p) * gX) + (1 - p) * J * hX)) ^ 2)
+        
+        return(sse)
+      }
+      
+      k <- ncol(x.all)
+      
+      start <- runif(k*2 + 1, min = -.5, max = .5)
+      
+      NLSfit <- optim(par = start, 
+                      fn = sse_nls_topcoded, J = J, y = y.all,
+                      treat = t, x = x.all, hessian = TRUE, control = list(maxit = maxIter))
+      
+      vcov.nls <- solve(NLSfit$hessian, tol = 1e-20)
+      se.nls <- sqrt(diag(vcov.nls))
+      
+      par.treat <- NLSfit$par[(k + 2):(2 * k + 1)]
+      par.control <- NLSfit$par[2:(k + 1)]
+      se.treat <- se.nls[(k + 2):(2 * k + 1)]
+      se.control <- se.nls[2:(k + 1)]
+      
+      p.est <- logistic(NLSfit$par[1])
+      p.ci <- c("lwr" = logistic(NLSfit$par[1] - qnorm(.975)*se.nls[1]),
+                "upr" = logistic(NLSfit$par[1] + qnorm(.975)*se.nls[1]))
+      
+    } else if (error == "uniform" & method == "nls") {
+      
+      ## NLS uniform error model
+      
+      #\frac{p_0 (1-T_i) J}{2} + T_i \l\{\frac{p_1 (J+1)}{2} +
+      #    (1-p_1)\E(Z_i \mid X_i)\r\}  \nonumber \\
+      # + \{(1-T_i)(1 - p_0) + T_i(1-p_1)\} \E(Y_i^\ast \mid X_i)
+      
+      # For the parameter p, we use the logit transformation by defining a new parameter p* = log {p / (1-p)}.  Then, substitute p = exp(p*) / { 1 + exp(p*)} into equation 11.
+      
+      sse_nls_uniform <- function(par, J, y, treat, x){
+        p0star <- par[1]
+        p1star <- par[2]
+        p0 <- exp(p0star) / (1 + exp(p0star))
+        p1 <- exp(p1star) / (1 + exp(p1star))
+        
+        k <- ncol(x)
+        coef.h <- par[3:(k + 2)]
+        coef.g <- par[(k + 3):(2 * k + 2)]
+        gX <- logistic(x %*% coef.g)
+        hX <- logistic(x %*% coef.h)
+        
+        sse <- sum((y - ((p0 * (1 - treat) * J) / 2 + 
+                    treat * ((p1 * (J + 1)) / 2 + 
+                               (1 - p1) * gX) +
+                    ((1 - treat) * (1 - p0) + 
+                       treat * (1 - p1)) * J * hX)) ^ 2)
+        
+        return(sse)
+      }
+      
+      k <- ncol(x.all)
+      
+      start <- runif(k*2 + 2, min = -.5, max = .5)
+      
+      NLSfit <- optim(par = start, 
+                      fn = sse_nls_uniform, J = J, y = y.all,
+                      treat = t, x = x.all, hessian = TRUE, control = list(maxit = maxIter))
+      
+      vcov.nls <- solve(NLSfit$hessian, tol = 1e-20)
+      se.nls <- sqrt(diag(vcov.nls))
+      
+      par.treat <- NLSfit$par[(k + 3):(2 * k + 2)]
+      par.control <- NLSfit$par[3:(k + 2)]
+      se.treat <- se.nls[(k + 3):(2 * k + 2)]
+      se.control <- se.nls[3:(k + 2)]
+      
+      p0.est <- logistic(NLSfit$par[1])
+      p0.ci <- c("lwr" = logistic(NLSfit$par[1] - qnorm(.975)*se.nls[1]),
+                "upr" = logistic(NLSfit$par[1] + qnorm(.975)*se.nls[1]))
+      
+      p1.est <- logistic(NLSfit$par[2])
+      p1.ci <- c("lwr" = logistic(NLSfit$par[2] - qnorm(.975)*se.nls[2]),
+                "upr" = logistic(NLSfit$par[2] + qnorm(.975)*se.nls[2]))
       
     }
-
-    if(multi == FALSE) {
-      fit.treat <- fit.treat[[1]]
-      vcov.nls <- vcov.nls[[1]]
-      se.twostep <- se.twostep[[1]]
-      par.treat.nls.std <- par.treat.nls.std[[m]]
-    }
-    
-    par.control.nls.std <- coef(fit.control)
-
-    if(method=="ml") {
+      
+    if(method=="ml" & robust == FALSE) {
       
       if(boundary == FALSE) {
       
@@ -403,7 +855,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
           ##
           ## observed-data log-likelihood for beta binomial
           ##
-          obs.llik.std <- function(par, J, y, treat, x, wt, const = FALSE) {
+          obs.llik.std <- function(par, J, y, treat, x, wt, const = FALSE, fit.sensitive) {
             
             k <- ncol(x)
             if (const) {
@@ -458,14 +910,20 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
               p0y <- 0
             }
             
-            return(p10+p1J1+p1y+p0y)
+            if (fit.sensitive == "bayesglm") {
+              p.prior.sensitive <- sum(dcauchy(x = coef.g, scale = rep(2.5, length(coef.g)), log = TRUE))
+            } else {
+              p.prior.sensitive <- 0
+            }
+            
+            return(p10+p1J1+p1y+p0y+p.prior.sensitive)
             
           }
           
           ##
           ##  Observed data log-likelihood for binomial
           ##
-          obs.llik.binom.std <- function(par, J, y, treat, x, wt, const = FALSE) {
+          obs.llik.binom.std <- function(par, J, y, treat, x, wt, const = FALSE, fit.sensitive) {
             
             k <- ncol(x)
             if (const) {
@@ -510,7 +968,13 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
               p0y <- 0
             }
             
-            return(p10+p1J1+p1y+p0y)
+            if (fit.sensitive == "bayesglm") {
+              p.prior.sensitive <- sum(dcauchy(x = coef.g, scale = rep(2.5, length(coef.g)), log = TRUE))
+            } else {
+              p.prior.sensitive <- 0
+            }
+            
+            return(p10+p1J1+p1y+p0y+p.prior.sensitive)
           }
           
           ##
@@ -579,14 +1043,25 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
           }
           
           ## Mstep 1: weighted MLE for logistic regression
-          wlogit.fit.std <- function(y, treat, x, w, par = NULL, wt) {
+          wlogit.fit.std <- function(y, treat, x, w, par = NULL, wt, fit.sensitive) {
               ## wt is survey weights
               
             yrep <- rep(c(1,0), each = length(y))
             xrep <- rbind(x, x)
             wrep <- c(w, 1-w)
             wtrep <- c(wt, wt)
-            return(glm(cbind(yrep, 1-yrep) ~ xrep - 1, weights = wrep * wtrep, family = binomial(logit), start = par))
+            
+            if(fit.sensitive == "glm"){
+              fit <- glm(cbind(yrep, 1-yrep) ~ xrep - 1, weights = wrep * wtrep, family = binomial(logit), start = par)
+            } else if (fit.sensitive == "bayesglm"){
+              fit <- bayesglm(cbind(yrep, 1-yrep) ~ xrep - 1,
+                                        weights = wrep * wtrep, family = binomial(logit),
+                                        start = par, control = glm.control(maxit = maxIter), scaled = F)
+            } else {
+              error("Please choose 'glm' or 'bayesglm' for fit.sensitive.")
+            }
+            
+            return(fit)
             
           }
           
@@ -648,9 +1123,9 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
             pllik <- -Inf
             
             if (overdispersed==T) {
-              llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
+              llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive)
             } else {
-              llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
+              llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive)
             }
             
             Not0 <- (t & (y.all == (J+1)))
@@ -663,7 +1138,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
                 
                 w <- Estep.std(par, J, y.all, t, x.all)
                 
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+3):length(par)], wt = w.all)
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+3):length(par)], wt = w.all, fit.sensitive = fit.sensitive)
               
                 y1 <- y.all
                 
@@ -691,7 +1166,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
                 
                 w <- Estep.binom.std(par, J, y.all, t, x.all)
 
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+1):length(par)], wt = w.all)
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar*2+1):length(par)], wt = w.all, fit.sensitive = fit.sensitive)
                 
                 fit0 <- glm(cbind(y.all[!Not0], J-y.all[!Not0]) ~ x.all[!Not0,] - 1,
                             family = binomial(logit), weights = (1-w[!Not0]) * w.all[!Not0], start = par[1:(nPar)])
@@ -714,9 +1189,9 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
                 cat(paste(counter, round(llik, 4), "\n"))
               
               if (overdispersed==T) {
-                llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
+                llik <- obs.llik.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive)
               } else {
-                llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all)
+                llik <- obs.llik.binom.std(par, J = J, y = y.all, treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive)
               }
               
               counter <- counter + 1
@@ -734,13 +1209,13 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
             
             if (overdispersed==T) {
               MLEfit <- optim(par, obs.llik.std, method = "BFGS", J = J, y = y.all,
-                              treat = t, x = x.all, wt = w.all, hessian = TRUE, control = list(maxit = 0))
-              vcov.mle <- solve(-MLEfit$hessian)
+                              treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive, hessian = TRUE, control = list(maxit = 0))
+              vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
               se.mle <- sqrt(diag(vcov.mle))
             } else {
               MLEfit <- optim(par, obs.llik.binom.std, method = "BFGS", J = J, y = y.all,
-                              treat = t, x = x.all, wt = w.all, hessian = TRUE, control = list(maxit = 0))
-              vcov.mle <- solve(-MLEfit$hessian)
+                              treat = t, x = x.all, wt = w.all, fit.sensitive = fit.sensitive, hessian = TRUE, control = list(maxit = 0))
+              vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
               se.mle <- sqrt(diag(vcov.mle))
             }
             
@@ -758,10 +1233,10 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
             
             if (overdispersed==T) {
               llik.const <- obs.llik.std(par, J = J, y = y.all, treat = t,
-                                         x = x.all, wt = w.all, const = TRUE)
+                                         x = x.all, wt = w.all, fit.sensitive = fit.sensitive, const = TRUE)
             } else {
               llik.const <- obs.llik.binom.std(par, J = J, y = y.all, treat = t,
-                                               x = x.all, wt = w.all, const = TRUE)
+                                               x = x.all, wt = w.all, fit.sensitive = fit.sensitive, const = TRUE)
             }
             
             counter <- 0
@@ -770,12 +1245,14 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
               if (overdispersed==T) {
                 
                 w <- Estep.std(par, J, y.all, t, x.all, const = TRUE)
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+2):(nPar*2+1)], wt = w.all)
+                
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+2):(nPar*2+1)], wt = w.all, fit.sensitive = fit.sensitive)
                 
               } else {
                 
                 w <- Estep.binom.std(par, J, y.all, t, x.all, const = TRUE)
-                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+1):(nPar*2)], wt = w.all)
+                
+                lfit <- wlogit.fit.std(y.all, t, x.all, w, par = par[(nPar+1):(nPar*2)], wt = w.all, fit.sensitive = fit.sensitive)
                 
               }
               
@@ -839,10 +1316,10 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
               
               if (overdispersed==T) {
                 llik.const <- obs.llik.std(par, J = J, y = y.all, treat = t,
-                                           x = x.all, wt = w.all, const = TRUE)
+                                           x = x.all, wt = w.all, const = TRUE, fit.sensitive = fit.sensitive)
               } else {
                 llik.const <- obs.llik.binom.std(par, J = J, y = y.all, treat = t,
-                                                 x = x.all, wt = w.all, const = TRUE)
+                                                 x = x.all, wt = w.all, const = TRUE, fit.sensitive = fit.sensitive)
               }
               
               counter <- counter + 1
@@ -858,19 +1335,19 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
             if (overdispersed==T) {
               
               MLEfit <- optim(par, obs.llik.std, method = "BFGS", J = J,
-                              y = y.all, treat = t, x = x.all, wt = w.all, const = TRUE,
+                              y = y.all, treat = t, x = x.all, wt = w.all, const = TRUE, fit.sensitive = fit.sensitive,
                               hessian = TRUE, control = list(maxit = 0))
               
-              vcov.mle <- solve(-MLEfit$hessian)
+              vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
               se.mle <- sqrt(diag(vcov.mle))
               
             } else {
               
               MLEfit <- optim(par, obs.llik.binom.std, method = "BFGS", J = J,
-                              y = y.all, treat = t,  x = x.all, wt = w.all, const = TRUE,
+                              y = y.all, treat = t,  x = x.all, wt = w.all, const = TRUE, fit.sensitive = fit.sensitive,
                               hessian = TRUE, control = list(maxit = 0))
               
-              vcov.mle <- solve(-MLEfit$hessian)
+              vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
               se.mle <- sqrt(diag(vcov.mle))
               
             }
@@ -1182,7 +1659,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
                           x = x.all, hessian = TRUE, control = list(maxit = 0),
                           multi = multi.condition)
           
-          vcov.mle <- solve(-MLEfit$hessian)
+          vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
           
           se.mle <- sqrt(diag(vcov.mle))
   
@@ -1667,14 +2144,14 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
             } else if(ceiling.fit=="bayesglm") {
               
               if (intercept.only.ceiling == F) {
-                qufit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
                                                    paste(x.vars.ceiling, collapse=" + "))),
                                   weights = dtmpC$w, family = binomial(logit),
                                   start = coef.qufit.start, data = dtmpC,
                                   control = glm.control(maxit = maxIter), scaled = F)
                 
               } else {
-                qufit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                qufit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
                                   weights = dtmpC$w, family = binomial(logit),
                                   start = coef.qufit.start, data = dtmpC,
                                   control = glm.control(maxit = maxIter), scaled = F)
@@ -1698,13 +2175,13 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
                            control = glm.control(maxit = maxIter))
             } else if(floor.fit=="bayesglm") {
               if (intercept.only.floor == F) {
-                qlfit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
+                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ ",
                                                    paste(x.vars.floor, collapse=" + "))),
                                   weights = dtmpF$w, family = binomial(logit),
                                   start = coef.qlfit.start, data = dtmpF,
                                   control = glm.control(maxit = maxIter), scaled = F)
               } else {
-                qlfit <- bayesglm.internal(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
+                qlfit <- bayesglm(as.formula(paste("cbind(", y.var, ", 1-", y.var, ") ~ 1")),
                                   weights = dtmpF$w, family = binomial(logit),
                                   start = coef.qlfit.start, data = dtmpF,
                                   control = glm.control(maxit = maxIter), scaled = F)
@@ -1896,8 +2373,8 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
         
       }
       
-      invH <- solve(H)
-      invM <- solve(M)
+      invH <- solve(H, tol = 1e-20)
+      invM <- solve(M, tol = 1e-20)
       
       invG <- rbind( cbind(invH, -invH %*% L %*% invM),
                     cbind(matrix(0, nrow(invM), ncol(invH)), invM)  ) 
@@ -2163,13 +2640,1180 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
       MLEfit <- optim(par, fn = obs.llik.modified, method = "BFGS", y = y.all, X = x.all,
                       treat = t, hessian = TRUE, control = list(maxit = 0))
       
-      vcov.mle <- solve(-MLEfit$hessian)
+      vcov.mle <- solve(-MLEfit$hessian, tol = 1e-20)
       se.mle <- sqrt(diag(vcov.mle))
       
     } # end ml for modified design
     
   } # end modified design
   
+  # one-step estimator
+  if (method == "onestep") {
+
+    if(error!="none") stop("Measurement error models not implemented for this method.")
+    if(robust) stop("Robust functionality not implemented for this method")
+    if(!is.null(h)|!is.null(group)) stop("Auxiliary info functionality not implemented for this method")
+
+    start.par <- c(coef(fit.treat), fit.control.coef)/5
+
+    nls.objective <- function(params, J, Tr, Y, X) {
+      
+      k  <- length(params)/2
+      beta  <- params[1:k]
+      gamma <- params[(k + 1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      tmp1 <- c(Tr * (Y - logistic(Xb) - J * logistic(Xg)) * logistic(Xb)/(1 + exp(Xb))) * X
+      tmp0 <- c((1 - Tr) * (Y - J * logistic(Xg)) * J * logistic(Xg)/(1 + exp(Xg))) * X
+    
+      m1 <- colMeans(tmp1)
+      m0 <- colMeans(tmp0)
+
+      W  <- ginv(adiag(t(tmp1) %*% tmp1/n, t(tmp0) %*% tmp0/n))
+      
+      as.numeric(t(c(m1, m0)) %*% W %*% c(m1, m0))
+
+    }
+
+    vcov.twostep.std.onestep <- function(params, J, Tr, Y, X) {
+    
+        n  <- length(Y)
+        k  <- length(params)/2
+        beta  <- params[1:k]
+        gamma <- params[(k + 1):(2*k)]
+
+        Xb <- X %*% beta
+        Xg <- X %*% gamma
+
+        tmp1 <- c(Tr * (Y - logistic(Xb) - J * logistic(Xg)) * logistic(Xb)/(1 + exp(Xb))) * X
+        tmp0 <- c((1 - Tr) * (Y - J * logistic(Xg)) * J * logistic(Xg)/(1 + exp(Xg))) * X
+        Em1 <- t(tmp1) %*% tmp1 / n
+        Em0 <- t(tmp0) %*% tmp0 / n
+        F <- adiag(Em1, Em0)
+        Gtmp <- c(Tr * logistic(Xb)/(1 + exp(Xb))) * X
+        G1 <- -t(Gtmp) %*% Gtmp / n  
+        Gtmp <- c(sqrt(J*Tr*logistic(Xb)*logistic(Xg)/
+                       ((1 + exp(Xb))*(1 + exp(Xg))))) * X
+        G2 <- -t(Gtmp) %*% Gtmp / n
+        Gtmp <- c(J*(1-Tr)*logistic(Xg)/(1 + exp(Xg))) * X
+        G3 <- -t(Gtmp) %*% Gtmp / n
+        invG1 <- ginv(G1)
+        invG3 <- ginv(G3)
+        invG <- rbind(cbind(invG1, - invG1 %*% G2 %*% invG3),
+                      cbind(matrix(0, ncol = ncol(G1), nrow = nrow(G3)), invG3))
+        
+        return(invG %*% F %*% t(invG) / n)
+        
+      }
+  
+      optim.out <- optim(fn = nls.objective,
+        par = start.par, J = J, Tr = t, Y = y.all, X = x.all, 
+        control = list(maxit = 5000))
+
+      vcov <- vcov.twostep.std.onestep(params = optim.out$par, J = J, Tr = t, Y = y.all, X = x.all)
+      rownames(vcov) <- colnames(vcov) <- rep(colnames(x.all), 2)
+      k <- ncol(x.all)
+
+      onestep.par.treat <- optim.out$par[1:k]
+      onestep.par.control <- optim.out$par[(k+1):(2*k)]
+      onestep.vcov <- vcov
+      onestep.se.treat <- sqrt(diag(vcov))[1:k]
+      onestep.se.control <- sqrt(diag(vcov))[(k+1):(2*k)]
+      onestep.convergence <- optim.out$convergence
+
+  }
+
+  # measurement error models
+  if (error == "topcode" & method == "ml") {
+    
+    ####################
+    # TOP CODING ERROR #
+    ####################
+    obs.llik.top <- function(all.pars, formula, data, treat, J) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+      beta <- all.pars[1:k]
+      gamma <- all.pars[(k+1):(2*k)]
+
+      log.odds <- all.pars[2*k + 1]
+      p0 <- logistic(log.odds)
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      lliks <- ifelse(Y == J + 1, log(p0 + (1 - p0) * logistic(Xb) * logistic(Xg)^J), 
+        ifelse(Y == J & Tr == 0, log(p0 + (1 - p0) * logistic(Xg)^J),  
+          ifelse(Y == 0 & Tr == 1, log((1 - p0) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J), 
+        ifelse(Y %in% 1:J & Tr == 1, log(
+          (1 - p0) * (logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * (1 - logistic(Xg))^(J-Y+1) + 
+            (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J-Y))), 
+          log((1 - p0) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J-Y))))))
+     
+     sum(lliks) 
+
+    }
+
+    topcodeE <- function(formula, data, treat, J, p0, params) {
+      
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+      beta <- params[1:k]
+      gamma <- params[(k+1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      # probability of top coding error
+      xi <- ifelse(Y == J + 1, 
+        p0/(p0 * (1 - logistic(Xb) * logistic(Xg)^J) + logistic(Xb)*logistic(Xg)^J), 
+          ifelse(Tr == 0 & Y == J, 
+            p0/(p0 * (1 - logistic(Xg)^J) + logistic(Xg)^J), 
+              0
+            )
+        )
+
+      # probability of sensitive trait
+      eta <- ifelse(Tr == 1 & Y == 0, 0,
+        ifelse(Y == J + 1, 
+          ((1-p0) * logistic(Xb) * logistic(Xg)^J + p0 * logistic(Xb))/
+            (p0 + (1-p0)*logistic(Xb)*logistic(Xg)^J),
+          logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * (1 - logistic(Xg))^(J-Y+1)/ 
+            (logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * (1 - logistic(Xg))^(J-Y+1) + 
+              (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y))
+          )
+        )
+
+      # eta <- ifelse(Tr == 0, 0, eta)
+
+      # latent number of control items
+      yzeta0 <- ifelse(Tr == 0 & Y == J, 
+        J * logistic(Xg)^J/(p0 * (1-logistic(Xg)^J) + logistic(Xg)^J), 0)
+
+      yzeta0y <- rep(0, n)
+      for (y in 1:(J - 1)) {
+        tmp <- ifelse(Tr == 0 & Y == J, 
+          y * p0 * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+            (p0 * (1 - logistic(Xg)^J) + logistic(Xg)^J), 
+              ifelse(Tr == 0 & Y == y, y, 0))
+        yzeta0y <- yzeta0y + tmp
+      }
+
+      yzeta1J <- ifelse(Tr == 1 & Y == J + 1, 
+        J * ((1-p0) * logistic(Xb) * logistic(Xg)^J + p0*logistic(Xg)^J)/(p0 + (1-p0)*logistic(Xb)*logistic(Xg)^J), 
+          ifelse(Tr == 1 & Y == J, 
+        J * (1 - logistic(Xb)) * logistic(Xg)^J/
+          ((1 - logistic(Xb)) * logistic(Xg)^J + logistic(Xb) * J * logistic(Xg)^(J-1) * (1 - logistic(Xg))), 
+            0))
+
+      yzeta1y <- rep(0, n)
+      for (y in 1:(J - 1)) {
+        tmp <- ifelse(Tr == 1 & Y == y + 1, 
+          y * logistic(Xb)*choose(J, Y-1)*logistic(Xg)^(Y-1)*(1-logistic(Xg))^(J-Y+1)/
+          (logistic(Xb)*choose(J, Y-1)*logistic(Xg)^(Y-1)*(1-logistic(Xg))^(J-Y+1) + 
+            (1-logistic(Xb))*choose(J, Y)*logistic(Xg)^Y*(1-logistic(Xg))^(J-Y)),
+          ifelse(Tr == 1 & Y == y, 
+            y * (1-logistic(Xb))*choose(J, Y)*logistic(Xg)^Y*(1-logistic(Xg))^(J-Y)/
+          ((1-logistic(Xb))*choose(J, Y)*logistic(Xg)^Y*(1-logistic(Xg))^(J-Y) + 
+            logistic(Xb)*choose(J, Y-1)*logistic(Xg)^(Y-1)*(1-logistic(Xg))^(J-Y+1)), 
+          ifelse(Tr == 1 & Y == J + 1, 
+            (y * p0 * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y))/
+              (p0 + (1-p0)*logistic(Xb)*logistic(Xg)^J), 
+                0)))
+        yzeta1y <- yzeta1y + tmp
+
+      }
+
+      yzeta <- yzeta0 + yzeta0y + yzeta1J + yzeta1y
+
+      return(list(xi = signif(xi, 10), eta = signif(eta, 10), yzeta = signif(yzeta, 10)))
+      
+    }
+
+    topcodeM <- function(formula, data, treat, J, xi, eta, yzeta) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      if (length(attr(attr(mf, "terms"), "term.labels")) == 0) {
+
+        betaX <- rbind(X[Tr == 1, ], X[Tr == 1, ])
+        betaY <- rep(0:1, each = sum(Tr))
+
+        beta.fit <- glm(cbind(betaY, 1 - betaY) ~ 1, weights = c(1 - eta[Tr == 1], eta[Tr == 1]), 
+          family = binomial("logit"), control = list(maxit = 5000))
+
+        gammaX <- rbind(X, X)
+        gammaY <- rep(0:1, each = n)
+
+        gamma.fit <- glm(cbind(gammaY, 1 - gammaY) ~ 1, weights = c(J - yzeta, yzeta), 
+          family = binomial("logit"), control = list(maxit = 5000))
+
+      } else {
+
+        betaX <- rbind(X[Tr == 1, ], X[Tr == 1, ])
+        betaY <- rep(0:1, each = sum(Tr))
+
+        beta.fit <- glm(cbind(betaY, 1 - betaY) ~ betaX - 1, weights = c(1 - eta[Tr == 1], eta[Tr == 1]), 
+          family = binomial("logit"), control = list(maxit = 5000))
+
+        gammaX <- rbind(X, X)
+        gammaY <- rep(0:1, each = n)
+
+        gamma.fit <- glm(cbind(gammaY, 1 - gammaY) ~ gammaX - 1, weights = c(J - yzeta, yzeta), 
+          family = binomial("logit"), control = list(maxit = 5000))
+      }
+
+      return(list(beta.fit = beta.fit, gamma.fit = gamma.fit, 
+        pars = c(coef(beta.fit), coef(gamma.fit)), p0 = mean(xi)))
+
+    }
+
+    topcodeEM <- function(formula, data, treat, J, p0 = 0.05, params = NULL, eps = 1e-08, maxIter) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      if (is.null(params)) {
+        params <- c(coef.treat.start, coef.control.start)
+      }
+
+      beta  <- params[1:k]
+      gamma <- params[(k+1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      Estep0 <- topcodeE(formula, data, treat, J, p0, params)
+      Mstep0 <- topcodeM(formula, data, treat, J, 
+        eta = Estep0$eta, yzeta = Estep0$yzeta, xi = Estep0$xi)
+
+      Estep <- topcodeE(formula, data, treat, J, p0, params)
+      Mstep <- topcodeM(formula, data, treat, J, 
+        eta = Estep$eta, yzeta = Estep$yzeta, xi = Estep$xi)
+
+      par.holder <- c(Mstep$pars, Mstep$p0)
+
+      iteration <- 1
+
+      while ((iteration == 1 | max(abs(par.holder - c(Mstep$par, Mstep$p0))) > eps) & 
+        iteration <= maxIter) {
+
+        par.holder <- c(Mstep$pars, Mstep$p0)
+
+        obs.llik0 <- obs.llik.top(all.pars = c(Mstep$pars, log(Mstep$p0/(1-Mstep$p0))), 
+          formula, data, treat, J)
+
+        Estep <- topcodeE(formula, data, treat, J, p0 = Mstep$p0, params = Mstep$pars)
+        Mstep <- topcodeM(formula, data, treat, J, 
+          eta = Estep$eta, yzeta = Estep$yzeta, xi = Estep$xi)
+
+        obs.llik1 <- obs.llik.top(all.pars = c(Mstep$pars, log(Mstep$p0/(1-Mstep$p0))), 
+          formula, data, treat, J)
+
+        if(signif(obs.llik1) < signif(obs.llik0)) warning("Observed-data likelihood is not monotonically increasing.")
+        iteration <- iteration + 1
+
+      }
+
+      if (iteration == maxIter) warning("Maximum number of iterations reached.")
+
+      optim.out <- optim(fn = obs.llik.top, hessian = TRUE, 
+        par = c(Mstep$pars, log(Mstep$p0/(1 - Mstep$p0))), 
+        formula = formula, data = data, treat = treat, J = J, 
+        control = list(fnscale = -1))
+
+      vcov <- vcov.flip <- solve(-optim.out$hessian)
+      std.errors <- sqrt(diag(vcov))
+      vcov.flip[(1:k), (1:k)] <- vcov[(k+1):(2*k), (k+1):(2*k)] 
+      vcov.flip[(k+1):(2*k), (k+1):(2*k)] <- vcov[(1:k), (1:k)]
+
+      return(
+        list(
+          par.treat   = Mstep$par[1:k], 
+          par.control = Mstep$par[(k+1):(2*k)],
+          se.treat    = std.errors[1:k],
+          se.control  = std.errors[(k+1):(2*k)],
+          vcov        = vcov.flip, 
+          p.est       = mean(Estep$xi),
+          p.ci        = c("lwr" = logistic(optim.out$par[2*k+1] - qnorm(0.975)*std.errors[2*k+1]),
+            "upr" = logistic(optim.out$par[2*k+1] + qnorm(0.975)*std.errors[2*k+1])), 
+          lp.est      = optim.out$par[2*k+1], 
+          lp.se       = std.errors[2*k+1], 
+          iterations  = iteration, 
+          obs.llik    = optim.out$value
+          )
+        )
+
+    }
+
+    topcode.out <- topcodeEM(formula = formula, data = data, treat = treat, J = J, maxIter = maxIter)
+    topcode.par.treat <- topcode.out$par.treat
+    topcode.par.control <- topcode.out$par.control
+    topcode.vcov <- topcode.out$vcov
+    topcode.se.treat <- topcode.out$se.treat
+    topcode.se.control <- topcode.out$se.control
+    llik.topcode <- topcode.out$obs.llik   
+    topcode.p <- topcode.out$p.est
+    topcode.p.ci <- topcode.out$p.ci
+    topcode.lp <- topcode.out$lp.est
+    topcode.lp.se <- topcode.out$lp.se
+    topcode.iter <- topcode.out$iterations
+
+
+  } 
+
+  if (error == "uniform" & method == "ml") {
+
+    ########################
+    # UNIFORM CODING ERROR #
+    ########################
+    obs.llik.uniform <- function(all.pars, formula, data, treat, J) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      beta <- all.pars[1:k]
+      gamma <- all.pars[(k+1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      p0 <- logistic(all.pars[2*k + 1])
+      p1 <- logistic(all.pars[2*k + 2])
+
+      lliks <- ifelse(Y == J + 1, 
+        log((1 - p1) * logistic(Xb) * logistic(Xg)^J + p1/(J + 2)), 
+        ifelse(Y == 0 & Tr == 1, 
+          log((1 - p1) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J + p1/(J + 2)), 
+        ifelse(Y %in% 1:J & Tr == 1, 
+          log((1 - p1) * (logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * (1 - logistic(Xg))^(J-Y+1) + 
+            (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J-Y)) + p1/(J + 2)), 
+        log((1 - p0) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J-Y) + p0/(J+1)))))
+
+      sum(lliks)
+
+    }
+
+    uniformE <- function(formula, data, treat, J, p0, p1, params) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      beta  <- params[1:k]
+      gamma <- params[(k+1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      # probability of error
+      xi <- ifelse(Y == J + 1, p1/(J+2)/(p1/(J+2) + (1-p1) * logistic(Xb) * logistic(Xg)^J), 
+        ifelse(Tr == 1 & Y == 0, p1/(J+2)/(p1/(J+2) + (1-p1) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J), 
+          ifelse(Tr == 1 & Y %in% 1:J, 
+            p1/(J+2)/(p1/(J+2) + (1-p1) * (logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * 
+              (1 - logistic(Xg))^(J-Y+1) + (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * 
+                (1 - logistic(Xg))^(J-Y))), 
+            p0/(J+1)/(p0/(J+1) + (1-p0) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J-Y)))))
+
+      # probability of sensitive trait
+      eta <- ifelse(Y == J + 1, 
+         (p1/(J + 2) * logistic(Xb) + (1 - p1) * logistic(Xb) * logistic(Xg)^J)/
+          ((1 - p1) * logistic(Xb) * logistic(Xg)^J + p1/(J + 2)), 
+        ifelse(Tr == 1 & Y == 0, 
+          p1/(J + 2) * logistic(Xb)/
+           ((1 - p1) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J + p1/(J + 2)), 
+        ifelse(Tr == 1 & Y %in% 1:J, 
+          (p1/(J + 2) + (1 - p1) * choose(J, Y - 1) * logistic(Xg)^(Y - 1) * (1 - logistic(Xg))^(J - Y + 1)) * logistic(Xb)/
+            (p1/(J + 2) + (1 - p1) * (logistic(Xb) * choose(J, Y - 1) * logistic(Xg)^(Y - 1) * (1 - logistic(Xg))^(J - Y + 1) + 
+              (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y))), 
+            0)
+          )
+        )
+
+      # expected values for control obs
+      yzeta0 <- Y * (p0/(J + 1) + (1 - p0)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y)/
+        (p0/(J + 1) + (1 - p0) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y))
+      for (y in 0:J) {
+        yzeta0 <- yzeta0 + ifelse(Y == y, 0, y * 
+          p0/(J + 1) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+          (p0/(J + 1) + (1 - p0) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y)))
+      }
+
+      # expected values for treated obs
+      yzetaJ1 <- J * ifelse(Y == J + 1, ((1-p1) * logistic(Xb) * logistic(Xg)^J + p1/(J+2) * logistic(Xg)^J)/
+        (p1/(J+2) + (1-p1) * logistic(Xb) * logistic(Xg)^J), 
+          ifelse(Tr == 1 & Y == J, ((1-p1) * (1 - logistic(Xb)) * logistic(Xg)^J + p1/(J+2) * logistic(Xg)^J)/
+            (p1/(J+2) + (1-p1) * (logistic(Xb) * J * logistic(Xg)^(J-1) * (1 - logistic(Xg)) + 
+              (1 - logistic(Xb)) * logistic(Xg)^J)), 
+          ifelse(Tr == 1 & Y == 0, (p1/(J+2) * logistic(Xg)^J)/ 
+            (p1/(J+2) + (1-p1) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J), 
+            ifelse(Tr == 1 & Y %in% 1:(J-1), p1/(J+2) * logistic(Xg)^J/
+        (p1/(J+2) + (1-p1) * ((1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y) + 
+          logistic(Xb) * choose(J, Y-1) * logistic(Xg)^(Y-1) * (1 - logistic(Xg))^(J-Y+1))), 
+              0))))
+
+      yzetay1 <- rep(0, n) 
+      for (y in 1:(J - 1)) {
+        tmp <- ifelse(Tr == 1 & Y == y + 1, 
+          y * (p1/(J + 2) + (1 - p1) * logistic(Xb)) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+              (p1/(J + 2) + (1 - p1) * (logistic(Xb) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y) + 
+                (1 - logistic(Xb)) * choose(J, y + 1) * logistic(Xg)^(y + 1) * (1 - logistic(Xg))^(J - y - 1))), 
+        ifelse(Tr == 1 & Y == y, 
+          y * (p1/(J + 2) + (1 - p1) * (1 - logistic(Xb))) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+              (p1/(J + 2) + (1 - p1) * (logistic(Xb) * choose(J, y - 1) * logistic(Xg)^(y - 1) * (1 - logistic(Xg))^(J - y + 1) + 
+                (1 - logistic(Xb)) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y))), 
+        ifelse(Tr == 1 & Y == 0, 
+          y * p1/(J + 2) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+              (p1/(J + 2) + (1 - p1) * (1 - logistic(Xb)) * (1 - logistic(Xg))^J), 
+        ifelse(Tr == 0, 0, 
+          y * p1/(J + 2) * choose(J, y) * logistic(Xg)^y * (1 - logistic(Xg))^(J - y)/
+              (p1/(J + 2) + (1 - p1) * (
+                (1 - logistic(Xb)) * choose(J, Y) * logistic(Xg)^Y * (1 - logistic(Xg))^(J - Y) + 
+                logistic(Xb) * choose(J, Y - 1) * logistic(Xg)^(Y - 1) * (1 - logistic(Xg))^(J - Y + 1)
+          ))))))
+        yzetay1 <- yzetay1 + tmp
+      }
+
+      yzeta1 <- yzetaJ1 + yzetay1
+
+      yzeta <- ifelse(Tr == 0, yzeta0, yzeta1)
+
+      return(list(xi = signif(xi, 10), eta = signif(eta, 10), yzeta = signif(yzeta, 10)))
+
+    }
+
+
+
+    uniformM <- function(formula, data, treat, J, xi, eta, yzeta) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      # intercept-only models
+      if (length(attr(attr(mf, "terms"), "term.labels")) == 0) {
+
+        betaX <- rbind(X[Tr == 1, ], X[Tr == 1, ])
+        betaY <- rep(0:1, each = sum(Tr))
+
+        beta.fit <- glm(cbind(betaY, 1 - betaY) ~ 1, weights = c(1 - eta[Tr == 1], eta[Tr == 1]), 
+          family = binomial("logit"), control = list(maxit = 100))
+
+        gammaX <- rbind(X, X)
+        gammaY <- rep(0:1, each = n)
+
+        gamma.fit <- glm(cbind(gammaY, 1 - gammaY) ~ 1, weights = c(J - yzeta, yzeta), 
+          family = binomial("logit"), control = list(maxit = 100))
+
+      # models with covariates
+      } else {
+
+        betaX <- rbind(X[Tr == 1, ], X[Tr == 1, ])
+        betaY <- rep(0:1, each = sum(Tr))
+
+        beta.fit <- glm(cbind(betaY, 1 - betaY) ~ betaX - 1, weights = c(1 - eta[Tr == 1], eta[Tr == 1]), 
+          family = binomial("logit"), control = list(maxit = 100))
+
+        gammaX <- rbind(X, X)
+        gammaY <- rep(0:1, each = n)
+
+        gamma.fit <- glm(cbind(gammaY, 1 - gammaY) ~ gammaX - 1, weights = c(J - yzeta, yzeta), 
+          family = binomial("logit"), control = list(maxit = 100))
+      }
+
+      return(list(beta.fit = beta.fit, gamma.fit = gamma.fit, 
+        pars = c(coef(beta.fit), coef(gamma.fit)), p0 = mean(xi[Tr==0]), p1 = mean(xi[Tr==1])))
+
+    }
+
+
+    uniformEM <- function(formula, data, treat, J, p0 = 0.05, p1 = 0.05, params = NULL, eps = 1e-08, 
+      maxIter) {
+
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      if (is.null(params)) {
+        params <- c(coef.treat.start, coef.control.start)
+      }
+
+      beta  <- params[1:k]
+      gamma <- params[(k+1):(2*k)]
+
+      Xb <- X %*% beta
+      Xg <- X %*% gamma
+
+      Estep0 <- uniformE(formula, data, treat, J, p0, p1, params)
+      Mstep0 <- uniformM(formula, data, treat, J, 
+        eta = Estep0$eta, yzeta = Estep0$yzeta, xi = Estep0$xi)
+
+      Estep <- uniformE(formula, data, treat, J, p0, p1, params)
+      Mstep <- uniformM(formula, data, treat, J, 
+        eta = Estep$eta, yzeta = Estep$yzeta, xi = Estep$xi)
+
+      par.holder <- c(Mstep$pars, Mstep$p0, Mstep$p1)
+
+      iteration <- 1
+
+      while ((iteration == 1 | max(abs(par.holder - c(Mstep$par, Mstep$p0, Mstep$p1))) > eps) & 
+        iteration <= maxIter) {
+
+        par.holder <- c(Mstep$pars, Mstep$p0, Mstep$p1)
+
+        obs.llik0 <- obs.llik.uniform(
+          all.pars = c(Mstep$pars, log(Mstep$p0/(1-Mstep$p0)), log(Mstep$p1/(1-Mstep$p1))), 
+          formula, data, treat, J)
+
+        Estep <- uniformE(formula, data, treat, J, 
+          p0 = Mstep$p0, p1 = Mstep$p1, params = Mstep$pars)
+        Mstep <- uniformM(formula, data, treat, J, 
+          eta = Estep$eta, yzeta = Estep$yzeta, xi = Estep$xi)
+
+        obs.llik1 <- obs.llik.uniform(
+          all.pars = c(Mstep$pars, log(Mstep$p0/(1-Mstep$p0)), log(Mstep$p1/(1-Mstep$p1))), 
+          formula, data, treat, J)
+
+        if (signif(obs.llik1) < signif(obs.llik0)) warning("Observed-data likelihood is not monotonically increasing.")
+        iteration <- iteration + 1
+
+      }
+
+      if (iteration == maxIter) warning("Maximum number of iterations reached.")
+
+      optim.out <- optim(fn = obs.llik.uniform, hessian = TRUE, 
+        par = c(Mstep$pars, log(Mstep$p0/(1-Mstep$p0)), log(Mstep$p1/(1-Mstep$p1))), 
+        formula = formula, data = data, treat = treat, J = J, 
+        control = list(fnscale = -1))
+
+      vcov <- vcov.flip <- solve(-optim.out$hessian)
+      std.errors <- sqrt(diag(vcov))
+      vcov.flip[(1:k), (1:k)] <- vcov[(k+1):(2*k), (k+1):(2*k)] 
+      vcov.flip[(k+1):(2*k), (k+1):(2*k)] <- vcov[(1:k), (1:k)]
+
+      return(
+        list(
+          par.treat   = Mstep$par[1:k], 
+          par.control = Mstep$par[(k+1):(2*k)],
+          se.treat    = std.errors[1:k],
+          se.control  = std.errors[(k+1):(2*k)],
+          vcov        = vcov.flip, 
+          p0.est      = Mstep$p0,
+          p0.ci       = c("lwr" = logistic(optim.out$par[2*k+1] - qnorm(0.975)*std.errors[2*k+1]),
+            "upr" = logistic(optim.out$par[2*k+1] + qnorm(0.975)*std.errors[2*k+1])), 
+          p1.est      = Mstep$p1,
+          p1.ci       = c("lwr" = logistic(optim.out$par[2*k+2] - qnorm(0.975)*std.errors[2*k+2]),
+            "upr" = logistic(optim.out$par[2*k+2] + qnorm(0.975)*std.errors[2*k+2])), 
+          lp0.est     = optim.out$par[2*k+1], 
+          lp0.se      = std.errors[2*k+1], 
+          lp1.est     = optim.out$par[2*k+2], 
+          lp1.se      = std.errors[2*k+2], 
+          iterations  = iteration, 
+          obs.llik    = optim.out$value
+          )
+        )
+
+    }
+
+    uniform.out <- uniformEM(formula = formula, data = data, treat = treat, J = J, maxIter = maxIter)
+    uniform.par.treat <- uniform.out$par.treat
+    uniform.par.control <- uniform.out$par.control
+    uniform.vcov <- uniform.out$vcov
+    uniform.se.treat <- uniform.out$se.treat
+    uniform.se.control <- uniform.out$se.control
+    llik.uniform <- uniform.out$obs.llik   
+    uniform.p0 <- uniform.out$p0.est
+    uniform.p0.ci <- uniform.out$p0.ci
+    uniform.lp0 <- uniform.out$lp0.est
+    uniform.lp0.se <- uniform.out$lp0.se
+    uniform.p1 <- uniform.out$p1.est
+    uniform.p1.ci <- uniform.out$p1.ci
+    uniform.lp1 <- uniform.out$lp1.est
+    uniform.lp1.se <- uniform.out$lp1.se
+    uniform.iter <- uniform.out$iterations
+
+  }
+  # end of measurement error models 
+
+  # robust nls functionality 
+  if (method == "nls" & robust) { 
+
+    # gradient matrix of NLS moments
+    Gmat <- function(delta, gamma, J, y, treat, x) {
+      
+      n <- length(y)
+      y1 <- y[treat == 1]
+      y0 <- y[treat == 0]
+      x1 <- x[treat == 1, , drop = FALSE]
+      x0 <- x[treat == 0, , drop = FALSE]
+      
+      Gtmp <- c(logistic(x1 %*% delta)/(1 + exp(x1 %*% delta))) * x1
+      G1 <- -t(Gtmp) %*% Gtmp / n  
+      Gtmp <- c(sqrt(J*logistic(x1 %*% delta)*logistic(x1 %*% gamma)/
+                       ((1 + exp(x1 %*% delta))*(1 + exp(x1 %*% gamma))))) * x1
+      G2 <- -t(Gtmp) %*% Gtmp / n
+      Gtmp <- c(J*logistic(x0 %*% gamma)/(1 + exp(x0 %*% gamma))) * x0
+      G3 <- -t(Gtmp) %*% Gtmp / n
+      G <- rbind(cbind(G1, G2),
+            cbind(matrix(0, ncol = ncol(G1), nrow = nrow(G3)), G3))
+      
+      return(G)
+      
+    }
+
+    # nls objective fn and gradient
+    NLSGMM <- function(pars, J, y, treat, x, W) {
+        
+      n <- length(y)
+      
+      y1 <- y[treat == 1]
+      y0 <- y[treat == 0]
+      x1 <- x[treat == 1, , drop = FALSE]
+      x0 <- x[treat == 0, , drop = FALSE]
+
+      delta <- pars[1:ncol(x)]
+      gamma <- pars[(ncol(x) + 1):(2 * ncol(x))]
+
+      # NLS moments
+      m1 <- c((y1 - J * logistic(x1 %*% gamma) - logistic(x1 %*% delta)) * 
+        logistic(x1 %*% delta)/(1 + exp(x1 %*% delta))) * x1
+      m0 <- c((y0 - J * logistic(x0 %*% gamma)) * 
+        J * logistic(x0 %*% gamma)/(1 + exp(x0 %*% gamma))) * x0
+
+      # dim moment      
+      dim <- mean(y1) - mean(y0)
+      m.dim <- dim - logistic(x %*% delta)
+
+      M <- c(colSums(m1), colSums(m0), sum(m.dim))/n
+      as.numeric(t(M) %*% W %*% M)
+
+    }
+
+    NLSGMM.Grad <- function(pars, J, y, treat, x, W) {
+        
+      n <- length(y)
+
+      y1 <- y[treat == 1]
+      y0 <- y[treat == 0]
+      x1 <- x[treat == 1, , drop = FALSE]
+      x0 <- x[treat == 0, , drop = FALSE]
+      delta <- pars[1:ncol(x)]
+      gamma <- pars[(ncol(x) + 1):(2 * ncol(x))]
+
+      # NLS moments
+      m1 <- c((y1 - J * logistic(x1 %*% gamma) - logistic(x1 %*% delta)) * 
+        logistic(x1 %*% delta)/(1 + exp(x1 %*% delta))) * x1
+      m0 <- c((y0 - J * logistic(x0 %*% gamma)) * 
+        J * logistic(x0 %*% gamma)/(1 + exp(x0 %*% gamma))) * x0
+
+      # DIM moment
+      dim <- mean(y1) - mean(y0)
+      m.dim <- dim - logistic(x %*% delta)
+      dm.dim <- -colMeans(c(logistic(x %*% delta)/(1 + exp(x %*% delta))) * x)
+
+      # NLS Jacobian
+      G <- Gmat(delta, gamma, J, y, treat, x)
+      # complete moment vector
+      M <- c(colSums(m1), colSums(m0), sum(m.dim)) / n
+      # complete Jacobian
+      G <- rbind(G, c(dm.dim, rep(0, length(gamma))))
+
+      t(M) %*% (W + t(W)) %*% G
+
+    }
+
+    # weight matrix
+    weightMatrix.nlsRobust <- function(pars, J, y, treat, x) {
+       
+      n <- length(y)
+      n1 <- sum(treat)
+      n0 <- sum(1 - treat)
+      k  <- ncol(x)
+
+      y1 <- y[treat == 1]
+      y0 <- y[treat == 0]
+      x1 <- x[treat == 1, , drop = FALSE]
+      x0 <- x[treat == 0, , drop = FALSE]
+
+      delta <- pars[1:k]
+      gamma <- pars[(k + 1):(k * 2)]
+
+      m1 <- c((y - J * logistic(x %*% gamma) - logistic(x %*% delta)) * 
+        logistic(x %*% delta)/(1 + exp(x %*% delta))) * treat * x
+      m0 <- c((y - J * logistic(x %*% gamma)) * 
+        J * logistic(x %*% gamma)/(1 + exp(x %*% gamma))) * (1-treat) * x
+      dim <- mean(y1) - mean(y0)
+      m.dim <- dim - logistic(x %*% delta)
+
+      F <- crossprod(cbind(m1, m0, m.dim))/n
+
+      return(solve(F))
+
+    }
+
+    NLSGMM.var <- function(pars, J, y, treat, x, W) {
+        
+      n <- length(y)
+      n1 <- sum(treat)
+      n0 <- sum(1 - treat)
+      k  <- ncol(x)
+
+      y1 <- y[treat == 1]
+      y0 <- y[treat == 0]
+      x1 <- x[treat == 1, , drop = FALSE]
+      x0 <- x[treat == 0, , drop = FALSE]
+
+      dim <- mean(y[treat == 1]) - mean(y[treat == 0])
+
+      delta <- pars[1:ncol(x)]
+      gamma <- pars[(ncol(x) + 1):(2 * ncol(x))]
+
+      m1 <- c((y - J * logistic(x %*% gamma) - logistic(x %*% delta)) * 
+        logistic(x %*% delta)/(1 + exp(x %*% delta))) * treat * x
+      m0 <- c((y - J * logistic(x %*% gamma)) * 
+        J * logistic(x %*% gamma)/(1 + exp(x %*% gamma))) * (1-treat) * x
+      m.dim <- -logistic(x %*% delta) + n/n1 * treat * y - n/n0 * (1-treat) * y
+
+      F      <- crossprod(cbind(m1, m0, m.dim))/n
+
+      dm.dim <- colMeans(-c(logistic(x %*% delta)/(1 + exp(x %*% delta))) * x)
+      G <- Gmat(delta, gamma, J, y, treat, x)
+      G <- rbind(G, c(dm.dim, rep(0, length(gamma))))
+
+      V <- solve(t(G) %*% W %*% G, tol = 1e-20) %*% 
+        t(G) %*% W %*% F %*% W %*% G %*%
+          solve(t(G) %*% W %*% G, tol = 1e-20)
+
+      return(V/n)
+
+    }
+
+    ictrobust <- function(formula, data, treat, J, robust, par0) {
+      
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      T  <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      cW0   <- weightMatrix.nlsRobust(pars = par0, J = J, y = Y, treat = T, x = X)  
+      step1 <- optim(par = par0, fn = NLSGMM, gr = NLSGMM.Grad,
+        J = J, y = Y, treat = T, x = X, W = cW0, 
+        method = "BFGS", control = list(maxit = 5000))
+      par1  <- step1$par
+      cW1   <- weightMatrix.nlsRobust(pars = par1, J = J, y = Y, treat = T, x = X)
+
+      step2 <- optim(par = par1, fn = NLSGMM, gr = NLSGMM.Grad,
+        J = J, y= Y, treat = T, x = X, W = cW1, 
+        method = "BFGS", control = list(maxit = 5000))
+      par2  <- step2$par
+      cW2   <- weightMatrix.nlsRobust(pars = par2, J = J, y = Y, treat = T, x = X)
+
+      step3 <- optim(par = par2, fn = NLSGMM, gr = NLSGMM.Grad,
+        J = J, y= Y, treat = T, x = X, W = cW2, 
+        method = "BFGS", control = list(maxit = 5000))
+      par3  <- step3$par
+      cW3   <- weightMatrix.nlsRobust(pars = par3, J = J, y = Y, treat = T, x = X)
+
+      vcov <- NLSGMM.var(par3, J = J, y= Y, treat = T, x = X, W = cW3)
+
+      return(list(
+        par = step3$par, 
+        vcov = vcov, 
+        se = sqrt(diag(vcov)), 
+        converge = 1 - step3$convergence, 
+        J.stat = ifelse(robust, n*step3$value, NA),
+        p.val = ifelse(robust, 1 - pchisq(q = step3$value, df = 2*k), NA),
+        est.mean = mean(logistic(X %*% step3$par[1:k])), 
+        diff.mean = mean(Y[T == 1]) - mean(Y[T == 0]), 
+        robust = robust, 
+        message = step3$message
+        )
+      )
+
+    }
+
+
+    ictrobust.out <- ictrobust(formula = formula, data = data, treat = treat, J = J, 
+      robust = robust, par0 = c(par.treat.nls.std, par.control.nls.std))
+    if (ictrobust.out$converge != 1) warning("Optimization routine did not converge.")
+    ictrobust.par <- ictrobust.out$par
+    ictrobust.vcov <- ictrobust.out$vcov
+    ictrobust.se <- sqrt(diag(ictrobust.vcov))
+
+    names(ictrobust.par) <- rep(names(x.all), 2)
+    names(ictrobust.se)  <- rep(names(x.all), 2)
+
+    par.control.robust <- ictrobust.par[1:ncol(x.all)]
+    par.treat.robust <- ictrobust.par[(ncol(x.all)+1):(ncol(x.all)*2)]
+    
+  }
+
+  # robust ml functionality 
+  if (robust & method == "ml") { 
+
+    sweepCross <- function(M, x) t(M) %*% sweep(M, MARGIN = 1, STATS = x, "*")
+
+    loglik <- function(params, J, Y, treat, X) {
+      
+      n     <- length(Y)
+      K     <- length(params)
+      gamma <- params[1:(K/2)]
+      beta  <- params[(K/2 + 1):K]
+
+      Xb    <- X %*% beta
+      Xg    <- X %*% gamma
+     
+      llik <- c(
+         -J * log(1 + exp(Xg)) - log(1 + exp(Xb)) + 
+          ifelse(Y == J + 1, Xb + J * Xg, 0) +  
+          ifelse(treat == 0, log(choose(J, Y)) + Y * Xg + log(1 + exp(Xb)), 0) + 
+          ifelse(treat == 1 & Y %in% 1:J, (Y - 1) * Xg + log(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+        )
+
+      return(sum(llik))
+
+    }
+
+    MLGMM <- function(params, cW, J, Y, treat, X, robust) {
+      
+      n     <- length(Y)
+      K     <- length(params)
+      beta  <- params[1:(K/2)]
+      gamma <- params[(K/2 + 1):K]
+
+      Xb    <- X %*% beta
+      Xg    <- X %*% gamma
+      Xbg   <- X %*% (beta + gamma)
+
+      # identification of beta
+      beta.coef <- c(
+        -logistic(Xb) + 
+        ifelse(Y == J + 1, 1, 0) + 
+        ifelse(treat == 0, logistic(Xb), 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y - 1) * exp(Xb)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+       )
+
+      beta.foc <- colMeans(X*beta.coef)
+
+      # identification of gamma
+      gamma.coef <- c(
+        -J*logistic(Xg) + 
+        ifelse(Y == J + 1, J, 0) + 
+        ifelse(treat == 0, Y, 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, (Y - 1) + choose(J, Y) * exp(Xg)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+      )
+      
+      gamma.foc <- colMeans(X*gamma.coef)
+
+      # dim moment
+      if (robust) {
+        dim <- mean(Y[treat == 1]) - mean(Y[treat == 0])
+        aux.vec <- dim - logistic(Xb)
+        aux.mom <- mean(aux.vec)
+        cG <- c(beta.foc, gamma.foc, aux.mom) 
+      } else {
+        cG <- c(beta.foc, gamma.foc)
+      }
+
+      # gmm objective
+      gmm.objective <- as.numeric(t(cG) %*% cW %*% cG)
+
+      return(gmm.objective)
+
+    }
+
+    MLGMM.Grad <- function(params, cW, J, Y, treat, X, robust) {
+      
+      n     <- length(Y)
+      K     <- length(params)
+      beta  <- params[1:(K/2)]
+      gamma <- params[(K/2 + 1):K]
+
+      Xb    <- X %*% beta
+      Xg    <- X %*% gamma
+      Xbg   <- X %*% (beta + gamma)
+
+      # identification of beta
+      beta.coef <- c(
+        -logistic(Xb) + 
+        ifelse(Y == J + 1, 1, 0) + 
+        ifelse(treat == 0, logistic(Xb), 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y - 1) * exp(Xb)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+       )
+
+      beta.foc <- colMeans(X*beta.coef)
+
+      # identification of gamma
+      gamma.coef <- c(
+        -J*logistic(Xg) + 
+        ifelse(Y == J + 1, J, 0) + 
+        ifelse(treat == 0, Y, 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, (Y - 1) + choose(J, Y) * exp(Xg)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+      )
+      
+      gamma.foc <- colMeans(X*gamma.coef)
+
+      # dim moment
+      if (robust == TRUE) {
+        aux.vec <- mean(Y[treat == 1]) - mean(Y[treat == 0]) - logistic(Xb)
+        aux.mom <- mean(aux.vec)
+        cG <- c(beta.foc, gamma.foc, aux.mom) 
+      } else {
+        cG <- c(beta.foc, gamma.foc)
+      }
+
+      # jacobian
+      tmp1 <- -logistic(Xb)/(1 + exp(Xb)) + 
+        ifelse(treat == 0, logistic(Xb)/(1 + exp(Xb)), 0) + 
+          ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp2 <- -J*logistic(Xg)/(1+exp(Xg)) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp3 <- -ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp4 <- -logistic(Xb)/(1+exp(Xb))
+
+      if (robust) {
+        dcG <- 1/n * rbind(
+          cbind(sweepCross(M = X, x = tmp1), sweepCross(M = X, x = tmp3)), 
+          cbind(t(sweepCross(M = X, x = tmp3)), sweepCross(M = X, x = tmp2)), 
+          cbind(t(colSums(X*c(tmp4))), matrix(0, ncol = K/2, nrow = 1))
+        )
+      } else {
+        dcG <- 1/n * rbind(
+          cbind(sweepCross(M = X, x = tmp1), sweepCross(M = X, x = tmp3)), 
+          cbind(t(sweepCross(M = X, x = tmp3)), sweepCross(M = X, x = tmp2))
+        )
+      }
+
+      return.vec <- c(t(cG) %*% (cW + t(cW)) %*% dcG)
+      
+      return(return.vec)
+
+    }
+
+    weightMatrix.MLRobust <- function(params, J, Y, treat, X, robust) {
+      
+      n     <- length(Y)
+      n1    <- sum(treat == 1)
+      n0    <- sum(treat == 0)
+
+      K     <- length(params)
+      beta  <- params[1:(K/2)]
+      gamma <- params[(K/2 + 1):K]
+
+      Xb    <- X %*% beta
+      Xg    <- X %*% gamma
+      Xbg   <- X %*% (beta + gamma)
+
+      # identification of beta
+      beta.coef <- c(
+        -logistic(Xb) + 
+        ifelse(Y == J + 1, 1, 0) + 
+        ifelse(treat == 0, logistic(Xb), 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y - 1) * exp(Xb)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+       )
+
+      beta.mat <- X*beta.coef
+
+      # identification of gamma
+      gamma.coef <- c(
+        -J*logistic(Xg) + 
+        ifelse(Y == J + 1, J, 0) + 
+        ifelse(treat == 0, Y, 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, (Y - 1) + choose(J, Y) * exp(Xg)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+      )
+      
+      gamma.mat <- X*gamma.coef
+      Wtmp <- crossprod(cbind(beta.mat, gamma.mat))/n
+
+      if (robust) {
+        # additional moment
+        m.dim <- mean(Y[treat==1]) - mean(Y[treat==0]) - logistic(Xb)
+        Wtmp  <- crossprod(cbind(beta.mat, gamma.mat, m.dim))/n
+      }
+
+      # weight matrix    
+      return(solve(Wtmp, tol=1e-20))
+
+    }
+
+    MLGMM.var <- function(params, J, Y, treat, X, robust, cW) {
+      
+      n     <- length(Y)
+      n1    <- sum(treat == 1)
+      n0    <- sum(treat == 0)
+
+      K     <- length(params)
+      beta  <- params[1:(K/2)]
+      gamma <- params[(K/2 + 1):K]
+
+      Xb    <- X %*% beta
+      Xg    <- X %*% gamma
+      Xbg   <- X %*% (beta + gamma)
+
+      # identification of beta
+      beta.coef <- c(
+        -logistic(Xb) + 
+        ifelse(Y == J + 1, 1, 0) + 
+        ifelse(treat == 0, logistic(Xb), 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y - 1) * exp(Xb)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+       )
+
+      beta.foc <- colMeans(X*beta.coef)
+
+      # identification of gamma
+      gamma.coef <- c(
+        -J*logistic(Xg) + 
+        ifelse(Y == J + 1, J, 0) + 
+        ifelse(treat == 0, Y, 0) + 
+        ifelse(treat == 1 & Y %in% 1:J, (Y - 1) + choose(J, Y) * exp(Xg)/(choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg)), 0)
+      )
+      
+      gamma.foc <- colMeans(X*gamma.coef)
+
+      # vcov of moments
+      if (robust) {
+        m.dim <- n/n1 * treat * Y - n/n0 * (1-treat) * Y - logistic(Xb)
+        F <- crossprod(cbind(X*beta.coef, X*gamma.coef, m.dim))/n
+      } else {
+        F <- crossprod(cbind(X*beta.coef, X*gamma.coef))/n
+      }
+           
+      # jacobian
+      tmp1 <- -logistic(Xb)/(1 + exp(Xb)) + 
+        ifelse(treat == 0, logistic(Xb)/(1 + exp(Xb)), 0) + 
+          ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp2 <- -J*logistic(Xg)/(1+exp(Xg)) + 
+        ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp3 <- -ifelse(treat == 1 & Y %in% 1:J, choose(J, Y) * choose(J, Y - 1) * exp(Xbg)/((choose(J, Y - 1) * exp(Xb) + choose(J, Y) * exp(Xg))^2), 0)
+      tmp4 <- -logistic(Xb)/(1+exp(Xb))
+
+      if (robust) {
+        dcG <- 1/n * rbind(
+          cbind(sweepCross(M = X, x = tmp1), sweepCross(M = X, x = tmp3)), 
+          cbind(t(sweepCross(M = X, x = tmp3)), sweepCross(M = X, x = tmp2)), 
+          cbind(t(colSums(X*c(tmp4))), matrix(0, ncol = K/2, nrow = 1))
+        )
+      } else {
+        dcG <- 1/n * rbind(
+          cbind(sweepCross(M = X, x = tmp1), sweepCross(M = X, x = tmp3)), 
+          cbind(t(sweepCross(M = X, x = tmp3)), sweepCross(M = X, x = tmp2))
+        )
+      }
+
+      return.mat <- solve(t(dcG) %*% cW %*% dcG, tol=1e-20) %*% 
+        t(dcG) %*% cW %*% F %*% cW %*% dcG %*% 
+          solve(t(dcG) %*% cW %*% dcG, tol=1e-20)
+
+      return(return.mat/n)
+
+    }
+
+    ictrobust <- function(formula, data, treat, J, robust, par0) {
+      
+      mf <- model.frame(formula, data)
+      n  <- nrow(mf)
+
+      Y  <- model.response(mf)
+      X  <- model.matrix(formula, data)
+      Tr <- data[row.names(mf), treat]
+      k  <- ncol(X)
+
+      cW0   <- weightMatrix.MLRobust(params = par0, J = J, Y = Y, treat = Tr, X = X, robust = TRUE)  
+      step1 <- optim(par = par0, fn = MLGMM, gr = MLGMM.Grad, 
+        robust = TRUE, J = J, Y = Y, treat = Tr, X = X, cW = cW0, 
+        method = "BFGS", control = list(maxit = 5000))
+      par1  <- step1$par
+      cW1   <- weightMatrix.MLRobust(params = par1, J = J, Y = Y, treat = Tr, X = X, robust = TRUE)
+
+      step2 <- optim(par = par1, fn = MLGMM, gr = MLGMM.Grad, 
+        robust = TRUE, J = J, Y = Y, treat = Tr, X = X, cW = cW1, 
+        method = "BFGS", control = list(maxit = 5000))
+      par2  <- step2$par
+      cW2   <- weightMatrix.MLRobust(params = par2, J = J, Y = Y, treat = Tr, X = X, robust = TRUE)
+
+      step3 <- optim(par = par2, fn = MLGMM, gr = MLGMM.Grad, 
+        robust = TRUE, J = J, Y = Y, treat = Tr, X = X, cW = cW2, 
+        method = "BFGS", control = list(maxit = 5000))
+      cW3   <- weightMatrix.MLRobust(params = step3$par, J = J, Y = Y, treat = Tr, X = X, robust = TRUE)
+
+      vcov <- MLGMM.var(params = step3$par, J = J, Y = Y, treat = Tr, X = X, robust = TRUE, cW = cW3)
+
+      return(list(
+        par = step3$par, 
+        vcov = vcov, 
+        se = sqrt(diag(vcov)), 
+        converge = 1 - step3$convergence, 
+        J.stat = ifelse(robust, n*step3$value, NA),
+        p.val = ifelse(robust, 1 - pchisq(q = step3$value, df = 2*k), NA),
+        est.mean = mean(logistic(X %*% step3$par[1:k])), 
+        diff.mean = mean(Y[treat == 1]) - mean(Y[treat == 0]), 
+        robust = robust, 
+        message = step3$message
+        )
+      )
+
+    }
+
+
+    ictrobust.out <- ictrobust(formula = formula, data = data, treat = treat, J = J, 
+      robust = robust, par0 = c(par.treat.nls.std, par.control.nls.std))
+    if (ictrobust.out$converge != 1) warning("Optimization routine did not converge.")
+    ictrobust.par <- ictrobust.out$par
+    ictrobust.vcov <- ictrobust.out$vcov
+    ictrobust.se <- sqrt(diag(ictrobust.vcov))
+
+    names(ictrobust.par) <- rep(names(x.all), 2)
+    names(ictrobust.se)  <- rep(names(x.all), 2)
+
+    par.control.robust <- ictrobust.par[1:ncol(x.all)]
+    par.treat.robust <- ictrobust.par[(ncol(x.all)+1):(ncol(x.all)*2)]
+    llik.robust <- loglik(params = c(par.control.robust, par.treat.robust), J = J, Y = y.all, treat = treat, X = x.all)   
+
+  }
+
   # auxiliary data functionality
   if (aux.check) {
 
@@ -2207,7 +3851,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
           }
         }
         
-        efficientW <- solve(F)
+        efficientW <- solve(F, tol = 1e-20)
 
         if (matrixMethod == "efficient" | matrixMethod == "cue") {
           efficientW
@@ -2370,7 +4014,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
           aux.mom.var <- t(aux.mom) %*% aux.mom/n
           F <- adiag(F, aux.mom.var)
         }
-        W <- solve(F)
+        W <- solve(F, tol = 1e-20)
 
         as.numeric(t(M) %*% W %*% M)
 
@@ -2452,7 +4096,7 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
         if (matrixMethod == "princomp") 
           vcov.aux <- ginv(t(G) %*% weightMatrix %*% G)/n
         else 
-          vcov.aux <- solve(t(G) %*% weightMatrix %*% G)/n
+          vcov.aux <- solve(t(G) %*% weightMatrix %*% G, tol = 1e-20)/n
         
         list(coef = coef, vcov = vcov.aux, val = fit1$value)
     
@@ -2477,79 +4121,138 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
   ## Set up return object
   
   if (method == "nls") {
-
-    if (multi == FALSE) {
+    
+    if (error == "topcode") {
+      return.object <-
+        list(
+          coef = setNames(nm = rep(coef.names, 2), c(par.treat, par.control)), 
+          par.treat = par.treat,
+          se.treat = se.treat,
+          par.control = par.control,
+          se.control = se.control,
+          vcov = vcov.nls,
+          p.est = p.est,
+          p.ci = p.ci,
+          coef.names = coef.names,
+          J = J,
+          design = design,
+          method = method,
+          fit.start = fit.start,
+          overdispersed = overdispersed,
+          boundary = boundary,
+          multi = multi,
+          error = error,
+          data = data,
+          x = x.all,
+          y = y.all,
+          treat = t,
+          call = match.call()
+        )
+    } else if (error == "uniform"){
+      return.object <-
+        list(
+          coef = setNames(nm = rep(coef.names, 2), c(par.treat, par.control)), 
+          par.treat = par.treat,
+          se.treat = se.treat,
+          par.control = par.control,
+          se.control = se.control,
+          vcov = vcov.nls,
+          p0.est = p0.est,
+          p0.ci = p0.ci,
+          p1.est = p1.est,
+          p1.ci = p1.ci,
+          coef.names = coef.names,
+          J = J,
+          design = design,
+          method = method,
+          fit.start = fit.start,
+          overdispersed = overdispersed,
+          boundary = boundary,
+          multi = multi,
+          error = error,
+          data = data,
+          x = x.all,
+          y = y.all,
+          treat = t,
+          call = match.call()
+        )
       
-      if(design=="standard")
+    } else {
+      
+      if (multi == FALSE) {
+        
+        if(design=="standard")
+          par.treat <- par.treat.nls.std
+        if(design=="modified")
+          par.treat <- par.treat.nls.mod
+        se.treat <- se.twostep[1:(length(par.treat))]
+        
+        if(design=="standard")
+          par.control <- par.control.nls.std
+        if(design=="modified")
+          par.control <- par.control.nls.mod
+        se.control <- se.twostep[(length(par.treat)+1):(length(se.twostep))]
+        
+        names(par.treat) <- names(se.treat) <- coef.names
+        
+        if (design=="standard")
+          names(par.control) <- names(se.control) <- coef.names
+        if (design=="modified")
+          names(par.control) <- names(se.control) <- rep(coef.names, J)
+        
+        sum.fit.treat <- summary(fit.treat)
+        
+        resid.se <- sum.fit.treat$sigma
+        resid.df <- sum.fit.treat$df[2]
+        
+        if(design=="standard") {
+          return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names,  J=J, design = design, method = method, fit.start = fit.start, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
+          if(weighted == TRUE)
+            return.object$weights <- w.all
+          
+        } else if (design=="modified") {
+          return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.twostep, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names, J=J, design = design, method = method, fit.nonsensitive = fit.nonsensitive, data = data, x = x.all, y = y.all, treat = t, boundary = FALSE, multi = FALSE, call = match.call())
+          if(weighted == TRUE)
+            return.object$weights <- w.all
+          
+        }
+        
+      } else if (multi == TRUE) {
+        
         par.treat <- par.treat.nls.std
-      if(design=="modified")
-        par.treat <- par.treat.nls.mod
-      se.treat <- se.twostep[1:(length(par.treat))]
-      
-      if(design=="standard")
+        
+        se.treat <- list()
+        for (m in 1:length(treatment.values))
+          se.treat[[m]] <- se.twostep[[m]][1:(length(par.treat[[m]]))]
+        
         par.control <- par.control.nls.std
-      if(design=="modified")
-        par.control <- par.control.nls.mod
-      se.control <- se.twostep[(length(par.treat)+1):(length(se.twostep))]
-      
-      names(par.treat) <- names(se.treat) <- coef.names
-      
-      if (design=="standard")
+        se.control <- se.twostep[[1]][(length(par.treat[[1]])+1):(length(se.twostep[[1]]))]
+        
+        for (m in 1:length(treatment.values)) {
+          names(par.treat[[m]]) <- coef.names
+          names(se.treat[[m]]) <- coef.names
+        }
+        
         names(par.control) <- names(se.control) <- coef.names
-      if (design=="modified")
-        names(par.control) <- names(se.control) <- rep(coef.names, J)
-      
-      sum.fit.treat <- summary(fit.treat)
-      
-      resid.se <- sum.fit.treat$sigma
-      resid.df <- sum.fit.treat$df[2]
-      
-      if(design=="standard") {
-        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names,  J=J, design = design, method = method, fit.start = fit.start, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
+        
+        
+        resid.se <- resid.df <- rep(NA, length(treatment.values))
+        for (m in 1:length(treatment.values)) {
+          sum.fit.treat <- summary(fit.treat[[m]])
+          resid.se[m] <- sum.fit.treat$sigma
+          resid.df[m] <- sum.fit.treat$df[2]
+        }
+        
+        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, resid.se=resid.se, resid.df=resid.df, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
         if(weighted == TRUE)
-            return.object$weights <- w.all
-
-      } else if (design=="modified") {
-        return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.twostep, resid.se=resid.se, resid.df=resid.df, coef.names=coef.names, J=J, design = design, method = method, fit.nonsensitive = fit.nonsensitive, data = data, x = x.all, y = y.all, treat = t, boundary = FALSE, multi = FALSE, call = match.call())
-        if(weighted == TRUE)
-            return.object$weights <- w.all
+          return.object$weights <- w.all
         
       }
       
-    } else if (multi == TRUE) {
-
-      par.treat <- par.treat.nls.std
-      
-      se.treat <- list()
-      for (m in 1:length(treatment.values))
-        se.treat[[m]] <- se.twostep[[m]][1:(length(par.treat[[m]]))]
-      
-      par.control <- par.control.nls.std
-      se.control <- se.twostep[[1]][(length(par.treat[[1]])+1):(length(se.twostep[[1]]))]
-      
-      for (m in 1:length(treatment.values)) {
-        names(par.treat[[m]]) <- coef.names
-        names(se.treat[[m]]) <- coef.names
-      }
-      
-      names(par.control) <- names(se.control) <- coef.names
-
-      
-      resid.se <- resid.df <- rep(NA, length(treatment.values))
-      for (m in 1:length(treatment.values)) {
-        sum.fit.treat <- summary(fit.treat[[m]])
-        resid.se[m] <- sum.fit.treat$sigma
-        resid.df[m] <- sum.fit.treat$df[2]
-      }
-      
-      return.object <- list(par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, vcov=vcov.nls, treat.values = treatment.values, treat.labels = treatment.labels, control.label = control.label, resid.se=resid.se, resid.df=resid.df, J=J,  coef.names=coef.names, design = design, method = method, overdispersed=overdispersed, boundary = boundary, multi = multi, data = data, x = x.all, y = y.all, treat = t, call = match.call())
-      if(weighted == TRUE)
-          return.object$weights <- w.all
-
     }
   }
   
-  if (method == "ml"){
+  if (method == "ml" & !robust) {
     
     if(design == "standard") {
       
@@ -2693,7 +4396,92 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
           return.object$weights <- w.all
     }
   }
+
+  if ((method == "nls" | method == "ml") & robust) {
+
+    par.treat <- ictrobust.par[1:nPar]
+    par.control <- ictrobust.par[(nPar+1):(nPar*2)]
+    se.treat <- sqrt(diag(ictrobust.vcov))[1:(nPar)]
+    se.control <- sqrt(diag(ictrobust.vcov))[(nPar+1):(nPar*2)]
+    dim  <- mean(y.all[t==1]) - mean(y.all[t==0])
+    dim.se <- sqrt(sd(y.all[t==1])^2/sum(t) + sd(y.all[t==0])^2/sum(1-t))
+
+    return.object <- list(coef = setNames(nm = rep(coef.names, 2), c(par.treat, par.control)),  
+      par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, 
+      vcov=ictrobust.vcov, treat.labels = treatment.labels, control.label = control.label, 
+        J=J, coef.names=coef.names, design = design, method = method, robust = robust, dim = dim, dim.se = dim.se, 
+          overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, 
+            ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t)
   
+    if (method == "ml") return.object$llik <- llik.robust
+      else {
+        resid <- y.treatment - logistic(x.treatment %*% par.treat)
+        return.object$resid.df <- nrow(x.treatment) - length(par.treat)
+        return.object$resid.se <- 1/return.object$resid.df * sum(resid^2)
+      }
+  }      
+
+  # measurement error models -- setting up return objects
+  if (error == "topcode" & method == "ml") {
+
+    par.treat <- topcode.par.treat
+    par.control <- topcode.par.control
+    se.treat <- topcode.se.treat
+    se.control <- topcode.se.control
+    p.est <- topcode.p
+
+    return.object <- list(coef = setNames(nm = rep(coef.names, 2), c(par.treat, par.control)), 
+      par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, 
+      vcov=topcode.vcov, treat.labels = treatment.labels, control.label = control.label, 
+        llik=llik.topcode, J=J, coef.names=coef.names, design = design, method = method, robust = robust, 
+          overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, 
+            ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t, 
+              p.est = topcode.p, p.ci = topcode.p.ci, lp.est = topcode.lp, lp.se = topcode.lp.se, iters = topcode.iter)
+  
+  }      
+
+  if (error == "uniform" & method == "ml") {
+
+    par.treat <- uniform.par.treat
+    par.control <- uniform.par.control
+    se.treat <- uniform.se.treat
+    se.control <- uniform.se.control
+    p0.est <- uniform.p0
+    p1.est <- uniform.p1
+    p0.est <- uniform.p0
+    p1.est <- uniform.p1
+
+    return.object <- list(coef = setNames(nm = rep(coef.names, 2), c(par.treat, par.control)), 
+      par.treat=par.treat, se.treat=se.treat, par.control=par.control, se.control=se.control, 
+      vcov=uniform.vcov, treat.labels = treatment.labels, control.label = control.label, 
+        llik=llik.uniform, J=J, coef.names=coef.names, design = design, method = method, robust = robust, 
+          overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, 
+            ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t, 
+      p0.est = uniform.p0, p0.ci = uniform.p0.ci, lp0.est = uniform.lp0, lp0.se = uniform.lp0.se, 
+        p1.est = uniform.p1, p1.ci = uniform.p1.ci, lp1.est = uniform.lp1, lp1.se = uniform.lp1.se, iters = uniform.iter)
+
+  
+  }      
+
+  if (method == "onestep") {
+
+    return.object <- list(coef = setNames(nm = rep(coef.names, 2), c(onestep.par.treat, onestep.par.control)), 
+      par.treat=onestep.par.treat, se.treat=onestep.se.treat, 
+      par.control=onestep.par.control, se.control = onestep.se.control, 
+      vcov=onestep.vcov, treat.labels = treatment.labels, control.label = control.label, 
+        J=J, coef.names=coef.names, design = design, method = method, robust = robust, 
+          overdispersed=overdispersed, constrained=constrained, boundary = boundary, multi = multi, 
+            ceiling = ceiling, floor = floor, call = match.call(), data = data, x = x.all, y = y.all, treat = t) 
+  
+    resid <- y.treatment - logistic(x.treatment %*% onestep.par.treat)
+    return.object$resid.df <- nrow(x.treatment) - length(onestep.par.treat)
+    return.object$resid.se <- 1/return.object$resid.df * sum(resid^2)
+
+  }
+
+  # robust functionality 
+  return.object$robust <- robust
+
   # auxiliary data functionality -- setting up return object
   return.object$aux <- aux.check 
 
@@ -2704,7 +4492,14 @@ ictreg <- function(formula, data = parent.frame(), treat = "treat", J, method = 
     return.object$J.stat <- round(J.stat, 4)
     return.object$overid.p <- overid.p
   }
+
+
+  return.object$error <- error
   
+  if (error == "topcode") {
+    return.object$p.est <- p.est
+  }
+
   class(return.object) <- "ictreg"
   
   return.object
@@ -2744,6 +4539,15 @@ print.ictreg <- function(x, ...){
   if (x$aux) cat("Incorporating ", x$nh, " auxiliary moment(s). Weighting method: ", x$wm, ".\n", 
     "The overidentification test statistic was: ", x$J.stat, " (p < ", x$overid.p, ")", ".\n", sep = "")
 
+  # measurement error models -- print details
+  if (x$error == "topcode") cat("Estimated proportion of top-coded respondents: ", x$p.est, ". 95% CI: (", 
+    round(x$p.ci[1], 6), ", ", round(x$p.ci[2], 6), ").\n", sep = "")
+
+  if (x$error == "uniform") cat("Estimated proportion of respondents with uniform error (control): ", x$p0.est, ". 95% CI: (", 
+    round(x$p0.ci[1], 6), ", ", round(x$p0.ci[2], 6), ").\n", 
+    "Estimated proportion of respondents with uniform error (treated): ", x$p1.est, ". 95% CI: (", 
+    round(x$p1.ci[1], 6), ", ", round(x$p1.ci[2], 6), ").\n", sep = "")
+
   invisible(x)
   
 }
@@ -2778,6 +4582,183 @@ print.predict.ictreg <- function(x, ...){
   
 }
 
+
+
+#' Predict Method for Item Count Technique
+#' 
+#' Function to calculate predictions and uncertainties of predictions from
+#' estimates from multivariate regression analysis of survey data with the item
+#' count technique.
+#' 
+#' \code{predict.ictreg} produces predicted values, obtained by evaluating the
+#' regression function in the frame newdata (which defaults to
+#' \code{model.frame(object)}. If the logical \code{se.fit} is \code{TRUE},
+#' standard errors of the predictions are calculated. Setting \code{interval}
+#' specifies computation of confidence intervals at the specified level or no
+#' intervals.
+#' 
+#' If \code{avg} is set to \code{TRUE}, the mean prediction across all
+#' observations in the dataset will be calculated, and if the \code{se.fit}
+#' option is set to \code{TRUE} a standard error for this mean estimate will be
+#' provided. The \code{interval} option will output confidence intervals
+#' instead of only the point estimate if set to \code{TRUE}.
+#' 
+#' Two additional types of mean prediction are also available. The first, if a
+#' \code{newdata.diff} data frame is provided by the user, calculates the mean
+#' predicted values across two datasets, as well as the mean difference in
+#' predicted value. Standard errors and confidence intervals can also be added.
+#' For difference prediction, \code{avg} must be set to \code{TRUE}.
+#' 
+#' The second type of prediction, triggered if a \code{direct.glm} object is
+#' provided by the user, calculates the mean difference in prediction between
+#' predictions based on an \code{ictreg} fit and a \code{glm} fit from a direct
+#' survey item on the sensitive question. This is defined as the revealed
+#' social desirability bias in Blair and Imai (2010).
+#' 
+#' @param object Object of class inheriting from "ictreg"
+#' @param newdata An optional data frame containing data that will be used to
+#' make predictions from. If omitted, the data used to fit the regression are
+#' used.
+#' @param newdata.diff An optional data frame used to compare predictions with
+#' predictions from the data in the provided newdata data frame.
+#' @param direct.glm A glm object from a logistic binomial regression
+#' predicting responses to a direct survey item regarding the sensitive item.
+#' The predictions from the ictreg object are compared to the predictions based
+#' on this glm object.
+#' @param se.fit A switch indicating if standard errors are required.
+#' @param interval Type of interval calculation.
+#' @param level Significance level for confidence intervals.
+#' @param avg A switch indicating if the mean prediction and associated
+#' statistics across all obserations in the dataframe will be returned instead
+#' of predictions for each observation.
+#' @param sensitive.item For multiple sensitive item design list experiments,
+#' specify which sensitive item fits to use for predictions. Default is the
+#' first sensitive item.
+#' @param ... further arguments to be passed to or from other methods.
+#' @return \code{predict.ictreg} produces a vector of predictions or a matrix
+#' of predictions and bounds with column names fit, lwr, and upr if interval is
+#' set. If se.fit is TRUE, a list with the following components is returned:
+#' 
+#' \item{fit}{vector or matrix as above} \item{se.fit}{standard error of
+#' prediction}
+#' @author Graeme Blair, UCLA, \email{graeme.blair@ucla.edu}
+#' and Kosuke Imai, Princeton University, \email{kimai@princeton.edu}
+#' @seealso \code{\link{ictreg}} for model fitting
+#' @references Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of
+#' List Experiments."  Political Analysis, Vol. 20, No 1 (Winter). available at
+#' \url{http://imai.princeton.edu/research/listP.html}
+#' 
+#' Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item Count
+#' Technique.'' Journal of the American Statistical Association, Vol. 106, No.
+#' 494 (June), pp. 407-416. available at
+#' \url{http://imai.princeton.edu/research/list.html}
+#' @keywords models regression
+#' @examples
+#' 
+#' data(race)
+#' 
+#' race.south <- race.nonsouth <- race
+#' 
+#' race.south[, "south"] <- 1
+#' race.nonsouth[, "south"] <- 0
+#' 
+#' \dontrun{
+#' 
+#' # Fit EM algorithm ML model with constraint with no covariates
+#' 
+#' ml.results.south.nocov <- ictreg(y ~ 1, 
+#'    data = race[race$south == 1, ], method = "ml", treat = "treat", 
+#'    J = 3, overdispersed = FALSE, constrained = TRUE)
+#' ml.results.nonsouth.nocov <- ictreg(y ~ 1, 
+#'    data = race[race$south == 0, ], method = "ml", treat = "treat", 
+#'    J = 3, overdispersed = FALSE, constrained = TRUE)
+#' 
+#' # Calculate average predictions for respondents in the South 
+#' # and the the North of the US for the MLE no covariates 
+#' # model, replicating the estimates presented in Figure 1, 
+#' # Imai (2010)
+#' 
+#' avg.pred.south.nocov <- predict(ml.results.south.nocov,
+#'    newdata = as.data.frame(matrix(1, 1, 1)), se.fit = TRUE, 
+#'    avg = TRUE)
+#' avg.pred.nonsouth.nocov <- predict(ml.results.nonsouth.nocov,
+#'    newdata = as.data.frame(matrix(1, 1, 1)), se.fit = TRUE, 
+#'    avg = TRUE)
+#' 
+#' # Fit linear regression
+#' 
+#' lm.results <- ictreg(y ~ south + age + male + college, 
+#'    data = race, treat = "treat", J=3, method = "lm")
+#' 
+#' # Calculate average predictions for respondents in the 
+#' # South and the the North of the US for the lm model, 
+#' # replicating the estimates presented in Figure 1, Imai (2010)
+#' 
+#' avg.pred.south.lm <- predict(lm.results, newdata = race.south, 
+#'    se.fit = TRUE, avg = TRUE)
+#' 
+#' avg.pred.nonsouth.lm <- predict(lm.results, newdata = race.nonsouth, 
+#'    se.fit = TRUE, avg = TRUE)
+#' 
+#' # Fit two-step non-linear least squares regression
+#' 
+#' nls.results <- ictreg(y ~ south + age + male + college, 
+#'    data = race, treat = "treat", J=3, method = "nls")
+#' 
+#' # Calculate average predictions for respondents in the South 
+#' # and the the North of the US for the NLS model, replicating
+#' # the estimates presented in Figure 1, Imai (2010)
+#' 
+#' avg.pred.nls <- predict(nls.results, newdata = race.south, 
+#'    newdata.diff = race.nonsouth, se.fit = TRUE, avg = TRUE)
+#' 
+#' # Fit EM algorithm ML model with constraint
+#' 
+#' ml.constrained.results <- ictreg(y ~ south + age + male + college, 
+#'    data = race, treat = "treat", J=3, method = "ml", 
+#'    overdispersed = FALSE, constrained = TRUE)
+#' 
+#' # Calculate average predictions for respondents in the South 
+#' # and the the North of the US for the MLE model, replicating the 
+#' # estimates presented in Figure 1, Imai (2010)
+#' 
+#' avg.pred.diff.mle <- predict(ml.constrained.results, 
+#'    newdata = race.south, newdata.diff = race.nonsouth,
+#'    se.fit = TRUE, avg = TRUE)
+#' 
+#' # Calculate average predictions from the item count technique
+#' # regression and from a direct sensitive item modeled with
+#' # a logit.
+#' 
+#' # Estimate logit for direct sensitive question
+#' 
+#' data(mis)
+#' 
+#' mis.list <- subset(mis, list.data == 1)
+#' 
+#' mis.sens <- subset(mis, sens.data == 1)
+#' 
+#' # Fit EM algorithm ML model
+#' 
+#' fit.list <- ictreg(y ~ age + college + male + south,
+#'    J = 4, data = mis.list, method = "ml")
+#' 
+#' # Fit logistic regression with directly-asked sensitive question
+#' 
+#' fit.sens <- glm(sensitive ~ age + college + male + south, 
+#'    data = mis.sens, family = binomial("logit"))
+#' 
+#' # Predict difference between response to sensitive item
+#' # under the direct and indirect questions (the list experiment).
+#' # This is an estimate of the revealed social desirability bias
+#' # of respondents. See Blair and Imai (2010).
+#' 
+#' avg.pred.social.desirability <- predict(fit.list, 
+#'    direct.glm = fit.sens, se.fit = TRUE)
+#' 
+#' }
+#' 
+#' 
 predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = FALSE,
                            interval = c("none","confidence"), level = .95, avg = FALSE, sensitive.item, ...){
 
@@ -2844,15 +4825,12 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
       
       v <- pix/(1+exp(xvar %*% beta))
       
-      if(avg==FALSE){
-        var.pred <- rep(NA, n)
-        for (i in 1:n) {
-          if (object$method == "lm")
-            var.pred[i] <- xvar[i,, drop = FALSE] %*% var.beta %*% t(xvar[i,, drop = FALSE])
-          else
-            var.pred[i] <- v[i] * v[i] * (xvar[i,, drop = FALSE] %*% var.beta %*%
-                                          t(xvar[i,, drop = FALSE]))
-        }
+      if(avg==FALSE){        
+          if (object$method == "lm"){
+            var.pred <- diag(xvar %*% var.beta %*% t(xvar))
+          } else {
+            var.pred <- v^2 * diag(xvar %*% var.beta %*% t(xvar))
+          }
         
         se <- sqrt(var.pred)
         
@@ -2860,16 +4838,10 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
         
         pix <- mean(pix)
         
-        var.pred <- 0
-        for (i in 1:n) {
-          for (j in 1:n) {
-            if (object$method == "lm")
-              var.pred <- var.pred + xvar[i,, drop = FALSE] %*% var.beta %*%
-                t(xvar[j,, drop = FALSE])
-            else
-              var.pred <- var.pred + v[i] * v[j] * (xvar[i,, drop = FALSE] %*%
-                                                    var.beta %*% t(xvar[j,, drop = FALSE]))
-          }
+        if (object$method == "lm"){
+          var.pred <- sum(xvar %*% var.beta %*% t(xvar))
+        } else {
+          var.pred <- sum(v %*% t(v) * xvar %*% var.beta %*% t(xvar))
         }
         
         se <- c(sqrt(var.pred)/n)
@@ -2912,15 +4884,10 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
       pixb <- logistic(xb %*% beta)
       va <- pixa/(1+exp(xa %*% beta))
       vb <- pixb/(1+exp(xb %*% beta))
-      
-      for (i in 1:n) {
-        for (j in 1:n) {
-          var <- var + va[i] * va[j] * (xa[i,, drop = FALSE] %*% var.beta %*% t(xa[j,, drop = FALSE]))
-          - 2 * va[i] * vb[j] * (xa[i,, drop = FALSE] %*% var.beta %*% t(xb[j,, drop = FALSE]))
-          + vb[i] * vb[j] * (xb[i,, drop = FALSE] %*% var.beta %*% t(xb[j,, drop = FALSE]))
-        }
-      }
-      
+
+      var <- sum( va %*% t(va) * xa %*% var.beta %*% t(xa)) + sum(vb %*% t(vb) * xb %*% var.beta %*% t(xb)) - 
+        2 * sum(va %*% t(vb) * xa %*% var.beta %*% t(xb))
+        
       est <- mean(pixa-pixb)
       
       se <- as.vector(sqrt(var)) / n
@@ -3028,7 +4995,7 @@ predict.ictreg <- function(object, newdata, newdata.diff, direct.glm, se.fit = F
     attr(return.object, "concat") <- TRUE
     
   }
-  
+
   class(return.object) <- "predict.ictreg"
   
   return.object
@@ -3039,7 +5006,7 @@ coef.ictreg <- function(object, ...){
   
   nPar <- length(object$coef.names)
   
-  if((object$method=="lm" | object$method=="nls" | object$design=="modified") & object$boundary == FALSE & object$multi == FALSE){
+  if((object$method=="lm" | object$method=="nls" | object$method=="onestep" | object$design=="modified") & object$boundary == FALSE & object$multi == FALSE){
     coef <- c(object$par.treat,object$par.control)
     
     if(object$design=="standard") {
@@ -3119,11 +5086,11 @@ vcov.ictreg <- function(object, ...){
   nPar <- length(object$coef.names)
   
   ## dummy value for constraint
-  if(object$method=="nls" | object$design=="modified" | object$method == "lm")
+  if(object$method=="nls" | object$method=="onestep" | object$design=="modified" | object$method == "lm")
     object$constrained <- F
   
   if (object$method == "lm" | (object$method=="ml" & object$constrained==T &
-     object$boundary == F & object$multi == F)) {
+     object$boundary == F & object$multi == F & object$robust == F)) {
     vcov <- rbind( cbind( vcov[(nPar+1):(nPar*2), (nPar+1):(nPar*2)],
                          vcov[(nPar+1):(nPar*2), 1:nPar]  ),
                   cbind(vcov[1:nPar, (nPar+1):(nPar*2)] ,vcov[1:nPar, 1:nPar])  )
@@ -3138,7 +5105,7 @@ vcov.ictreg <- function(object, ...){
                         vcov[(nPar+1):(nPar*2),(nPar+1):(nPar*2)]) )
   }
 
-  if((object$method=="nls" | object$method == "lm") &
+  if((object$method=="nls" | object$method=="onestep" | object$method == "lm") &
      object$boundary == FALSE & object$multi == FALSE){
     if(object$design=="standard") rownames(vcov) <-
       colnames(vcov)<- c(paste("sensitive.",object$coef.names,sep=""),
@@ -3223,6 +5190,135 @@ c.predict.ictreg <- function(...){
   
 }
 
+
+
+#' Plot Method for the Item Count Technique
+#' 
+#' Function to plot predictions and confidence intervals of predictions from
+#' estimates from multivariate regression analysis of survey data with the item
+#' count technique.
+#' 
+#' \code{plot.predict.ictreg} produces plots with estimated population
+#' proportions of respondents answering the sensitive item in a list experiment
+#' in the affirmative, with confidence intervals.
+#' 
+#' The function accepts a set of \code{predict.ictreg} objects calculated in
+#' the following manner:
+#' 
+#' \code{predict(ictreg.object, avg = TRUE, interval = "confidence")}
+#' 
+#' For each average prediction, a point estimate and its confidence interval is
+#' plotted at equally spaced intervals. The x location of the points can be
+#' manipulated with the \code{xvec} option.
+#' 
+#' Either a single predict object can be plotted, or a group of them combined
+#' with \code{c(predict.object1, predict.object2)}. Predict objects with the
+#' \code{newdata.diff} option, which calculates the mean difference in
+#' probability between two datasets, and the \code{direct.glm} option, which
+#' calculates the mean difference between the mean predicted support for the
+#' sensitive item in the list experiment and in a direct survey item, can also
+#' be plotted in the same way as other \code{predict} objects.
+#' 
+#' @param x object or set of objects of class inheriting from "predict.ictreg".
+#' Either a single object from an \code{ictreg()} model fit or multiple
+#' \code{predict} objects combined with the c() function.
+#' @param labels a vector of labels for each prediction, plotted at the x axis.
+#' @param axes.ict a switch indicating if custom plot axes are to be used with
+#' the user-provided estimate \code{labels}.
+#' @param xlim a title for the y axis.
+#' @param ylim a title for the y axis.
+#' @param xlab a title for the x axis.
+#' @param ylab a title for the y axis.
+#' @param axes an indicator for whether default plot axes are included.
+#' @param pch either an integer specifying a symbol or a single character to be
+#' used as the default in plotting points.
+#' @param xvec a vector of x values at which the proportions will be printed.
+#' @param ... Other graphical parameters to be passed to the \code{plot()}
+#' command are accepted.
+#' @author Graeme Blair, UCLA, \email{graeme.blair@ucla.edu}
+#' and Kosuke Imai, Princeton University, \email{kimai@princeton.edu}
+#' @seealso \code{\link{ictreg}} for model fitting and
+#' \code{\link{predict.ictreg}} for predictions based on the model fits.
+#' @references Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of
+#' List Experiments."  Political Analysis, Vol. 20, No 1 (Winter). available at
+#' \url{http://imai.princeton.edu/research/listP.html}
+#' 
+#' Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item Count
+#' Technique.'' Journal of the American Statistical Association, Vol. 106, No.
+#' 494 (June), pp. 407-416. available at
+#' \url{http://imai.princeton.edu/research/list.html}
+#' @keywords models regression
+#' @examples
+#' 
+#' data(race)
+#' race.south <- race.nonsouth <- race
+#' race.south[, "south"] <- 1
+#' race.nonsouth[, "south"] <- 0
+#' 
+#' \dontrun{
+#' 
+#' # Fit EM algorithm ML model with constraint
+#' ml.constrained.results <- ictreg(y ~ south + age + male + college, 
+#'    data = race, treat = "treat", J=3, method = "ml", 
+#'    overdispersed = FALSE, constrained = TRUE)
+#' 
+#' # Calculate average predictions for respondents in the South 
+#' # and the the North of the US for the MLE model, replicating the 
+#' # estimates presented in Figure 1, Imai (2011)
+#' avg.pred.south.mle <- predict(ml.constrained.results, 
+#'    newdata = race.south, avg = TRUE, interval = "confidence")
+#' avg.pred.nonsouth.mle <- predict(ml.constrained.results, 
+#'    newdata = race.nonsouth, avg = TRUE, interval = "confidence")
+#' 
+#' # A plot of a single estimate and its confidence interval
+#' plot(avg.pred.south.mle, labels = "South")
+#' 
+#' # A  plot of the two estimates and their confidence intervals
+#' # use c() to combine more than one predict object for plotting
+#' plot(c(avg.pred.south.mle, avg.pred.nonsouth.mle), labels = c("South", "Non-South"))
+#' 
+#' # The difference option can also be used to simultaneously
+#' # calculate separate estimates of the two sub-groups
+#' # and the estimated difference. This can also be plotted.
+#' 
+#' avg.pred.diff.mle <- predict(ml.constrained.results, 
+#'    newdata = race.south, newdata.diff = race.nonsouth,
+#'    se.fit = TRUE, avg = TRUE, interval="confidence")
+#' 
+#' plot(avg.pred.diff.mle, labels = c("South", "Non-South", "Difference"))
+#' 
+#' # Social desirability bias plots
+#' 
+#' # Estimate logit for direct sensitive question
+#' 
+#' data(mis)
+#' 
+#' mis.list <- subset(mis, list.data == 1)
+#' 
+#' mis.sens <- subset(mis, sens.data == 1)
+#' 
+#' # Fit EM algorithm ML model
+#' 
+#' fit.list <- ictreg(y ~ age + college + male + south,
+#'    J = 4, data = mis.list, method = "ml")
+#' 
+#' # Fit logistic regression with directly-asked sensitive question
+#' 
+#' fit.sens <- glm(sensitive ~ age + college + male + south, 
+#'    data = mis.sens, family = binomial("logit"))
+#' 
+#' # Predict difference between response to sensitive item
+#' # under the direct and indirect questions (the list experiment).
+#' # This is an estimate of the revealed social desirability bias
+#' # of respondents. See Blair and Imai (2010).
+#' 
+#' avg.pred.social.desirability <- predict(fit.list, 
+#'    direct.glm = fit.sens, se.fit = TRUE)
+#' 
+#' plot(avg.pred.social.desirability)
+#' 
+#' }
+#' @method plot predict.ictreg
 plot.predict.ictreg <- function(x, labels = NA, axes.ict = TRUE,
                                 xlim = NULL, ylim = NULL, xlab = NULL, ylab = "Estimated Proportion",
                                 axes = F, pch = 19, xvec = NULL, ...){
@@ -3255,6 +5351,72 @@ plot.predict.ictreg <- function(x, labels = NA, axes.ict = TRUE,
   
 }
 
+
+
+#' Summary Method for the Item Count Technique
+#' 
+#' Function to summarize results from list experiment regression based on the
+#' ictreg() function, and to produce proportions of liars estimates.
+#' 
+#' \code{predict.ictreg} produces a summary of the results from an
+#' \code{ictreg} object. It displays the coefficients, standard errors, and fit
+#' statistics for any model from \code{ictreg}.
+#' 
+#' \code{predict.ictreg} also produces estimates of the conditional probability
+#' of lying and of the population proportion of liars for boundary models from
+#' \code{ictreg()} if \code{ceiling = TRUE} or \code{floor = TRUE}.
+#' 
+#' The conditional probability of lying for the ceiling model is the
+#' probability that a respondent with true affirmative views of all the
+#' sensitive and non-sensitive items lies and responds negatively to the
+#' sensitive item. The conditional probability for the floor model is the
+#' probability that a respondent lies to conceal her true affirmative views of
+#' the sensitive item when she also holds true negative views of all the
+#' non-sensitive items. In both cases, the respondent may believe her privacy
+#' is not protected, so may conceal her true affirmative views of the sensitive
+#' item.
+#' 
+#' @param object Object of class inheriting from "ictreg"
+#' @param boundary.proportions A switch indicating whether, for models with
+#' ceiling effects, floor effects, or both (indicated by the \code{floor =
+#' TRUE}, \code{ceiling = TRUE} options in ictreg), the conditional probability
+#' of lying and the population proportions of liars are calculated.
+#' @param n.draws For quasi-Bayesian approximation based predictions, specify
+#' the number of Monte Carlo draws.
+#' @param ... further arguments to be passed to or from other methods.
+#' @author Graeme Blair, UCLA, \email{graeme.blair@ucla.edu}
+#' and Kosuke Imai, Princeton University, \email{kimai@princeton.edu}
+#' @seealso \code{\link{ictreg}} for model fitting
+#' @references Blair, Graeme and Kosuke Imai. (2012) ``Statistical Analysis of
+#' List Experiments."  Political Analysis, Vol. 20, No 1 (Winter). available at
+#' \url{http://imai.princeton.edu/research/listP.html}
+#' 
+#' Imai, Kosuke. (2011) ``Multivariate Regression Analysis for the Item Count
+#' Technique.'' Journal of the American Statistical Association, Vol. 106, No.
+#' 494 (June), pp. 407-416. available at
+#' \url{http://imai.princeton.edu/research/list.html}
+#' @keywords models regression
+#' @examples
+#' 
+#' data(race)
+#' \dontrun{
+#' # Fit standard design ML model with ceiling effects
+#' # Replicates Table 7 Columns 3-4 in Blair and Imai (2012)
+#' 
+#' ceiling.results <- ictreg(y ~ age + college + male + south, treat = "treat", 
+#' 		   	  J = 3, data = affirm, method = "ml", fit.start = "nls",
+#' 			  ceiling = TRUE, ceiling.fit = "bayesglm",
+#' 			  ceiling.formula = ~ age + college + male + south)
+#' 
+#' # Summarize fit object and generate conditional probability 
+#' # of ceiling liars the population proportion of ceiling liars,
+#' # both with standard errors.
+#' # Replicates Table 7 Columns 3-4 last row in Blair and Imai (2012)
+#' 
+#' summary(ceiling.results, boundary.proportions = TRUE)
+#' }
+#' 
+#' 
 summary.ictreg <- function(object, boundary.proportions = FALSE, n.draws = 10000, ...) {
   object$boundary.proportions <- boundary.proportions
   object$n.draws <- n.draws
@@ -3269,12 +5431,12 @@ print.summary.ictreg <- function(x, ...){
 
   cat("\n")
   
-  if(x$method=="nls" | x$design=="modified" | x$method == "lm")
+  if(x$method=="nls" | x$method=="onestep" | x$design=="modified" | x$method == "lm")
     x$constrained <- T
 
   if (x$design == "standard") {
   
-    if((x$method=="nls" | x$method == "lm") & x$multi == FALSE){
+    if((x$method=="nls" | x$method=="onestep" | x$method == "lm") & x$multi == FALSE){
       ##cat(rep(" ", max(nchar(x$coef.names))+8), "Sensitive Item", rep(" ", 5),
       ##    "Control Items \n", sep="")
       tb.treat <- tb.control <- matrix(NA, ncol = 2, nrow = length(x$par.control))
@@ -3605,8 +5767,18 @@ print.summary.ictreg <- function(x, ...){
   cat(treat.print, sep ="")
   cat(" and the control group by '", x$control.label, "'.\n\n", sep = "")
   
+  # auxiliary data functionality
   if (x$aux) cat("Incorporating ", x$nh, " auxiliary moment(s). Weighting method: ", x$wm, ".\n", 
     "The overidentification test statistic was: ", x$J.stat, " (p < ", x$overid.p, ")", ".\n", sep = "")
+
+  # measurement error models
+  if (x$error == "topcode") cat("Estimated proportion of top-coded respondents: ", x$p.est, ". 95% CI: (", 
+    round(x$p.ci[1], 6), ", ", round(x$p.ci[2], 6), ").\n", sep = "")
+
+  if (x$error == "uniform") cat("Estimated proportion of respondents with uniform error (control): ", x$p0.est, ". 95% CI: (", 
+    round(x$p0.ci[1], 6), ", ", round(x$p0.ci[2], 6), ").\n", 
+    "Estimated proportion of respondents with uniform error (treated): ", x$p1.est, ". 95% CI: (", 
+    round(x$p1.ci[1], 6), ", ", round(x$p1.ci[2], 6), ").\n", sep = "")
 
   invisible(x)
   
