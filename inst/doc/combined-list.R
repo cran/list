@@ -1,4 +1,4 @@
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # Set a seed for reproducibility
 set.seed(123) 
 
@@ -15,12 +15,12 @@ N.innocent <- 500
 
 type <- rep(c("TA", "WH", "IN"), times=c(N.trueadmitter, N.withholder, N.innocent))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 D <- ifelse(type=="TA", 1, 0)
 direct.est <- mean(D)
 direct.est
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 N <- length(type)
 # Generate list response potential outcomes
 
@@ -41,17 +41,17 @@ list.se <- sqrt((var(Y[Z==1])/sum(Z) + var(Y[Z==0])/sum(1-Z)))
 list.est
 list.se
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 library(list)
 # Wrap up all data in a dataframe
 df <- data.frame(Y, Z, D)
 out.1 <- combinedListDirect(formula = Y ~ Z, data = df, treat = "Z", direct = "D")
 out.1
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 summary(out.1)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # Define three subject types as before plus one new type
 
 N.trueadmitter <- 400
@@ -85,7 +85,7 @@ out.2 <- combinedListDirect(formula = Y ~ Z, data = df, treat = "Z", direct = "D
 # Extract Placebo Test I results 
 unlist(out.2$placebo.I)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # Define three subject types as before plus one new type
 
 N.trueadmitter <- 400
@@ -120,7 +120,7 @@ out.3 <- combinedListDirect(formula = Y ~ Z, data = df, treat = "Z", direct = "D
 # Extract Placebo Test II results 
 unlist(out.3$placebo.II)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # Define subject types.
 N.trueadmitter <- 500
 N.withholder <- 500

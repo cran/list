@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <meta name="author" content="Alexander Coppock" />
 
-<meta name="date" content="2019-02-26" />
+<meta name="date" content="2020-03-17" />
 
 <title>Combining List Experiments with Direct Questions using combinedListDirect()</title>
 
@@ -96,7 +96,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -117,9 +117,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -288,8 +285,12 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
+
+
+
 
 </head>
 
@@ -299,8 +300,8 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 
 <h1 class="title toc-ignore">Combining List Experiments with Direct Questions using <code>combinedListDirect()</code></h1>
-<h4 class="author"><em>Alexander Coppock</em></h4>
-<h4 class="date"><em>2019-02-26</em></h4>
+<h4 class="author">Alexander Coppock</h4>
+<h4 class="date">2020-03-17</h4>
 
 
 
@@ -356,10 +357,10 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb4-16" data-line-number="16">list.est &lt;-<span class="st"> </span><span class="kw">mean</span>(Y[Z<span class="op">==</span><span class="dv">1</span>]) <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(Y[Z<span class="op">==</span><span class="dv">0</span>])</a>
 <a class="sourceLine" id="cb4-17" data-line-number="17">list.se &lt;-<span class="st"> </span><span class="kw">sqrt</span>((<span class="kw">var</span>(Y[Z<span class="op">==</span><span class="dv">1</span>])<span class="op">/</span><span class="kw">sum</span>(Z) <span class="op">+</span><span class="st"> </span><span class="kw">var</span>(Y[Z<span class="op">==</span><span class="dv">0</span>])<span class="op">/</span><span class="kw">sum</span>(<span class="dv">1</span><span class="op">-</span>Z)))</a>
 <a class="sourceLine" id="cb4-18" data-line-number="18">list.est</a></code></pre></div>
-<pre><code>## [1] 0.6334232</code></pre>
+<pre><code>## [1] 0.619082</code></pre>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">list.se</a></code></pre></div>
-<pre><code>## [1] 0.05996451</code></pre>
-<p>The list experiment comes closer to the truth: our estimate is now 0.63. The standard error is somewhat large, at 0.06. A principal difficulty with using list experiments is that estimates can be quite imprecise.</p>
+<pre><code>## [1] 0.05910645</code></pre>
+<p>The list experiment comes closer to the truth: our estimate is now 0.62. The standard error is somewhat large, at 0.06. A principal difficulty with using list experiments is that estimates can be quite imprecise.</p>
 </div>
 <div id="combined-list-experiment" class="section level1">
 <h1>Combined List Experiment</h1>
@@ -378,8 +379,8 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 ## 
 ##  Prevalence estimate
 ##                Prevalence
-## Estimate       0.65863351
-## Standard Error 0.04987643</code></pre>
+## Estimate       0.69551882
+## Standard Error 0.04933932</code></pre>
 <p>If we compare the standard errors of the two methods, we can see that the combined estimator is more precise than the conventional estimator.</p>
 </div>
 <div id="placebo-tests" class="section level1">
@@ -401,16 +402,16 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 ## 
 ##  Prevalence estimates
 ##                  Combined     Direct Conventional
-## Estimate       0.65863351 0.33333333   0.63342318
-## Standard Error 0.04987643 0.01217567   0.05996451
+## Estimate       0.69551882 0.33333333   0.61908199
+## Standard Error 0.04933932 0.01217567   0.05910645
 ## 
 ##  Placebo Test I
 ##        Beta is the conventional list experiment estimate among those who answer 'Yes' to the direct question.
 ##        Ho: beta = 1
 ##        Ha: beta != 1
 ##       
-##        Estimate         SE         p   n
-## beta 0.9232591 0.09940286 0.4401031 500
+##        Estimate         SE          p   n
+## beta 0.7702253 0.09870956 0.01992348 500
 ## 
 ##  Placebo Test II
 ##        Delta is the average effect of the receiving the treatment list on the direct question response.
@@ -457,7 +458,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb14-31" data-line-number="31"><span class="co"># Extract Placebo Test I results </span></a>
 <a class="sourceLine" id="cb14-32" data-line-number="32"><span class="kw">unlist</span>(out<span class="fl">.2</span><span class="op">$</span>placebo.I)</a></code></pre></div>
 <pre><code>##     estimate           se            p            n 
-##   0.75924415   0.10355750   0.02007988 500.00000000</code></pre>
+##   0.75978816   0.10374990   0.02059668 500.00000000</code></pre>
 <p>The low p-value suggests that we should reject the hypothesis that the list experimental estimate is equal to one among those who answer “Yes” to the direct question. We could reject this hypothesis if any of the four assumptions above were violated in some way. If the null is rejected, the list experiment estimates - both conventional and combined - are possibly biased.</p>
 <hr />
 <p>Next let’s consider a case where the treatment does affect the direct question response, violating the Treatment Ignorability assumption.</p>
@@ -552,6 +553,9 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <p>A comparison of the standard errors with and without covariate adjustment confirms that the covariate-adjusted estimator is more precise. When you include covariates, the placebo tests become more powerful as well.</p>
 </div>
 
+
+
+<!-- code folding -->
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
