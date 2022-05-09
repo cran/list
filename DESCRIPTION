@@ -1,8 +1,8 @@
 Package: list
-Version: 9.2
+Version: 9.2.1
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
-Authors@R: c(person("Graeme", "Blair", email = "graeme.blair@ucla.edu", role = c("aut", "cre")),
+Authors@R: c(person("Graeme", "Blair", email = "graeme.blair@gmail.com", role = c("aut", "cre")),
              person("Winston", "Chou", email = "wchou@princeton.edu", role = c("aut")),
              person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut")),
              person("Bethany", "Park", email = "bapark@princeton.edu", role = c("ctb")),
@@ -41,14 +41,14 @@ LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.0.2
+RoxygenNote: 6.1.1
 NeedsCompilation: yes
-Packaged: 2020-03-18 05:24:23 UTC; gdblair
+Packaged: 2022-05-09 05:26:09 UTC; graeme
 Author: Graeme Blair [aut, cre],
   Winston Chou [aut],
   Kosuke Imai [aut],
   Bethany Park [ctb],
   Alexander Coppock [ctb]
-Maintainer: Graeme Blair <graeme.blair@ucla.edu>
+Maintainer: Graeme Blair <graeme.blair@gmail.com>
 Repository: CRAN
-Date/Publication: 2020-03-19 13:00:14 UTC
+Date/Publication: 2022-05-09 09:10:05 UTC
