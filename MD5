@@ -1,11 +1,11 @@
-fd7bd6b4f49d2db1ec3753c14f308366 *ChangeLog
-5dfac7a34470e71e363d67490d3b559b *DESCRIPTION
+209f29f42e6aad931aa77b10858ac678 *ChangeLog
+d3ed0c50a951ce594684f1d5135df116 *DESCRIPTION
 084dad8ff57f45d16340c402fa47af8f *NAMESPACE
 42a7a60f22456426bb46b7742ace7b0c *R/combinedListDirect.R
 ea7cdf4be2ed60316faac423a0b735a3 *R/comp.listEndorse.R
 d483cc0b08a58710529516912d0ae2f3 *R/ict.hausman.test.R
 1a46fb397e4955d3c91241f154e3cde1 *R/ict.test.R
-e0705a8d6481fc0451e6f791aced0007 *R/ictreg.R
+84f8fc685dfe29fa13a62cc20dad1f8e *R/ictreg.R
 b193c17ac334a79d2b25cf6b71d885b1 *R/ictreg.joint.R
 abe1075cf397cb8a972992347ee94bc9 *R/ictregBayes.R
 d69e3a24ba2a086d547038a2457233bf *R/ictregBayesHier.R
@@ -21,7 +21,7 @@ ce8fd733e5d0bba2bef1701abdacbd00 *data/race.tab.gz
 0e05e14ca9f05aa6be3276bec2686a78 *inst/CITATION
 d6ec05402c35dfa2947998c835b94fdb *inst/doc/combined-list.R
 52acecd68b9c3dee18bda56f41eb0fd4 *inst/doc/combined-list.Rmd
-75c499ad0512bb9020957086c6e2f254 *inst/doc/combined-list.html
+af6ddb533a4eb934187fcbad76300393 *inst/doc/combined-list.html
 aadc7647108162764cb6c1e0aace0bf9 *man/affirm.Rd
 2e3d044084f888459838b8b100e482cd *man/combinedListDirect.Rd
 4f6e88e696d89639871f6efe24195644 *man/combinedListExps.Rd
@@ -58,7 +58,7 @@ b54e485e5ed760dace9bdbb24a3ae0b9 *tests/testthat.R
 3187d9e29c5ad25f756dd5a911d4dcd9 *tests/testthat/Rplots.pdf
 975f2b3885995fe57999091e826cf8e7 *tests/testthat/test-combined.R
 8cee492180d744553419f04767f113f7 *tests/testthat/test-ict.test.R
-8bfad17a0e87bee59206ea99ce1c1e9d *tests/testthat/test-ictreg.R
+02dc163cc30a7861ad09358e6343e704 *tests/testthat/test-ictreg.R
 faaaf54cf34536541ff3bf36f9c98563 *tests/testthat/test-ictreg.joint.R
 726dd0a22a2e8cfacfd8450b28f5482d *tests/testthat/test-ictregBayes.R
 ffab7f0be55aa8f927bb01a51cfc7d04 *tests/testthat/test-ictregBayesHier.R

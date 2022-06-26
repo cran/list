@@ -1,5 +1,5 @@
 Package: list
-Version: 9.2.2
+Version: 9.2.4
 Title: Statistical Methods for the Item Count Technique and List
         Experiment
 Authors@R: c(person("Graeme", "Blair", email = "graeme.blair@gmail.com", role = c("aut", "cre")),
@@ -43,7 +43,7 @@ License: GPL (>= 2)
 Encoding: UTF-8
 RoxygenNote: 7.2.0
 NeedsCompilation: yes
-Packaged: 2022-05-24 18:18:22 UTC; gdblair
+Packaged: 2022-06-26 03:47:46 UTC; gdblair
 Author: Graeme Blair [aut, cre],
   Winston Chou [aut],
   Kosuke Imai [aut],
@@ -51,4 +51,4 @@ Author: Graeme Blair [aut, cre],
   Alexander Coppock [ctb]
 Maintainer: Graeme Blair <graeme.blair@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-05-25 11:00:12 UTC
+Date/Publication: 2022-06-26 21:20:02 UTC
