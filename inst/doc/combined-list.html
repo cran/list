@@ -12,7 +12,7 @@
 
 <meta name="author" content="Alexander Coppock" />
 
-<meta name="date" content="2022-06-25" />
+<meta name="date" content="2024-01-10" />
 
 <title>Combining List Experiments with Direct Questions using combinedListDirect()</title>
 
@@ -31,23 +31,23 @@ document.addEventListener('DOMContentLoaded', function(e) {
 </script>
 
 <style type="text/css">
-  code{white-space: pre-wrap;}
-  span.smallcaps{font-variant: small-caps;}
-  span.underline{text-decoration: underline;}
-  div.column{display: inline-block; vertical-align: top; width: 50%;}
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-  ul.task-list{list-style: none;}
-    </style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
 
 
 
 <style type="text/css">
-  code {
-    white-space: pre;
-  }
-  .sourceCode {
-    overflow: visible;
-  }
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
@@ -65,55 +65,54 @@ pre > code.sourceCode { white-space: pre-wrap; }
 pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
-  { counter-reset: source-line 0; }
+{ counter-reset: source-line 0; }
 pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
+{ position: relative; left: -4em; counter-increment: source-line; }
 pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-    color: #aaaaaa;
-  }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
 div.sourceCode
-  {   }
+{ }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
 </style>
 <script>
 // apply pandoc div.sourceCode style to pre.sourceCode instead
@@ -122,13 +121,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -335,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Combining List Experiments with Direct
 Questions using <code>combinedListDirect()</code></h1>
 <h4 class="author">Alexander Coppock</h4>
-<h4 class="date">2022-06-25</h4>
+<h4 class="date">2024-01-10</h4>
 
 
 
@@ -359,28 +365,28 @@ to an underestimate of prevalence because some subjects who do hold the
 attitude or engage in the behavior would withhold.</p>
 <p>For example, suppose we have 1500 subjects, 1000 of whom engage, but
 500 of whom would withhold if asked directly.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a seed for reproducibility</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>) </span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Define subject types.</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Truthfully respond &quot;Yes&quot; to direct question</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Falsely respond &quot;No&quot; to direct question</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Truthfully respond &quot;No&quot; to direct question</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent))</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># Set a seed for reproducibility</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>) </span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Define subject types.</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># Truthfully respond &quot;Yes&quot; to direct question</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># Falsely respond &quot;No&quot; to direct question</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co"># Truthfully respond &quot;No&quot; to direct question</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent))</span></code></pre></div>
 </div>
 <div id="direct-question" class="section level1">
 <h1>Direct Question</h1>
 <p>Now suppose we were to ask the direct question, “Do you engage?”</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">==</span><span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>direct.est <span class="ot">&lt;-</span> <span class="fu">mean</span>(D)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>direct.est</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">==</span><span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>direct.est <span class="ot">&lt;-</span> <span class="fu">mean</span>(D)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>direct.est</span></code></pre></div>
 <pre><code>## [1] 0.3333333</code></pre>
 <p>The true proportion of engagers is 1000/1500 = 0.67. However, the
 direct question is badly biased by social desirability: our direct
@@ -399,26 +405,26 @@ assumptions: No Liars and No Design Effects. No Liars requires that
 treatment subjects respond truthfully to the list question and No Design
 Effects requires that the presence of the sensitive item does not change
 treated subjects’ responses to the non-sensitive items.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate list response potential outcomes</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Control potential outcome</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Conduct random assignment</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Reveal list responses</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>list.est <span class="ot">&lt;-</span> <span class="fu">mean</span>(Y[Z<span class="sc">==</span><span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(Y[Z<span class="sc">==</span><span class="dv">0</span>])</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>list.se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>((<span class="fu">var</span>(Y[Z<span class="sc">==</span><span class="dv">1</span>])<span class="sc">/</span><span class="fu">sum</span>(Z) <span class="sc">+</span> <span class="fu">var</span>(Y[Z<span class="sc">==</span><span class="dv">0</span>])<span class="sc">/</span><span class="fu">sum</span>(<span class="dv">1</span><span class="sc">-</span>Z)))</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>list.est</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># Generate list response potential outcomes</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Control potential outcome</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># Conduct random assignment</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co"># Reveal list responses</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>list.est <span class="ot">&lt;-</span> <span class="fu">mean</span>(Y[Z<span class="sc">==</span><span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(Y[Z<span class="sc">==</span><span class="dv">0</span>])</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>list.se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>((<span class="fu">var</span>(Y[Z<span class="sc">==</span><span class="dv">1</span>])<span class="sc">/</span><span class="fu">sum</span>(Z) <span class="sc">+</span> <span class="fu">var</span>(Y[Z<span class="sc">==</span><span class="dv">0</span>])<span class="sc">/</span><span class="fu">sum</span>(<span class="dv">1</span><span class="sc">-</span>Z)))</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>list.est</span></code></pre></div>
 <pre><code>## [1] 0.619082</code></pre>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>list.se</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>list.se</span></code></pre></div>
 <pre><code>## [1] 0.05910645</code></pre>
 <p>The list experiment comes closer to the truth: our estimate is now
 0.62. The standard error is somewhat large, at 0.06. A principal
@@ -438,12 +444,12 @@ treatment not have any effect on the direct question response.
 Monotonicity requires that no subjects “falsely confess” to the direct
 question.</p>
 <p>Estimation is straightforward:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(list)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(list)</span></code></pre></div>
 <pre><code>## Loading required package: sandwich</code></pre>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrap up all data in a dataframe</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.1</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Wrap up all data in a dataframe</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>out<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>out<span class="fl">.1</span></span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -481,7 +487,7 @@ different from 0.</p>
 <code>summary.comblist()</code>. Because we generated the data above
 respecting the list experiment assumptions, we know that we should pass
 both tests.</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(out<span class="fl">.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">summary</span>(out<span class="fl">.1</span>)</span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -518,38 +524,38 @@ false.</p>
 First, let’s consider the case where some subjects are “design
 affected”, i.e., they lower their response to the non-sensitive items
 when the sensitive item is also on the list.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define three subject types as before plus one new type</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">400</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Truthfully responds &quot;Yes&quot; to direct question</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># but decreases response to the non-sensitive items </span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># in the presence of the sensitive item</span></span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>N.designaffected <span class="ot">&lt;-</span> <span class="dv">100</span></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;DA&quot;</span>), </span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent, N.designaffected))</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;DA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Control potential outcome</span></span>
-<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span></span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Note that it is NOT higher for those who are &quot;design affected&quot;</span></span>
-<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
-<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
-<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
-<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
-<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract Placebo Test I results </span></span>
-<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="fu">unlist</span>(out<span class="fl">.2</span><span class="sc">$</span>placebo.I)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># Define three subject types as before plus one new type</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">400</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co"># Truthfully responds &quot;Yes&quot; to direct question</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co"># but decreases response to the non-sensitive items </span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co"># in the presence of the sensitive item</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>N.designaffected <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;DA&quot;</span>), </span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>            <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent, N.designaffected))</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;DA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co"># Control potential outcome</span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co"># Treated potential outcome is 1 higher for true admitters and withholders</span></span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co"># Note that it is NOT higher for those who are &quot;design affected&quot;</span></span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a></span>
+<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
+<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
+<span id="cb14-28"><a href="#cb14-28" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="#cb14-29" tabindex="-1"></a>out<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb14-30"><a href="#cb14-30" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" tabindex="-1"></a><span class="co"># Extract Placebo Test I results </span></span>
+<span id="cb14-32"><a href="#cb14-32" tabindex="-1"></a><span class="fu">unlist</span>(out<span class="fl">.2</span><span class="sc">$</span>placebo.I)</span></code></pre></div>
 <pre><code>##     estimate           se            p            n 
 ##   0.75978816   0.10374990   0.02059668 500.00000000</code></pre>
 <p>The low p-value suggests that we should reject the hypothesis that
@@ -561,39 +567,39 @@ rejected, the list experiment estimates - both conventional and combined
 <hr />
 <p>Next let’s consider a case where the treatment does affect the direct
 question response, violating the Treatment Ignorability assumption.</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define three subject types as before plus one new type</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">400</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Truthfully answers &quot;Yes&quot; when in control</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co"># But falsely answers &quot;No&quot; when in treatment</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>N.affectedbytreatment <span class="ot">&lt;-</span> <span class="dv">100</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;ABT&quot;</span>), </span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent, N.affectedbytreatment))</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Direct Question Potential outcomes</span></span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>D0 <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;ABT&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>D1 <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="co"># List Experiment potential outcomes</span></span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Reveal outcomes according to random assignment</span></span>
-<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
-<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
-<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> Z<span class="sc">*</span>D1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>D0</span>
-<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
-<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
-<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract Placebo Test II results </span></span>
-<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a><span class="fu">unlist</span>(out<span class="fl">.3</span><span class="sc">$</span>placebo.II)</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># Define three subject types as before plus one new type</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">400</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co"># Truthfully answers &quot;Yes&quot; when in control</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co"># But falsely answers &quot;No&quot; when in treatment</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>N.affectedbytreatment <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>, <span class="st">&quot;ABT&quot;</span>), </span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>            <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent, N.affectedbytreatment))</span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a></span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a><span class="co"># Direct Question Potential outcomes</span></span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a>D0 <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>,<span class="st">&quot;ABT&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb16-17"><a href="#cb16-17" tabindex="-1"></a>D1 <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">%in%</span><span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb16-18"><a href="#cb16-18" tabindex="-1"></a></span>
+<span id="cb16-19"><a href="#cb16-19" tabindex="-1"></a><span class="co"># List Experiment potential outcomes</span></span>
+<span id="cb16-20"><a href="#cb16-20" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, N, <span class="at">replace=</span><span class="cn">TRUE</span>)</span>
+<span id="cb16-21"><a href="#cb16-21" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb16-22"><a href="#cb16-22" tabindex="-1"></a></span>
+<span id="cb16-23"><a href="#cb16-23" tabindex="-1"></a><span class="co"># Reveal outcomes according to random assignment</span></span>
+<span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb16-25"><a href="#cb16-25" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
+<span id="cb16-26"><a href="#cb16-26" tabindex="-1"></a>D <span class="ot">&lt;-</span> Z<span class="sc">*</span>D1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>D0</span>
+<span id="cb16-27"><a href="#cb16-27" tabindex="-1"></a></span>
+<span id="cb16-28"><a href="#cb16-28" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D)</span>
+<span id="cb16-29"><a href="#cb16-29" tabindex="-1"></a></span>
+<span id="cb16-30"><a href="#cb16-30" tabindex="-1"></a>out<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb16-31"><a href="#cb16-31" tabindex="-1"></a></span>
+<span id="cb16-32"><a href="#cb16-32" tabindex="-1"></a><span class="co"># Extract Placebo Test II results </span></span>
+<span id="cb16-33"><a href="#cb16-33" tabindex="-1"></a><span class="fu">unlist</span>(out<span class="fl">.3</span><span class="sc">$</span>placebo.II)</span></code></pre></div>
 <pre><code>##      estimate            se             p             n 
 ##   -0.05092491    0.02364766    0.03128051 1500.00000000</code></pre>
 <p>Again, the low p-value suggests that the null hypothesis that the
@@ -608,30 +614,30 @@ results.</p>
 include pre-treatment covariates that are predictive of the list
 experiment outcome. The combined estimator can accomodate the inclusion
 of pre-treatment covariates quite easily.</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define subject types.</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent))</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate a predictive pre-treatment covariate &quot;X&quot;)</span></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N, <span class="at">sd =</span> <span class="dv">2</span>)</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Control potential outcome is related to &quot;X&quot;</span></span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">cut</span>(X <span class="sc">+</span> <span class="fu">runif</span>(N), <span class="at">breaks =</span> <span class="dv">4</span>))</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">==</span><span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D, X)</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Conduct estimation without covariate adjustment</span></span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.4</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.4</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Define subject types.</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>N.trueadmitter <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>N.withholder <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>N.innocent <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>type <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>, <span class="st">&quot;IN&quot;</span>), <span class="at">times=</span><span class="fu">c</span>(N.trueadmitter, N.withholder, N.innocent))</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="fu">length</span>(type)</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co"># Generate a predictive pre-treatment covariate &quot;X&quot;)</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N, <span class="at">sd =</span> <span class="dv">2</span>)</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="co"># Control potential outcome is related to &quot;X&quot;</span></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>Y0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">cut</span>(X <span class="sc">+</span> <span class="fu">runif</span>(N), <span class="at">breaks =</span> <span class="dv">4</span>))</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>Y1 <span class="ot">&lt;-</span> Y0 <span class="sc">+</span> <span class="fu">ifelse</span>(type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;WH&quot;</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(type<span class="sc">==</span><span class="st">&quot;TA&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Z<span class="sc">*</span>Y1 <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>Z)<span class="sc">*</span>Y0</span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a></span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Y, Z, D, X)</span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a></span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co"># Conduct estimation without covariate adjustment</span></span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a>out<span class="fl">.4</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a>out<span class="fl">.4</span></span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
@@ -641,10 +647,10 @@ of pre-treatment covariates quite easily.</p>
 ##                Prevalence
 ## Estimate       0.68373531
 ## Standard Error 0.03165778</code></pre>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Conduct estimation with covariate adjustment</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Just add the covariate on the right-hand side of the formula</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z <span class="sc">+</span> X, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>out<span class="fl">.5</span></span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># Conduct estimation with covariate adjustment</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="co"># Just add the covariate on the right-hand side of the formula</span></span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>out<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">combinedListDirect</span>(<span class="at">formula =</span> Y <span class="sc">~</span> Z <span class="sc">+</span> X, <span class="at">data =</span> df, <span class="at">treat =</span> <span class="st">&quot;Z&quot;</span>, <span class="at">direct =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>out<span class="fl">.5</span></span></code></pre></div>
 <pre><code>## 
 ##  Combined List Estimates 
 ## 
